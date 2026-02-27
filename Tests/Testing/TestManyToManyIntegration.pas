@@ -207,11 +207,10 @@ begin
   Should(CheckStudent.Courses.IsValueCreated).BeFalse; // Not loaded yet
   
   CoursesList := CheckStudent.Courses.Value; // Access property trigger
-  
+
   Should(CheckStudent.Courses.IsValueCreated).BeTrue;
-  
   Should(CoursesList).NotBeNil;
-  Should(CoursesList.Count).Be(2); 
+  Should(CoursesList.Count).Be(2);
 end;
 
 procedure TManyToManyIntegrationTests.TestLink_ManyToMany;

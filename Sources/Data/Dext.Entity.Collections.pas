@@ -198,7 +198,35 @@ begin
     ListTyp := Ctx.FindType(ListTypName);
     
     if ListTyp = nil then
-      raise Exception.CreateFmt('Could not find RTTI for %s. Make sure the unit is used.', [ListTypName]);
+    begin
+      // Fallback search: iterate all types in RTTI
+      var TypeNamePattern := 'TTrackingList<' + Typ.Name + '>';
+      for var tRtti in Ctx.GetTypes do
+      begin
+        if tRtti.IsInstance and (tRtti.Name.Contains(TypeNamePattern) or tRtti.QualifiedName.Contains(TypeNamePattern)) then
+        begin
+          ListTyp := tRtti;
+          Break;
+        end;
+      end;
+    end;
+    
+    if ListTyp = nil then
+    begin
+      // Last resort: try TList<T>
+      var ListPattern := 'TList<' + Typ.Name + '>';
+      for var tRtti in Ctx.GetTypes do
+      begin
+        if tRtti.IsInstance and (tRtti.Name.Contains(ListPattern) or tRtti.QualifiedName.Contains(ListPattern)) then
+        begin
+          ListTyp := tRtti;
+          Break;
+        end;
+      end;
+    end;
+
+    if ListTyp = nil then
+      raise Exception.CreateFmt('Could not find specialized list RTTI for %s. Make sure the unit or the list is used.', [ListTypName]);
 
     Result := TActivator.CreateInstance(ListTyp.AsInstance.MetaclassType, [TValue.From<IDbContext>(AContext), AOwner, APropertyName]);
   finally

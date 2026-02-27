@@ -430,28 +430,22 @@ begin
   // Deep Equality Check (BeEquivalentTo)
   List1 := TCollections.CreateList<Integer>;
   List2 := TCollections.CreateList<Integer>;
+  List1.Add(10); List1.Add(20);
+  List2.Add(10); List2.Add(20);
+
   try
-    List1.Add(10); List1.Add(20);
-    List2.Add(10); List2.Add(20);
+    ShouldList<Integer>.Create(List1).BeEquivalentTo(List2);
+    Pass('BeEquivalentTo - Deep equal lists (different pointers)');
+  except
+    on E: Exception do Fail('BeEquivalentTo', E.Message);
+  end;
     
-    try
-      Should(List1).BeEquivalentTo(List2);
-      Pass('BeEquivalentTo - Deep equal lists (different pointers)');
-    except
-      on E: Exception do Fail('BeEquivalentTo', E.Message);
-    end;
-    
-    List2.Add(30);
-    try
-      Should(List1).BeEquivalentTo(List2);
-      Fail('BeEquivalentTo - Different lists', 'Should have failed');
-    except
-      on E: EAssertionFailed do Pass('BeEquivalentTo - Detected difference');
-    end;
-    
-  finally
-    // List1.Free;
-    // List2.Free;
+  List2.Add(30);
+  try
+    ShouldList<Integer>.Create(List1).BeEquivalentTo(List2);
+    Fail('BeEquivalentTo - Different lists', 'Should have failed');
+  except
+    on E: EAssertionFailed do Pass('BeEquivalentTo - Detected difference');
   end;
 end;
 

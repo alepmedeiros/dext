@@ -11,7 +11,9 @@ uses
   DelphiAST in '..\..\External\DelphiAST\Source\DelphiAST.pas',
   DelphiAST.Consts in '..\..\External\DelphiAST\Source\DelphiAST.Consts.pas',
   DelphiAST.Classes in '..\..\External\DelphiAST\Source\DelphiAST.Classes.pas',
+  DelphiAST.Writer in '..\..\External\DelphiAST\Source\DelphiAST.Writer.pas',
   DelphiAST.SimpleParserEx in '..\..\External\DelphiAST\Source\DelphiAST.SimpleParserEx.pas',
+  DelphiAST.Serialize.Binary in '..\..\External\DelphiAST\Source\DelphiAST.Serialize.Binary.pas',
   SimpleParser in '..\..\External\DelphiAST\Source\SimpleParser\SimpleParser.pas',
   SimpleParser.Lexer in '..\..\External\DelphiAST\Source\SimpleParser\SimpleParser.Lexer.pas',
   SimpleParser.Lexer.Types in '..\..\External\DelphiAST\Source\SimpleParser\SimpleParser.Lexer.Types.pas';

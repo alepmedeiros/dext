@@ -483,11 +483,16 @@ begin
                            else
                               LIntfType := Prop.PropertyType;
 
-                           if LIntfType <> nil then
-                             TValue.Make(@ListIntf, LIntfType.Handle, FValue)
+                           // Refined fix: Ensure we have the correct VTable pointer for the specific interface
+                           if (LIntfType <> nil) and (LIntfType is TRttiInterfaceType) and
+                              Supports(ListObj, TRttiInterfaceType(LIntfType).GUID, ListIntf) then
+                           begin
+                              TValue.Make(@ListIntf, LIntfType.Handle, FValue);
+                           end
                            else
-                             FValue := TValue.From<IInterface>(ListIntf);
-                             
+                           begin
+                              FValue := TValue.From<IInterface>(ListIntf);
+                           end;
                            FOwnsValue := False;
                         end
                         else
@@ -567,32 +572,35 @@ end;
 
 procedure TLazyLoader.LoadManyToMany(Prop: TRttiProperty; const PropMap: TPropertyMap; const Ctx: TRttiContext);
 var
-  SQL: string;
-  SB: TStringBuilder;
-  Cmd: IDbCommand;
-  Reader: IDbReader;
-  EntityId: string;
-  RelatedIds: Dext.Collections.TList<TValue>;
-  ItemTypeName: string;
-  ItemType: TRttiType;
-  TypeName: string;
-  StartPos, EndPos: Integer;
-  RelatedDbSet: IDbSet;
-  ResList: Dext.Collections.IList<TObject>;
-  IdValues: TArray<Variant>;
-  Expr: IExpression;
-  PropHelper: TPropExpression;
-  ListObj: TObject;
   AddMethod: TRttiMethod;
-  Obj: TObject;
-  UseExistingInterface: Boolean;
-  ListIntf: IInterface;
+  Cmd: IDbCommand;
+  EntityId: string;
+  Expr: IExpression;
+  IdValues: TArray<Variant>;
   IntfType: TRttiType;
-  IntfTypeInfo: PTypeInfo;
+  ItemType: TRttiType;
+  ItemTypeName: string;
+  ListIntf: IInterface;
+  ListObj: TObject;
+  Obj: TObject;
+  PropHelper: TPropExpression;
+  Reader: IDbReader;
+  RelatedDbSet: IDbSet;
+  RelatedIds: Dext.Collections.TList<TValue>;
+  ResList: Dext.Collections.IList<TObject>;
+  SB: TStringBuilder;
+  SQL: string;
+  StartPos, EndPos: Integer;
+  TypeName: string;
+  UseExistingInterface: Boolean;
 begin
   // Get entity's primary key value
   EntityId := TDbContext(FContext).DataSet(FEntity.ClassInfo).GetEntityId(FEntity);
   if EntityId = '' then Exit;
+
+  ListObj := nil;
+  UseExistingInterface := False;
+  ResList := nil;
   
   // Build SQL to query join table
   SB := TStringBuilder.Create;
@@ -612,31 +620,27 @@ begin
   // Prop.PropertyType is Lazy<IList<T>>. We need IList<T>.
   TypeName := Prop.PropertyType.Name;
   IntfType := nil;
+  var SearchName := '';
   if TypeName.StartsWith('Lazy<') then
   begin
     StartPos := Pos('<', TypeName);
-    EndPos := Length(TypeName); // Assuming closing > for the whole type
+    EndPos := Length(TypeName);
     if (StartPos > 0) then
     begin
-        var InnerName := Copy(TypeName, StartPos + 1, EndPos - StartPos - 1);
-        IntfType := Ctx.FindType(InnerName);
-        if IntfType = nil then
-        begin
-           // Fallback for non-qualified names if direct find fails
-           var QualifiedName := Prop.PropertyType.QualifiedName;
-           // Lazy is in Dext.Types.Lazy. Try to use same namespace for list? 
-           // Better to look at the Actual property result type if possible.
-        end;
+        SearchName := Copy(TypeName, StartPos + 1, EndPos - StartPos - 1);
+        IntfType := Ctx.FindType(SearchName);
     end;
   end;
 
-  if IntfType = nil then 
+  if (IntfType = nil) and (SearchName <> '') then 
   begin
-    // Fallback search in RTTI if parsing failed
-    for IntfType in Ctx.GetTypes do
-       if (IntfType.TypeKind = tkInterface) and IntfType.QualifiedName.Contains('IList<') then
-          // This is too aggressive, better to rely on parsing or direct knowledge
+    // Robust fallback: search all types for matching name or qualified name
+    for var T in Ctx.GetTypes do
+       if (T.TypeKind = tkInterface) and (SameText(T.Name, SearchName) or SameText(T.QualifiedName, SearchName)) then
+       begin
+          IntfType := T;
           break;
+       end;
   end;
 
   // Re-extract ItemType for the query
@@ -650,6 +654,16 @@ begin
      begin
         ItemTypeName := Copy(IntfName, StartPos + 1, EndPos - StartPos - 1);
         ItemType := Ctx.FindType(ItemTypeName);
+        
+        if ItemType = nil then
+        begin
+          for var T in Ctx.GetTypes do
+            if SameText(T.Name, ItemTypeName) or SameText(T.QualifiedName, ItemTypeName) then
+            begin
+               ItemType := T;
+               break;
+            end;
+        end;
      end;
   end;
 
@@ -657,14 +671,49 @@ begin
   RelatedIds := Dext.Collections.TList<TValue>.Create;
   try
     Cmd := TDbContext(FContext).Connection.CreateCommand(SQL);
-    Cmd.AddParam('p1', TValue.From<string>(EntityId));
+    
+    // Try to pass PK with correct type (Integer if possible)
+    var IntVal: Integer;
+    if TryStrToInt(EntityId, IntVal) then
+      Cmd.AddParam('p1', TValue.From<Integer>(IntVal))
+    else
+      Cmd.AddParam('p1', TValue.From<string>(EntityId));
+      
     Reader := Cmd.ExecuteQuery;
     
     while Reader.Next do
-      RelatedIds.Add(Reader.GetValue(0));
-      
-    if (RelatedIds.GetCount = 0) and (not FValue.IsEmpty) then
     begin
+      var V := Reader.GetValue(0);
+      RelatedIds.Add(V);
+    end;
+      
+    if (RelatedIds.GetCount = 0) then
+    begin
+       // Initialize empty list to avoid returning nil to the property
+       if (not UseExistingInterface) and (ListObj = nil) and (not FValue.IsEmpty) then
+       begin
+         // Keep existing list (likely from constructor)
+       end
+       else if (not UseExistingInterface) and (ListObj = nil) then
+       begin
+          try
+            ListObj := TTrackingListFactory.CreateList(ItemType.Handle, TDbContext(FContext), FEntity, FPropName);
+          except
+             ListObj := TCollections.CreateList<TObject>(False) as TObject;
+          end;
+          
+          if (ListObj <> nil) and ListObj.GetInterface(IInterface, ListIntf) then
+          begin
+             // Use TValue.Make to ensure correct interface type metadata
+             if (IntfType <> nil) and (IntfType is TRttiInterfaceType) and
+                Supports(ListObj, TRttiInterfaceType(IntfType).GUID, ListIntf) then
+               TValue.Make(@ListIntf, IntfType.Handle, FValue)
+             else
+               FValue := TValue.From<IInterface>(ListIntf);
+             FOwnsValue := False;
+          end;
+       end;
+       
        FLoaded := True;
        Exit;
     end;
@@ -693,7 +742,7 @@ begin
       else if FValue.IsObject then
         ListObj := FValue.AsObject;
     end;
-    
+
     if not UseExistingInterface and (ListObj = nil) then
     begin
       try
@@ -701,28 +750,42 @@ begin
       except
         ListObj := nil;
       end;
-      
-      if ListObj = nil then
-         ListObj := TSmartList<TObject>.Create(False);
     end;
     
+    if (ListObj = nil) and (not UseExistingInterface) then
+    begin
+        // Final attempt: fallback to TObject list if all fails, but try to keep it typed if possible
+        ListObj := TCollections.CreateList<TObject>(False) as TObject;
+    end;
+
     // Resolve Add method
     if UseExistingInterface then
-      AddMethod := IntfType.GetMethod('Add')
-    else
-      AddMethod := Ctx.GetType(ListObj.ClassType).GetMethod('Add');
-
-    if AddMethod = nil then Exit;
-    
-    // Populate
-    for Obj in ResList do
     begin
-      try
-        if UseExistingInterface then
-          AddMethod.Invoke(FValue, [Obj])
-        else
-          AddMethod.Invoke(ListObj, [Obj]);
-      except
+       AddMethod := IntfType.GetMethod('Add');
+       if AddMethod = nil then
+         for var m in IntfType.GetMethods do
+           if SameText(m.Name, 'Add') then begin AddMethod := m; break; end;
+    end
+    else
+    begin
+       var ListRtti := Ctx.GetType(ListObj.ClassType);
+       AddMethod := ListRtti.GetMethod('Add');
+       if AddMethod = nil then
+         for var m in ListRtti.GetMethods do
+           if SameText(m.Name, 'Add') then begin AddMethod := m; break; end;
+    end;
+
+    if AddMethod <> nil then
+    begin
+      for Obj in ResList do
+      begin
+        try
+          if UseExistingInterface then
+            AddMethod.Invoke(FValue, [Obj])
+          else
+            AddMethod.Invoke(ListObj, [Obj]);
+        except
+        end;
       end;
     end;
     
@@ -731,11 +794,15 @@ begin
     begin
       if (ListObj <> nil) and ListObj.GetInterface(IInterface, ListIntf) then
       begin
-        // Use the actual interface type info for TValue to avoid typecast issues in Lazy<T>
-        if IntfType <> nil then
-          TValue.Make(@ListIntf, IntfType.Handle, FValue)
+        if (IntfType <> nil) and (IntfType is TRttiInterfaceType) and
+          Supports(ListObj, TRttiInterfaceType(IntfType).GUID, ListIntf) then
+        begin
+          TValue.Make(@ListIntf, IntfType.Handle, FValue);
+        end
         else
+        begin
           FValue := TValue.From<IInterface>(ListIntf);
+        end;
         FOwnsValue := False;
       end
       else
