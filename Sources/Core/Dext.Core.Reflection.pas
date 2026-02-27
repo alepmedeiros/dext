@@ -12,6 +12,11 @@ uses
 type
   TCustomAttributeClass = class of TCustomAttribute;
 
+  /// <summary>
+  ///   Indicates that a record type is a Dext Smart Property.
+  /// </summary>
+  SmartPropAttribute = class(TCustomAttribute);
+
   TRttiObjectHelper = class helper for TRttiObject
   public
     function GetAttribute<T: TCustomAttribute>: T; overload;
@@ -95,16 +100,21 @@ begin
   begin
     var TypeName := RttiType.Name;
     IsNullable := TypeName.Contains('Nullable');
-    IsSmartProp := TypeName.Contains('Prop') or TypeName.EndsWith('Type');
+    IsSmartProp := RttiType.HasAttribute(SmartPropAttribute);
 
     for var Field in RttiType.GetFields do
     begin
-      if SameText(Field.Name, 'FValue') or SameText(Field.Name, 'Value') then
+      var LFieldName := Field.Name;
+      if SameText(LFieldName, 'FValue') or SameText(LFieldName, 'Value') then
       begin
         ValueField := Field;
         InnerType := Field.FieldType.Handle;
+        
+        // Safety fallback: if it has FValue and looks like Prop/Type but missed the attribute
+        if not IsSmartProp then
+           IsSmartProp := TypeName.Contains('Prop') or TypeName.EndsWith('Type');
       end
-      else if Field.Name.ToLower.Contains('hasvalue') then
+      else if LFieldName.ToLower.Contains('hasvalue') then
         HasValueField := Field;
     end;
   end;
@@ -206,10 +216,6 @@ end;
 
 class function TReflection.TryUnwrapProp(const ASource: TValue; var ADest: TValue): Boolean;
 var
-  RType: TRttiType;
-  FValueField: TRttiField;
-  FHasValueField: TRttiField;
-  TypeName: string;
   PData: Pointer;
 begin
   ADest := ASource;
@@ -221,25 +227,17 @@ begin
   // Check both Kind sources for maximum compatibility with Delphi RTTI inconsistencies.
   if (ASource.Kind <> tkRecord) and (ASource.TypeInfo.Kind <> tkRecord) then Exit;
 
-  RType := FContext.GetType(ASource.TypeInfo);
-  if RType = nil then Exit;
-
-  TypeName := RType.Name;
-
-  // Check for Smart Types (Prop<T>, StringType, IntType, CurrencyType, etc.)
-  FValueField := RType.GetField('FValue');
-  if (FValueField <> nil) and
-     (TypeName.Contains('Prop<') or TypeName.Contains('TProp') or
-      TypeName.EndsWith('Type') or TypeName.Contains('Nullable')) then
+  // Check for Smart Types (marked with [SmartProp] attribute)
+  var Meta := GetMetadata(ASource.TypeInfo);
+  if Meta.IsSmartProp and (Meta.ValueField <> nil) then
   begin
     // For Nullable<T>, check HasValue first
-    if TypeName.Contains('Nullable') then
+    if Meta.IsNullable then
     begin
-      FHasValueField := RType.GetField('FHasValue');
-      if FHasValueField <> nil then
+      if Meta.HasValueField <> nil then
       begin
         PData := ASource.GetReferenceToRawData;
-        if (PData = nil) or not FHasValueField.GetValue(PData).AsBoolean then
+        if (PData = nil) or not Meta.HasValueField.GetValue(PData).AsBoolean then
         begin
           ADest := TValue.Empty;
           Result := True;
@@ -251,7 +249,7 @@ begin
     PData := ASource.GetReferenceToRawData;
     if PData <> nil then
     begin
-      ADest := FValueField.GetValue(PData);
+      ADest := Meta.ValueField.GetValue(PData);
       Result := True;
     end;
   end;

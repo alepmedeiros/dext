@@ -247,10 +247,10 @@ type
   JsonBooleanAttribute = Dext.Json.JsonBooleanAttribute;
   // New types (preferred)
   TCaseStyle = Dext.Json.Types.TCaseStyle;
-  TEnumStyle = Dext.Json.TEnumStyle;
-  TJsonFormatting = Dext.Json.TJsonFormatting;
-  TDateFormat = Dext.Json.TDateFormat;
-  TJsonSettings = Dext.Json.TJsonSettings;
+  TEnumStyle = Dext.Json.Types.TEnumStyle;
+  TJsonFormatting = Dext.Json.Types.TJsonFormatting;
+  TDateFormat = Dext.Json.Types.TDateFormat;
+  TJsonSettings = Dext.Json.Types.TJsonSettings;
   // Deprecated aliases (for backward compatibility)
 {$WARNINGS OFF}
   TDextCaseStyle = Dext.Json.TDextCaseStyle;
@@ -455,17 +455,19 @@ const
   asStopping = Dext.Hosting.AppState.asStopping;
   asStopped = Dext.Hosting.AppState.asStopped;
   // Dext.Json
+  CaseInherit = Dext.Json.Types.CaseInherit;
   Unchanged = Dext.Json.Types.Unchanged;
   CamelCase = Dext.Json.Types.CamelCase;
   PascalCase = Dext.Json.Types.PascalCase;
   SnakeCase = Dext.Json.Types.SnakeCase;
-  AsNumber = Dext.Json.AsNumber;
-  AsString = Dext.Json.AsString;
-  None = Dext.Json.None;
-  Indented = Dext.Json.Indented;
-  ISO8601 = Dext.Json.ISO8601;
-  UnixTimestamp = Dext.Json.UnixTimestamp;
-  CustomFormat = Dext.Json.CustomFormat;
+  EnumInherit = Dext.Json.Types.EnumInherit;
+  AsNumber = Dext.Json.Types.AsNumber;
+  AsString = Dext.Json.Types.AsString;
+  None = Dext.Json.Types.None;
+  Indented = Dext.Json.Types.Indented;
+  ISO8601 = Dext.Json.Types.ISO8601;
+  UnixTimestamp = Dext.Json.Types.UnixTimestamp;
+  CustomFormat = Dext.Json.Types.CustomFormat;
   // Dext.Json.Types
   jntNull = Dext.Json.Types.jntNull;
   jntString = Dext.Json.Types.jntString;

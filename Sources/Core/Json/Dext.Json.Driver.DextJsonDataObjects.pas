@@ -42,6 +42,7 @@ type
     function AsDouble: Double; virtual; abstract;
     function AsBoolean: Boolean; virtual; abstract;
     function ToJson(Indented: Boolean = False): string; virtual; abstract;
+    function IsNull: Boolean; virtual; abstract;
   end;
 
   TJsonDataObjectAdapter = class(TJsonDataObjectWrapper, IDextJsonObject)
@@ -60,6 +61,7 @@ type
     function AsDouble: Double; override;
     function AsBoolean: Boolean; override;
     function ToJson(Indented: Boolean = False): string; override;
+    function IsNull: Boolean; override;
 
     // IDextJsonObject
     function Contains(const Name: string): Boolean;
@@ -101,6 +103,7 @@ type
     function AsDouble: Double; override;
     function AsBoolean: Boolean; override;
     function ToJson(Indented: Boolean = False): string; override;
+    function IsNull: Boolean; override;
 
     // IDextJsonArray
     function GetCount: NativeInt;
@@ -137,6 +140,7 @@ type
     function AsDouble: Double;
     function AsBoolean: Boolean;
     function ToJson(Indented: Boolean = False): string;
+    function IsNull: Boolean;
   end;
 
   TJsonDataObjectsProvider = class(TInterfacedObject, IDextJsonProvider)
@@ -193,7 +197,19 @@ begin
     Result := Boolean(FValue);
 end;
 
+function TJsonPrimitiveAdapter.IsNull: Boolean;
+begin
+  Result := FNodeType = jntNull;
+end;
+
 function TJsonPrimitiveAdapter.ToJson(Indented: Boolean): string;
+function BoolToStr(B: Boolean; UseWords: Boolean): string;
+begin
+  if UseWords then
+    if B then Result := 'True' else Result := 'False'
+  else
+    if B then Result := '-1' else Result := '0';
+end;
 begin
   if FNodeType = jntString then
     Result := '"' + VarToStrDef(FValue, '') + '"' // Simple escaping needed? JsonDataObjects handles this usually.
@@ -252,6 +268,11 @@ end;
 function TJsonDataObjectAdapter.AsBoolean: Boolean;
 begin
   Result := False; // Not applicable
+end;
+
+function TJsonDataObjectAdapter.IsNull: Boolean;
+begin
+  Result := FObj = nil;
 end;
 
 function TJsonDataObjectAdapter.ToJson(Indented: Boolean): string;
@@ -490,6 +511,11 @@ end;
 function TJsonDataArrayAdapter.AsBoolean: Boolean;
 begin
   Result := False;
+end;
+
+function TJsonDataArrayAdapter.IsNull: Boolean;
+begin
+  Result := FArr = nil;
 end;
 
 function TJsonDataArrayAdapter.ToJson(Indented: Boolean): string;

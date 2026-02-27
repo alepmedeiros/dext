@@ -128,7 +128,7 @@ type
   private
     FStream: TStream;
     FIndented: Boolean;
-    FCaseStyle: TCaseStyle;
+    FSettings: TJsonSettings;
     FNeedComma: array[0..63] of Boolean; // Max depth of 64
     FDepth: Integer;
     procedure WriteRaw(const S: string); inline;
@@ -138,7 +138,7 @@ type
   public
     constructor Create(AStream: TStream; AIndented: Boolean = False);
     
-    property CaseStyle: TCaseStyle read FCaseStyle write FCaseStyle;
+    property Settings: TJsonSettings read FSettings write FSettings;
     
     procedure WriteStartObject;
     procedure WriteEndObject;
@@ -157,12 +157,14 @@ type
   end;
 
 function EscapeJsonString(const S: string): string;
-function GetJsonVal(const AVal: TValue): string;
+function GetJsonVal(const AVal: TValue): string; overload;
+function GetJsonVal(const AVal: TValue; const ASettings: TJsonSettings): string; overload;
 
 implementation
 
 uses
   System.DateUtils,
+  Dext.Core.Reflection,
   Dext.Json;
 
 function EscapeJsonString(const S: string): string;
@@ -192,9 +194,10 @@ begin
   end;
 end;
 
-function GetJsonVal(const AVal: TValue): string;
+function GetJsonVal(const AVal: TValue; const ASettings: TJsonSettings): string;
 var
   FS: TFormatSettings;
+  Unwrapped: TValue;
 begin
    if AVal.IsEmpty then Exit('null');
 
@@ -202,32 +205,18 @@ begin
    FS := TFormatSettings.Create;
    FS.DecimalSeparator := '.';
 
-   // Smart Properties Support: Unwrap Prop<T> before serialization
-   if (AVal.Kind = tkRecord) and (AVal.TypeInfo <> nil) and
-      string(AVal.TypeInfo.Name).StartsWith('Prop<') then
+   // Handle Smart Properties (Prop<T>, Nullable<T>, etc.)
+   if TReflection.TryUnwrapProp(AVal, Unwrapped) then
    begin
-     var Ctx := TRttiContext.Create;
-     try
-        var RecType := Ctx.GetType(AVal.TypeInfo).AsRecord;
-        if RecType <> nil then
-        begin
-          var Field := RecType.GetField('FValue');
-          if Field <> nil then
-          begin
-             Result := GetJsonVal(Field.GetValue(AVal.GetReferenceToRawData));
-             Exit;
-          end;
-        end;
-     finally
-        Ctx.Free;
-     end;
+     Result := GetJsonVal(Unwrapped, ASettings);
+     Exit;
    end;
 
    // Try to use framework serializer for other complex types (objects/arrays)
    if AVal.Kind in [tkRecord, tkMRecord, tkDynArray, tkArray, tkClass] then
    begin
      // For normal records/objects, delegate to Dext.Json
-     Result := TDextJson.Serialize(AVal);
+     Result := TDextJson.Serialize(AVal, ASettings);
      Exit;
    end;
 
@@ -245,10 +234,20 @@ begin
        if AVal.TypeInfo = TypeInfo(Boolean) then
          Result := BoolToStr(AVal.AsBoolean, true).ToLower
        else
-         Result := IntToStr(AVal.AsOrdinal);
-     else
-       Result := '"' + EscapeJsonString(AVal.ToString) + '"';
+       begin
+         if ASettings.EnumStyle = TEnumStyle.AsString then
+           Result := '"' + GetEnumName(AVal.TypeInfo, AVal.AsOrdinal) + '"'
+         else
+           Result := IntToStr(AVal.AsOrdinal);
+       end;
+   else
+     Result := '"' + EscapeJsonString(AVal.ToString) + '"';
    end;
+end;
+
+function GetJsonVal(const AVal: TValue): string;
+begin
+  Result := GetJsonVal(AVal, TDextJson.GetDefaultSettings);
 end;
 
 { TUtf8JsonReader }
@@ -562,7 +561,9 @@ constructor TUtf8JsonWriter.Create(AStream: TStream; AIndented: Boolean);
 begin
   FStream := AStream;
   FIndented := AIndented;
-  FCaseStyle := TCaseStyle.Unchanged;
+  FSettings := TJsonSettings.Default;
+  if AIndented then 
+    FSettings.Formatting := TJsonFormatting.Indented;
   FDepth := 0;
   FillChar(FNeedComma, SizeOf(FNeedComma), 0);
 end;
@@ -669,10 +670,19 @@ begin
 end;
 
 procedure TUtf8JsonWriter.WriteValue(const AValue: TValue);
+var
+  Unwrapped: TValue;
 begin
   if AValue.IsEmpty then
   begin
     WriteNull;
+    Exit;
+  end;
+
+  // Handle Smart Properties (Prop<T>, Nullable<T>, etc.)
+  if TReflection.TryUnwrapProp(AValue, Unwrapped) then
+  begin
+    WriteValue(Unwrapped);
     Exit;
   end;
 
@@ -691,7 +701,12 @@ begin
       if AValue.TypeInfo = TypeInfo(Boolean) then
         WriteBoolean(AValue.AsBoolean)
       else
-        WriteNumber(AValue.AsOrdinal);
+      begin
+        if FSettings.EnumStyle = TEnumStyle.AsString then
+          WriteString(GetEnumName(AValue.TypeInfo, AValue.AsOrdinal))
+        else
+          WriteNumber(AValue.AsOrdinal);
+      end;
     tkClass:
       begin
         var Obj := AValue.AsObject;
@@ -706,7 +721,7 @@ begin
             begin
               if Prop.IsReadable and (Prop.Visibility in [mvPublic, mvPublished]) then
               begin
-                 WritePropertyName(TJsonUtils.ApplyCaseStyle(Prop.Name, FCaseStyle));
+                 WritePropertyName(TJsonUtils.ApplyCaseStyle(Prop.Name, FSettings.CaseStyle));
                  WriteValue(Prop.GetValue(Obj));
               end;
             end;
@@ -715,6 +730,11 @@ begin
             Ctx.Free;
           end;
         end;
+      end;
+    tkRecord, tkMRecord:
+      begin
+        // For normal records that are not SmartProps, use the default serializer
+        WriteRaw(TDextJson.Serialize(AValue));
       end;
   else
     WriteString(AValue.ToString);

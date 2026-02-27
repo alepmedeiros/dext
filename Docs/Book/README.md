@@ -17,22 +17,31 @@
 ### Part I: Foundations
 
 #### [1. Getting Started](01-getting-started/README.md)
+
 - [Installation](01-getting-started/installation.md)
 - [Hello World](01-getting-started/hello-world.md)
 - [Project Structure](01-getting-started/project-structure.md)
 
 #### [2. Web Framework](02-web-framework/README.md)
+
 - [Minimal APIs](02-web-framework/minimal-apis.md) - Route handlers with `MapGet`, `MapPost`
 - [Controllers](02-web-framework/controllers.md) - MVC-style controllers
 - [Model Binding](02-web-framework/model-binding.md) - JSON/Form to objects
 - [Routing](02-web-framework/routing.md) - URL patterns & parameters
 - [Middleware](02-web-framework/middleware.md) - Request pipeline
 
-#### [3. Authentication & Security](03-authentication/README.md)
+#### [3. Generic Collections](01-getting-started/collections.md) ⭐ **NEW**
+
+- [Introduction](01-getting-started/collections.md) - IList, IDictionary & LINQ
+- [Ownership & Safety](01-getting-started/collections.md#ownership) - Memory management guide
+
+#### [4. Authentication & Security](03-authentication/README.md)
+
 - [JWT Authentication](03-authentication/jwt-auth.md) - Token-based auth
 - [Claims Builder](03-authentication/claims-builder.md) - User claims
 
 #### [4. API Features](04-api-features/README.md)
+
 - [OpenAPI / Swagger](04-api-features/openapi-swagger.md) - API documentation
 - [Rate Limiting](04-api-features/rate-limiting.md) - Request throttling
 - [CORS](04-api-features/cors.md) - Cross-origin requests
@@ -44,6 +53,7 @@
 ### Part II: Data Access
 
 #### [5. ORM (Dext.Entity)](05-orm/README.md)
+
 - [Getting Started](05-orm/getting-started.md) - First entity & context
 - [Entities & Mapping](05-orm/entities.md) - `[Table]`, `[Column]`, `[PK]`
 - [Querying](05-orm/querying.md) - `Where`, `OrderBy`, `Take`
@@ -56,6 +66,7 @@
 - [Multi-Tenancy](05-orm/multi-tenancy.md) - Schema/DB/Column isolation
 
 #### [6. Database as API](06-database-as-api/README.md)
+
 - [Zero-Code CRUD](06-database-as-api/zero-code-crud.md) - REST from entities
 
 ---
@@ -63,14 +74,17 @@
 ### Part III: Advanced Features
 
 #### [7. Real-Time Communication](07-real-time/README.md)
+
 - [Hubs (SignalR)](07-real-time/hubs-signalr.md) - WebSocket messaging
 
 #### [8. Testing](08-testing/README.md)
+
 - [Mocking](08-testing/mocking.md) - `Mock<T>` and verification
 - [Assertions](08-testing/assertions.md) - Fluent `Should()` syntax
 - [Snapshots](08-testing/snapshots.md) - JSON snapshot testing
 
 #### [9. CLI Tool](09-cli/README.md)
+
 - [Commands](09-cli/commands.md) - `dext` CLI overview
 - [Migrations](09-cli/migrations.md) - `migrate:up`, `migrate:down`
 - [Scaffolding](09-cli/scaffolding.md) - `dext scaffold`
@@ -78,17 +92,20 @@
 - [Dashboard](09-cli/dashboard.md) - `dext ui`
 
 #### [10. Advanced Topics](10-advanced/README.md)
+
 - [Dependency Injection](10-advanced/dependency-injection.md)
 - [Background Services](10-advanced/background-services.md)
 - [Configuration](10-advanced/configuration.md) - `IOptions<T>`
 - [Async API](10-advanced/async-api.md) - `TAsyncTask`
 
 #### [11. Desktop UI (Dext.UI)](11-desktop-ui/README.md) ⭐ NEW
+
 - [Navigator Framework](11-desktop-ui/navigator.md) - Push/Pop navigation with middlewares
 - [Magic Binding](11-desktop-ui/magic-binding.md) - Declarative UI data binding
 - [MVVM Patterns](11-desktop-ui/mvvm-patterns.md) - Architecture guide
 
 #### [12. Networking (Dext.Net)](12-networking/rest-client.md) ⭐ NEW
+
 - [REST Client](12-networking/rest-client.md) - Fluent HTTP Client
 
 ---
@@ -118,7 +135,6 @@ Each chapter references working examples from the `Examples/` directory:
 | [Orm.EntityDemo](../../Examples/Orm.EntityDemo/) | ORM Basics |
 | [Hubs](../../Examples/Hubs/) | Real-Time SignalR |
 | [Desktop.MVVM.CustomerCRUD](../../Examples/Desktop.MVVM.CustomerCRUD/) | Navigator, MVVM, Testing |
-
 
 ---
 

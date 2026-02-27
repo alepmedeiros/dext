@@ -6,6 +6,37 @@
 
 ---
 
+## 🚀 2026-03-01 - Dext.Collections Refactoring: Performance & Memory Safety
+
+### ✨ Major Features / Features Principais
+
+> **A new engine for collections, designed for the future of Dext!**
+>
+> **Um novo motor de coleções, desenhado para o futuro do Dext!**
+
+#### Generic Collections Evolution
+
+**[PT-BR]** Refatoramos completamente o núcleo de coleções do framework para garantir segurança de memória e performance superior.
+
+- 🛡️ **Zero-Leak Architecture** - Substituição total de classes manuais por interfaces (`IList<T>`, `IDictionary<K,V>`). O gerenciamento de memória agora é automático, eliminando riscos de vazamento em closures e threads.
+- 🧬 **Ownership Intelligence** - Controle de propriedade nativo. As listas gerenciam o ciclo de vida dos objetos de forma inteligente, destruindo-os apenas quando apropriado.
+- ⚡ **LINQ Engine** - Suporte completo a operações funcionais lazies (`Where`, `Select`, `Any`, `OrderBy`, `GroupBy`) integradas nativamente às coleções.
+- 🔍 **Native IExpression Integration** - Coleções agora suportam filtragem via especificações e árvores de expressão do Dext, mantendo paridade entre filtros em memória e filtros de banco (ORM).
+
+**[EN]** Completely refactored the collections core to ensure memory safety and superior performance.
+
+- 🛡️ **Zero-Leak Architecture** - Total replacement of manual classes with interfaces (`IList<T>`, `IDictionary<K,V>`). Memory management is now automatic, eliminating leakage risks in closures and threads.
+- 🧬 **Ownership Intelligence** - Native ownership control. Lists manage object lifecycles intelligently, destroying them only when appropriate.
+- ⚡ **LINQ Engine** - Full support for lazy functional operations (`Where`, `Select`, `Any`, `OrderBy`, `GroupBy`) natively integrated into collections.
+- 🔍 **Native IExpression Integration** - Collections now support filtering via Dext specifications and expression trees, maintaining parity between in-memory and database (ORM) filters.
+
+#### Documentation & Book
+
+**[PT-BR]** Lançamento de documentação bilíngue completa e novos capítulos no Dext Book dedicados a coleções e gerenciamento de memória.
+**[EN]** Launch of full bilingual documentation and new Dext Book chapters dedicated to collections and memory management.
+
+---
+
 ## 🚀 2026-02-22 - Dext v1.0 Release Candidate: ORM Evolution & Performance
 
 ### ✨ Major Features / Features Principais
@@ -15,7 +46,9 @@
 > **The final evolution of Dext ORM and Web API before v1.0!**
 
 #### ORM Evolution & Fluency
+
 **[PT-BR]** Simplificamos drasticamente a exposição de dados e a execução de consultas complexas.
+
 - ⚡ **MapDataApi<T>** - Nova sintaxe fluente para criar endpoints REST completos a partir de uma entidade com uma única linha de código.
 - 🛠️ **FromSql Support** - Agora você pode executar SQL puro diretamente via `DbContext.Users.FromSql(...)` mantendo o mapeamento automático para objetos.
 - 🔗 **Multi-Mapping ([Nested])** - Suporte a hidratação recursiva estilo Dapper. Mapeie objetos complexos em uma única query usando o atributo `[Nested]`.
@@ -23,6 +56,7 @@
 - 🧬 **Stored Procedures Evolution** - Mapeamento declarativo via `[StoredProcedure]` e atributos `[DbParam]` para parâmetros de entrada e saída.
 
 **[EN]** Drastically simplified data exposure and complex query execution.
+
 - ⚡ **MapDataApi<T>** - New fluent syntax to create full REST endpoints from an entity with a single line of code.
 - 🛠️ **FromSql Support** - You can now execute raw SQL directly via `DbContext.Users.FromSql(...)` while maintaining automatic object mapping.
 - 🔗 **Multi-Mapping ([Nested])** - Dapper-style recursive hydration support. Map complex objects in a single query using the `[Nested]` attribute.
@@ -30,12 +64,15 @@
 - 🧬 **Stored Procedures Evolution** - Declarative mapping via `[StoredProcedure]` and `[DbParam]` attributes for input and output parameters.
 
 #### Web & Performance
+
 **[PT-BR]** Foco em performance e flexibilidade na filtragem de dados.
+
 - 🚀 **Zero-Allocation JSON** - Motor "Database as API" agora utiliza `TUtf8JsonWriter` para streaming direto do banco para o socket, minimizando alocações de memória.
 - 🔍 **Dynamic Specification Mapping** - Filtragem avançada via QueryString integrada (`_gt`, `_lt`, `_sort`, etc) que mapeia automaticamente para o SQL.
 - 🏗️ **Core Interception** - O motor de Proxy e ClassProxy foi movido para o Core, eliminando dependências circulares e otimizando o Lazy Loading.
 
 **[EN]** Focus on performance and flexibility in data filtering.
+
 - 🚀 **Zero-Allocation JSON** - "Database as API" engine now uses `TUtf8JsonWriter` for direct streaming from database to socket, minimizing memory allocations.
 - 🔍 **Dynamic Specification Mapping** - Integrated advanced QueryString filtering (`_gt`, `_lt`, `_sort`, etc) that automatically maps to SQL.
 - 🏗️ **Core Interception** - The Proxy and ClassProxy engine has been moved to Core, eliminating circular dependencies and optimizing Lazy Loading.
@@ -112,6 +149,7 @@
 - 🔄 **Conversão automática de tipos** - O framework gera casts SQL apropriados automaticamente
 
 **Exemplo Completo:**
+
 ```pascal
 type
   [Table('UserSettings')]
@@ -191,18 +229,20 @@ var NoProfile := Context.UserSettings
 
 ---
 
-
 ## 2026-02-05 - Dext.Entity: Many-to-Many & Full Attribute Suite
 
 ### ✨ Nova Feature / New Feature
 
 #### Many-to-Many Relationships & WebSalesSystem Support
+
 **[PT-BR]** Implementação motivada por limitações de relacionamento identificadas no novo projeto `WebSalesSystem`. Suporte completo a relacionamentos Muitos-para-Muitos via atributo `[ManyToMany]`. Gerenciamento automático de tabelas de ligação, suporte a Lazy Loading e Eager Loading (`Include`). Novos métodos `LinkManyToMany`, `UnlinkManyToMany` e `SyncManyToMany` adicionados ao `IDbSet<T>`.
 
 **[EN]** Implementation driven by relationship limitations identified in the new `WebSalesSystem` project. Full support for Many-to-Many relationships via `[ManyToMany]` attribute. Automatic join table management, support for Lazy and Eager loading (`Include`). New methods `LinkManyToMany`, `UnlinkManyToMany`, and `SyncManyToMany` added to `IDbSet<T>`.
 
 #### Full Attribute Suite
+
 **[PT-BR]** Expansão do mapeamento para suportar os requisitos de modelagem do `WebSalesSystem`:
+
 - `[SoftDelete]`: Filtro automático e deleção lógica.
 - `[Version]`: Controle de concorrência otimista.
 - `[CreatedAt]` / `[UpdatedAt]`: Auditoria automática de timestamps.
@@ -210,6 +250,7 @@ var NoProfile := Context.UserSettings
 - `[DbType]`, `[Precision]`, `[MaxLength]`: Controle refinado de tipos e constraints.
 
 **[EN]** Mapping expansion to support `WebSalesSystem` modeling requirements:
+
 - `[SoftDelete]`: Automatic filtering and logical deletion.
 - `[Version]`: Optimistic concurrency control.
 - `[CreatedAt]` / `[UpdatedAt]`: Automatic timestamp auditing.
@@ -230,6 +271,7 @@ var NoProfile := Context.UserSettings
 ### ⚠️ Breaking Changes & Modernization
 
 #### TDextServices Refactoring
+
 **[PT-BR]** `TDextServices` e os Builders (`AddHealthChecks`, `AddBackgroundServices`) agora são **Records**. Não é mais necessário (nem possível) chamar `.Free`. Isso elimina os memory leaks causados por capturas de ciclos em closures.
 
 **[EN]** `TDextServices` and Builders (`AddHealthChecks`, `AddBackgroundServices`) are now **Records**. It is no longer necessary (nor possible) to call `.Free`. This eliminates memory leaks caused by cycle captures in closures.
@@ -250,6 +292,7 @@ var NoProfile := Context.UserSettings
 **[EN]** Old attributes still work but are **deprecated**. Use preferred names for better compatibility with the .NET ecosystem. The new `[Route]` attribute is now supported at the class level for route prefixes.
 
 **Novo Exemplo / New Example:**
+
 ```pascal
 [ApiController]
 [Route('/api/orders')]
@@ -276,6 +319,7 @@ end;
 | `TApplicationBuilderWithModelBinding` | `TApplicationBuilderExtensions.MapPost<T>` |
 
 **Antes / Before (memory leak):**
+
 ```pascal
 TApplicationBuilderModelBindingExtensions
   .WithModelBinding(App)
@@ -290,6 +334,7 @@ TApplicationBuilderModelBindingExtensions
 ```
 
 **Depois / After (sem leak, DI automático):**
+
 ```pascal
 TApplicationBuilderExtensions.MapPost<TUserRequest, IUserIntegrationService>(App, '/api/users',
   procedure(Req: TUserRequest; UserService: IUserIntegrationService)
@@ -324,11 +369,13 @@ Os tipos e métodos antigos foram marcados como `deprecated` e continuarão func
 | `.WithEnumAsString` | `.EnumAsString` |
 
 **Sintaxe antiga / Old syntax:**
+
 ```pascal
 TDextJson.SetDefaultSettings(TDextSettings.Default.WithCamelCase.WithCaseInsensitive);
 ```
 
 **Sintaxe nova / New syntax:**
+
 ```pascal
 DefaultJsonSettings(JsonSettings.CamelCase.CaseInsensitive);
 ```
@@ -343,6 +390,7 @@ DefaultJsonSettings(JsonSettings.CamelCase.CaseInsensitive);
 | `TCorsBuilder.Create...` | `Cors...` |
 
 **Sintaxe antiga / Old syntax:**
+
 ```pascal
 App.Builder.UseCors(
   procedure(Builder: TCorsBuilder)
@@ -352,6 +400,7 @@ App.Builder.UseCors(
 ```
 
 **Sintaxe nova / New syntax:**
+
 ```pascal
 Builder.UseCors(Cors.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader);
 ```
@@ -366,6 +415,7 @@ Builder.UseCors(Cors.AllowAnyOrigin.AllowAnyMethod.AllowAnyHeader);
 | `TOpenAPIBuilder.Create...` | `Swagger...` |
 
 **Sintaxe antiga / Old syntax:**
+
 ```pascal
 var SwaggerOpts := TOpenAPIBuilder.Create;
 SwaggerOpts.WithTitle('My API');
@@ -374,6 +424,7 @@ App.Builder.UseSwagger(SwaggerOpts);
 ```
 
 **Sintaxe nova / New syntax:**
+
 ```pascal
 Builder.UseSwagger(Swagger.Title('My API').Version('v1'));
 ```
@@ -400,6 +451,7 @@ Builder.UseSwagger(Swagger.Title('My API').Version('v1'));
 | `TWebApplication.Create` | `WebApplication` (Global Function) |
 
 **Sintaxe antiga / Old syntax:**
+
 ```pascal
 [DextController('/api/orders')]
 TOrdersController = class
@@ -412,6 +464,7 @@ end;
 ```
 
 **Sintaxe nova / New syntax:**
+
 ```pascal
 [Route('/api/orders')]
 TOrdersController = class
@@ -426,19 +479,19 @@ end;
 ### ✨ Novas Features / New Features
 
 1. **Função global `JsonSettings`**: Retorna um `TJsonSettings` padrão para configuração fluente.
-   
+
    **Global function `JsonSettings`**: Returns a default `TJsonSettings` for fluent configuration.
 
 2. **Procedure `DefaultJsonSettings`**: Atalho para `TDextJson.SetDefaultSettings`.
-   
+
    **Procedure `DefaultJsonSettings`**: Shorthand for `TDextJson.SetDefaultSettings`.
 
 3. **Função global `Cors`**: Cria um `TCorsBuilder` para configuração fluente.
-   
+
    **Global function `Cors`**: Creates a `TCorsBuilder` for fluent configuration.
 
 4. **Função global `Swagger`**: Cria um `TOpenAPIBuilder` para configuração fluente.
-   
+
    **Global function `Swagger`**: Creates a `TOpenAPIBuilder` for fluent configuration.
 
 5. **Função global `WebApplication`**: Atalho para `TWebApplication.Create`.
@@ -559,4 +612,3 @@ var List := Db.Customers
 Se você encontrar bugs ou tiver sugestões, por favor abra uma issue no GitHub.
 
 **If you find bugs or have suggestions, please open an issue on GitHub.**
-

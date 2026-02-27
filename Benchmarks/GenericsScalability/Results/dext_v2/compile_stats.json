@@ -1,0 +1,12 @@
+﻿{
+    "Label":  "dext_v2",
+    "Timestamp":  "2026-02-27 12:11:26",
+    "CompileTimeSeconds":  162.15,
+    "CompileTimeFormatted":  "02:42.14",
+    "Platform":  "Win32",
+    "Config":  "Release",
+    "BuildSuccess":  true,
+    "BinarySizeBytes":  29886976,
+    "BinarySizeMB":  28.5,
+    "LinesCompiled":  "21525"
+}

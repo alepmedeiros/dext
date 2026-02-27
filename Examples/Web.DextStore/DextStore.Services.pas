@@ -311,7 +311,7 @@ begin
     // In a real app, you would create OrderItems entities
     // Here we just reference them but we need to be careful because CartService clears the cart
     // So we should deep copy. For this demo, we'll just create new objects.
-    var OrderItems := TCollections.CreateList<TCartItem>(True);
+    var OrderItems := TCollections.CreateList<TCartItem>(False);
     for var Item in Items do
     begin
       var NewItem := TCartItem.Create;

@@ -42,6 +42,7 @@ type
     function AsDouble: Double; virtual; abstract;
     function AsBoolean: Boolean; virtual; abstract;
     function ToJson(Indented: Boolean = False): string; virtual; abstract;
+    function IsNull: Boolean; virtual; abstract;
   end;
 
   TSystemJsonObjectAdapter = class(TSystemJsonWrapper, IDextJsonObject)
@@ -60,6 +61,7 @@ type
     function AsDouble: Double; override;
     function AsBoolean: Boolean; override;
     function ToJson(Indented: Boolean = False): string; override;
+    function IsNull: Boolean; override;
 
     // IDextJsonObject
     function Contains(const Name: string): Boolean;
@@ -101,6 +103,7 @@ type
     function AsDouble: Double; override;
     function AsBoolean: Boolean; override;
     function ToJson(Indented: Boolean = False): string; override;
+    function IsNull: Boolean; override;
 
     // IDextJsonArray
     function GetCount: NativeInt;
@@ -138,6 +141,7 @@ type
     function AsDouble: Double;
     function AsBoolean: Boolean;
     function ToJson(Indented: Boolean = False): string;
+    function IsNull: Boolean;
   end;
 
   TSystemJsonProvider = class(TInterfacedObject, IDextJsonProvider)
@@ -210,6 +214,11 @@ begin
   else Result := SameText(FValue.Value, 'true');
 end;
 
+function TSystemJsonPrimitiveAdapter.IsNull: Boolean;
+begin
+  Result := FValue is TJSONNull;
+end;
+
 function TSystemJsonPrimitiveAdapter.ToJson(Indented: Boolean): string;
 begin
   Result := FValue.ToString;
@@ -259,6 +268,11 @@ end;
 function TSystemJsonObjectAdapter.AsBoolean: Boolean;
 begin
   Result := False;
+end;
+
+function TSystemJsonObjectAdapter.IsNull: Boolean;
+begin
+  Result := FObj = nil;
 end;
 
 function TSystemJsonObjectAdapter.ToJson(Indented: Boolean): string;
@@ -471,6 +485,11 @@ end;
 function TSystemJsonArrayAdapter.AsBoolean: Boolean;
 begin
   Result := False;
+end;
+
+function TSystemJsonArrayAdapter.IsNull: Boolean;
+begin
+  Result := FArr = nil;
 end;
 
 function TSystemJsonArrayAdapter.ToJson(Indented: Boolean): string;

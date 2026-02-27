@@ -69,7 +69,7 @@ end;
 procedure TStartup.Configure(const App: IWebApplication);
 begin
   // ✨ Configurações globais de JSON (CamelCase para APIs modernas)
-  JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive);
+  JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive.EnumAsString);
 
   // Pipeline de middlewares configurado via Facade Dext.Web
   App.Builder

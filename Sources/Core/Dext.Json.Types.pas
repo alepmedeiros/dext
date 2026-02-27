@@ -1,42 +1,16 @@
-﻿{***************************************************************************}
-{                                                                           }
-{           Dext Framework                                                  }
-{                                                                           }
-{           Copyright (C) 2025 Cesar Romero & Dext Contributors             }
-{                                                                           }
-{           Licensed under the Apache License, Version 2.0 (the "License"); }
-{           you may not use this file except in compliance with the License.}
-{           You may obtain a copy of the License at                         }
-{                                                                           }
-{               http://www.apache.org/licenses/LICENSE-2.0                  }
-{                                                                           }
-{           Unless required by applicable law or agreed to in writing,      }
-{           software distributed under the License is distributed on an     }
-{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
-{           either express or implied. See the License for the specific     }
-{           language governing permissions and limitations under the        }
-{           License.                                                        }
-{                                                                           }
-{***************************************************************************}
-{                                                                           }
-{  Author:  Cesar Romero                                                    }
-{  Created: 2025-12-08                                                      }
-{                                                                           }
-{***************************************************************************}
-unit Dext.Json.Types;
+﻿unit Dext.Json.Types;
 
 interface
 
 uses
-  System.SysUtils, System.Classes;
+  System.SysUtils, System.Classes, Dext.DI.Interfaces;
 
 type
   TDextJsonNodeType = (jntNull, jntString, jntNumber, jntBoolean, jntObject, jntArray);
 
-  /// <summary>
-  ///   Defines the casing style for JSON property names.
-  /// </summary>
   TCaseStyle = (
+    /// <summary>Inherit from global settings or parent context.</summary>
+    CaseInherit,
     /// <summary>Keep names as they are in the record/class.</summary>
     Unchanged, 
     /// <summary>Convert to camelCase (e.g., myProperty).</summary>
@@ -45,6 +19,40 @@ type
     PascalCase, 
     /// <summary>Convert to snake_case (e.g., my_property).</summary>
     SnakeCase
+  );
+
+  /// <summary>
+  ///   Defines how enumerations are serialized.
+  /// </summary>
+  TEnumStyle = (
+    /// <summary>Inherit from global settings or parent context.</summary>
+    EnumInherit,
+    /// <summary>Serialize as the underlying integer value.</summary>
+    AsNumber, 
+    /// <summary>Serialize as the string name of the enum value.</summary>
+    AsString
+  );
+
+  /// <summary>
+  ///   Defines JSON output formatting.
+  /// </summary>
+  TJsonFormatting = (
+    /// <summary>Compact JSON (no whitespace).</summary>
+    None, 
+    /// <summary>Indented JSON for readability.</summary>
+    Indented
+  );
+
+  /// <summary>
+  ///   Defines standard date/time formats.
+  /// </summary>
+  TDateFormat = (
+    /// <summary>ISO 8601 format (e.g., "2025-11-16T11:07:37.565").</summary>
+    ISO8601,        
+    /// <summary>Unix timestamp (seconds since epoch).</summary>
+    UnixTimestamp,  
+    /// <summary>Custom format string.</summary>
+    CustomFormat    
   );
 
   IDextJsonNode = interface
@@ -56,13 +64,14 @@ type
     function AsDouble: Double;
     function AsBoolean: Boolean;
     function ToJson(Indented: Boolean = False): string;
+    function IsNull: Boolean;
+    property NodeType: TDextJsonNodeType read GetNodeType;
   end;
 
   IDextJsonArray = interface;
 
   IDextJsonObject = interface(IDextJsonNode)
     ['{B1B2C3D4-E5F6-7890-ABCD-EF1234567891}']
-    // Getters
     function Contains(const Name: string): Boolean;
     function GetNode(const Name: string): IDextJsonNode;
     function GetString(const Name: string): string;
@@ -73,11 +82,9 @@ type
     function GetObject(const Name: string): IDextJsonObject;
     function GetArray(const Name: string): IDextJsonArray;
     
-    // Iteration
     function GetCount: Integer;
     function GetName(Index: Integer): string;
-    
-    // Setters
+
     procedure SetString(const Name, Value: string);
     procedure SetInteger(const Name: string; Value: Integer);
     procedure SetInt64(const Name: string; Value: Int64);
@@ -86,6 +93,8 @@ type
     procedure SetObject(const Name: string; Value: IDextJsonObject);
     procedure SetArray(const Name: string; Value: IDextJsonArray);
     procedure SetNull(const Name: string);
+
+    property Count: Integer read GetCount;
   end;
 
   IDextJsonArray = interface(IDextJsonNode)
@@ -108,6 +117,41 @@ type
     procedure Add(Value: IDextJsonObject); overload;
     procedure Add(Value: IDextJsonArray); overload;
     procedure AddNull;
+
+    property Count: NativeInt read GetCount;
+  end;
+
+  /// <summary>
+  ///   Configuration settings for the JSON serializer.
+  /// </summary>
+  TJsonSettings = record
+  public
+    FCaseInsensitive: Boolean;
+    FIgnoreNullValues: Boolean;
+    FServiceProvider: IServiceProvider;
+    
+    Formatting: TJsonFormatting;
+    IgnoreDefaultValues: Boolean;
+    DateFormat: string;
+    CaseStyle: TCaseStyle;
+    EnumStyle: TEnumStyle;
+    DateFormatStyle: TDateFormat;
+    
+    class function Default: TJsonSettings; static;
+    class function Indented: TJsonSettings; static;
+
+    // Fluent API
+    function CamelCase: TJsonSettings;
+    function PascalCase: TJsonSettings;
+    function SnakeCase: TJsonSettings;
+    function EnumAsString: TJsonSettings;
+    function EnumAsNumber: TJsonSettings;
+    function IgnoreNullValues: TJsonSettings;
+    function CaseInsensitive: TJsonSettings;
+    function ISODateFormat: TJsonSettings;
+    function UnixTimestamp: TJsonSettings;
+    function CustomDateFormat(const Format: string): TJsonSettings;
+    function ServiceProvider(const AProvider: IServiceProvider): TJsonSettings;
   end;
 
   IDextJsonProvider = interface
@@ -119,5 +163,94 @@ type
 
 implementation
 
-end.
+{ TJsonSettings }
 
+function TJsonSettings.CamelCase: TJsonSettings;
+begin
+  Result := Self;
+  Result.CaseStyle := TCaseStyle.CamelCase;
+end;
+
+function TJsonSettings.CaseInsensitive: TJsonSettings;
+begin
+  Result := Self;
+  Result.FCaseInsensitive := True;
+end;
+
+function TJsonSettings.CustomDateFormat(const Format: string): TJsonSettings;
+begin
+  Result := Self;
+  Result.DateFormatStyle := TDateFormat.CustomFormat;
+  Result.DateFormat := Format;
+end;
+
+class function TJsonSettings.Default: TJsonSettings;
+begin
+  FillChar(Result, SizeOf(Result), 0);
+  Result.Formatting := TJsonFormatting.None;
+  Result.FIgnoreNullValues := False;
+  Result.IgnoreDefaultValues := False;
+  Result.DateFormat := 'yyyy-mm-dd"T"hh:nn:ss.zzz';
+  Result.DateFormatStyle := TDateFormat.ISO8601;
+  Result.CaseStyle := TCaseStyle.Unchanged;
+  Result.EnumStyle := TEnumStyle.AsNumber;
+  Result.FCaseInsensitive := False;
+end;
+
+function TJsonSettings.EnumAsNumber: TJsonSettings;
+begin
+  Result := Self;
+  Result.EnumStyle := TEnumStyle.AsNumber;
+end;
+
+function TJsonSettings.EnumAsString: TJsonSettings;
+begin
+  Result := Self;
+  Result.EnumStyle := TEnumStyle.AsString;
+end;
+
+function TJsonSettings.IgnoreNullValues: TJsonSettings;
+begin
+  Result := Self;
+  Result.FIgnoreNullValues := True;
+end;
+
+class function TJsonSettings.Indented: TJsonSettings;
+begin
+  Result := Default;
+  Result.Formatting := TJsonFormatting.Indented;
+end;
+
+function TJsonSettings.ISODateFormat: TJsonSettings;
+begin
+  Result := Self;
+  Result.DateFormatStyle := TDateFormat.ISO8601;
+  Result.DateFormat := 'yyyy-mm-dd"T"hh:nn:ss.zzz';
+end;
+
+function TJsonSettings.PascalCase: TJsonSettings;
+begin
+  Result := Self;
+  Result.CaseStyle := TCaseStyle.PascalCase;
+end;
+
+function TJsonSettings.ServiceProvider(const AProvider: IServiceProvider): TJsonSettings;
+begin
+  Result := Self;
+  Result.FServiceProvider := AProvider;
+end;
+
+function TJsonSettings.SnakeCase: TJsonSettings;
+begin
+  Result := Self;
+  Result.CaseStyle := TCaseStyle.SnakeCase;
+end;
+
+function TJsonSettings.UnixTimestamp: TJsonSettings;
+begin
+  Result := Self;
+  Result.DateFormatStyle := TDateFormat.UnixTimestamp;
+  Result.DateFormat := '';
+end;
+
+end.

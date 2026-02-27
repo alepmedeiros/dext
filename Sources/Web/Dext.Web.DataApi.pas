@@ -44,6 +44,7 @@ type
     FRolesForRead: string;
     FRolesForWrite: string;
     FNamingStrategy: TCaseStyle;
+    FEnumStyle: TEnumStyle;
     FContextClass: TClass;
     FEnableSwagger: Boolean;
     FSwaggerTag: string;
@@ -62,6 +63,7 @@ type
     property SwaggerTag: string read FSwaggerTag write FSwaggerTag;
     property SwaggerDescription: string read FSwaggerDescription write FSwaggerDescription;
     property NamingStrategy: TCaseStyle read FNamingStrategy write FNamingStrategy;
+    property EnumStyle: TEnumStyle read FEnumStyle write FEnumStyle;
   end;
 
   TDataApiOptions<T> = class(TDataApiOptions)
@@ -80,6 +82,8 @@ type
     function Description(const ADescription: string): TDataApiOptions<T>;
     function DbContext<TCtx: class>: TDataApiOptions<T>;
     function UseSql(const ASql: string): TDataApiOptions<T>;
+    function EnumsAsStrings: TDataApiOptions<T>;
+    function EnumsAsNumbers: TDataApiOptions<T>;
   end;
 
   TDataApiHandler<T: class> = class
@@ -147,7 +151,8 @@ constructor TDataApiOptions.Create;
 begin
   FAllowedMethods := AllApiMethods;
   FTenantIdRequired := False;
-  FNamingStrategy := TCaseStyle.CamelCase;
+  FNamingStrategy := TCaseStyle.CaseInherit;
+  FEnumStyle := TEnumStyle.EnumInherit;
 end;
 
 function DataApiOptions: TDataApiOptions<TObject>;
@@ -236,6 +241,18 @@ end;
 function TDataApiOptions<T>.UseSql(const ASql: string): TDataApiOptions<T>;
 begin
   FSql := ASql;
+  Result := Self;
+end;
+
+function TDataApiOptions<T>.EnumsAsStrings: TDataApiOptions<T>;
+begin
+  FEnumStyle := TEnumStyle.AsString;
+  Result := Self;
+end;
+
+function TDataApiOptions<T>.EnumsAsNumbers: TDataApiOptions<T>;
+begin
+  FEnumStyle := TEnumStyle.AsNumber;
   Result := Self;
 end;
 
@@ -338,9 +355,16 @@ var
   PropName: string;
   Map: TEntityMap;
   PropMap: TPropertyMap;
+  FinalSettings: TJsonSettings;
 begin
   if Entity = nil then
     Exit('null');
+
+  FinalSettings := TDextJson.GetDefaultSettings;
+  if FOptions.NamingStrategy <> TCaseStyle.CaseInherit then
+    FinalSettings.CaseStyle := FOptions.NamingStrategy;
+  if FOptions.EnumStyle <> TEnumStyle.EnumInherit then
+    FinalSettings.EnumStyle := FOptions.EnumStyle;
     
   Ctx := TRttiContext.Create;
   try
@@ -364,9 +388,9 @@ begin
       First := False;
       
       // Apply naming strategy
-      PropName := TJsonUtils.ApplyCaseStyle(Prop.Name, FOptions.FNamingStrategy);
+      PropName := TJsonUtils.ApplyCaseStyle(Prop.Name, FinalSettings.CaseStyle);
         
-      Result := Result + '"' + PropName + '":' + GetJsonVal(Prop.GetValue(TObject(Entity)));
+      Result := Result + '"' + PropName + '":' + GetJsonVal(Prop.GetValue(TObject(Entity)), FinalSettings);
     end;
     
     Result := Result + '}';
@@ -711,8 +735,14 @@ begin
          // Build JSON response with high-performance UTF8 writer
          var Stream := TMemoryStream.Create;
          try
+           var FinalSettings := TDextJson.GetDefaultSettings;
+           if FOptions.NamingStrategy <> TCaseStyle.CaseInherit then
+             FinalSettings.CaseStyle := FOptions.NamingStrategy;
+           if FOptions.EnumStyle <> TEnumStyle.EnumInherit then
+             FinalSettings.EnumStyle := FOptions.EnumStyle;
+
            var Writer := TUtf8JsonWriter.Create(Stream, False);
-           Writer.CaseStyle := FOptions.NamingStrategy;
+           Writer.Settings := FinalSettings;
            Writer.WriteStartArray;
            for var Item in FinalItems do
            begin
@@ -844,7 +874,11 @@ begin
         PropName := Prop.Name;
         if not JsonObj.Contains(PropName) then
         begin
-          PropName := TJsonUtils.ApplyCaseStyle(Prop.Name, FOptions.FNamingStrategy);
+          var FinalNamingStrategy := FOptions.NamingStrategy;
+          if FinalNamingStrategy = TCaseStyle.CaseInherit then
+            FinalNamingStrategy := TDextJson.GetDefaultSettings.CaseStyle;
+            
+          PropName := TJsonUtils.ApplyCaseStyle(Prop.Name, FinalNamingStrategy);
         end;
         
         if JsonObj.Contains(PropName) then
@@ -971,7 +1005,11 @@ begin
           PropName := Prop.Name;
           if not JsonObj.Contains(PropName) then
           begin
-            PropName := TJsonUtils.ApplyCaseStyle(Prop.Name, FOptions.FNamingStrategy);
+            var FinalNamingStrategy := FOptions.NamingStrategy;
+            if FinalNamingStrategy = TCaseStyle.CaseInherit then
+              FinalNamingStrategy := TDextJson.GetDefaultSettings.CaseStyle;
+              
+            PropName := TJsonUtils.ApplyCaseStyle(Prop.Name, FinalNamingStrategy);
           end;
         
           if JsonObj.Contains(PropName) then
