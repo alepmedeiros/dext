@@ -44,7 +44,8 @@ type
     FConfiguration: IConfiguration;
     FDefaultPort: Integer;
     FActiveHost: IWebHost; // ✅ Track active host
-    
+    FServerFactory: TServerFactory;
+
     procedure Setup(Port: Integer);
     procedure Teardown;
   public
@@ -59,6 +60,7 @@ type
     function BuildServices: IServiceProvider; // ?
     function UseMiddleware(Middleware: TClass): IWebApplication;
     function UseStartup(Startup: IStartup): IWebApplication; // ? Non-generic
+    procedure UseServerFactory(const AFactory: TServerFactory);
     function MapControllers: IWebApplication;
     procedure Run; overload;
     procedure Run(Port: Integer); overload;
@@ -353,7 +355,10 @@ begin
   end;
 
   // Store active host
-  FActiveHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);
+  if Assigned(FServerFactory) then
+    FActiveHost := FServerFactory(Port, RequestHandler, FServiceProvider)
+  else
+    FActiveHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);
 end;
 
 procedure TWebApplication.Teardown;
@@ -494,6 +499,11 @@ end;
 procedure TWebApplication.SetDefaultPort(Port: Integer);
 begin
   FDefaultPort := Port;
+end;
+
+procedure TWebApplication.UseServerFactory(const AFactory: TServerFactory);
+begin
+  FServerFactory := AFactory;
 end;
 
 end.

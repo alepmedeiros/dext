@@ -49,6 +49,7 @@ type
   TRequestDelegate = reference to procedure(AContext: IHttpContext);
   TStaticHandler = reference to procedure(AContext: IHttpContext);
   TMiddlewareDelegate = reference to procedure(AContext: IHttpContext; ANext: TRequestDelegate);
+  TServerFactory = reference to function(Port: Integer; Pipeline: TRequestDelegate; Services: IServiceProvider): IWebHost;
 
   TOpenAPIResponseMetadata = record
     StatusCode: Integer;
@@ -260,6 +261,7 @@ type
     function GetApplicationBuilder: IApplicationBuilder;
     function GetConfiguration: IConfiguration;
     function BuildServices: IServiceProvider; // ? Automation
+    procedure UseServerFactory(const AFactory: TServerFactory);
     procedure Run(Port: Integer); overload;
     procedure Start(Port: Integer); overload;
     procedure Start; overload;
