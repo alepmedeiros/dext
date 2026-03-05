@@ -171,15 +171,15 @@ begin
     WriteLn('DI Attributes Unit Tests');
     WriteLn('========================');
     WriteLn;
-    
-    if TTest.Configure
-      .Verbose
-      .RegisterFixtures([TDICustomConstructorsTests])
-      .Run then
-      ExitCode := 0
-    else
-      ExitCode := 1;
-      
+
+    TTest.SetExitCode(
+      TTest
+        .Configure
+        .Verbose
+        .RegisterFixtures([
+          TDICustomConstructorsTests
+         ])
+        .Run);
   except
     on E: Exception do
     begin

@@ -726,6 +726,11 @@ begin
                     Val := ISO8601ToDate(Node.AsString)
                   else
                     Val := TValue.From<Double>(Node.AsDouble);
+                tkRecord:
+                  if TReflection.IsSmartProp(Prop.PropertyType.Handle) then
+                    Val := TValue.From<Double>(Node.AsDouble)
+                  else
+                    Val := TValue.Empty;
               else
                 Val := TValue.Empty;
               end;
@@ -1238,11 +1243,13 @@ begin
     // Skip if has JsonIgnore attribute
     var ShouldSkip := False;
     for var Attr in Prop.GetAttributes do
-      if Attr is JsonIgnoreAttribute then
+    begin
+      if (Attr is JsonIgnoreAttribute) or (Attr.ClassName = 'NotMappedAttribute') then
       begin
         ShouldSkip := True;
         Break;
       end;
+    end;
     
     if ShouldSkip then
       Continue;
@@ -1643,7 +1650,6 @@ begin
     if ElementType = nil then
       raise EDextJsonException.CreateFmt('Could not determine element type for %s', [AType.NameFld.ToString]);
 
-    AddMethod := nil;
     // Instantiate via Activator (Handles DI, Fallbacks and Factory)
     Result := TActivator.CreateInstance(FSettings.FServiceProvider, AType);
 
@@ -1672,12 +1678,50 @@ begin
       end;
     end;
 
-    for var Method in RttiType.GetMethods do
-      if (Method.Name = 'Add') and (Length(Method.GetParameters) = 1) then
+    var InstObj: TObject := nil;
+    if Result.Kind = tkInterface then
+      InstObj := Result.AsInterface as TObject
+    else if Result.Kind = tkClass then
+      InstObj := Result.AsObject;
+
+    var ActualRttiType: TRttiType;
+    if Assigned(InstObj) then
+      ActualRttiType := TRttiContext.Create.GetType(InstObj.ClassType)
+    else
+      ActualRttiType := RttiType;
+
+    AddMethod := nil;
+    
+    // First try concrete instance type
+    if ActualRttiType is TRttiInstanceType then
+    begin
+      for var Method in ActualRttiType.GetMethods do
+        if (Method.Name = 'Add') and (Length(Method.GetParameters) = 1) then
+        begin
+          AddMethod := Method;
+          Break;
+        end;
+    end;
+
+    // Fallback to interface hierarchy
+    if not Assigned(AddMethod) and (RttiType is TRttiInterfaceType) then
+    begin
+      var Intf := TRttiInterfaceType(RttiType);
+      while Intf <> nil do
       begin
-        AddMethod := Method;
-        Break;
+        for var Method in Intf.GetMethods do
+          if (Method.Name = 'Add') and (Length(Method.GetParameters) = 1) then
+          begin
+            AddMethod := Method;
+            Break;
+          end;
+        if Assigned(AddMethod) then Break;
+        if Intf.BaseType is TRttiInterfaceType then
+          Intf := TRttiInterfaceType(Intf.BaseType)
+        else
+          Intf := nil;
       end;
+    end;
 
     if not Assigned(AddMethod) then
       raise EDextJsonException.CreateFmt('Could not find Add method for list type %s', [AType.NameFld.ToString]);
@@ -1726,7 +1770,15 @@ begin
         end;
 
         if not ElementValue.IsEmpty then
-          AddMethod.Invoke(Result, [ElementValue]);
+        begin
+          var TargetInst: TValue;
+          if Assigned(InstObj) and (AddMethod.Parent.IsInstance) then
+            TargetInst := InstObj
+          else
+            TargetInst := Result;
+            
+          AddMethod.Invoke(TargetInst, [ElementValue]);
+        end;
       end;
     finally
     end;
@@ -1751,17 +1803,55 @@ begin
     if (KeyType = nil) or (ValueType = nil) then
       raise EDextJsonException.CreateFmt('Could not determine dictionary types for %s', [string(AType^.Name)]);
 
-    AddMethod := nil;
     // Instantiate via Activator
     Result := TActivator.CreateInstance(FSettings.FServiceProvider, AType);
     
     var RttiType := TReflection.GetMetadata(AType).RttiType;
-    for var Method in RttiType.GetMethods do
-      if ((Method.Name = 'Add') or (Method.Name = 'AddOrSetValue')) and (Length(Method.GetParameters) = 2) then
+    
+    var InstObj: TObject := nil;
+    if Result.Kind = tkInterface then
+      InstObj := Result.AsInterface as TObject
+    else if Result.Kind = tkClass then
+      InstObj := Result.AsObject;
+
+    var ActualRttiType: TRttiType;
+    if Assigned(InstObj) then
+      ActualRttiType := TRttiContext.Create.GetType(InstObj.ClassType)
+    else
+      ActualRttiType := RttiType;
+
+    AddMethod := nil;
+    
+    // First try concrete instance type
+    if ActualRttiType is TRttiInstanceType then
+    begin
+      for var Method in ActualRttiType.GetMethods do
+        if ((Method.Name = 'Add') or (Method.Name = 'AddOrSetValue')) and (Length(Method.GetParameters) = 2) then
+        begin
+          AddMethod := Method;
+          Break;
+        end;
+    end;
+
+    // Fallback to interface hierarchy
+    if not Assigned(AddMethod) and (RttiType is TRttiInterfaceType) then
+    begin
+      var Intf := TRttiInterfaceType(RttiType);
+      while Intf <> nil do
       begin
-        AddMethod := Method;
-        Break;
+        for var Method in Intf.GetMethods do
+          if ((Method.Name = 'Add') or (Method.Name = 'AddOrSetValue')) and (Length(Method.GetParameters) = 2) then
+          begin
+            AddMethod := Method;
+            Break;
+          end;
+        if Assigned(AddMethod) then Break;
+        if Intf.BaseType is TRttiInterfaceType then
+          Intf := TRttiInterfaceType(Intf.BaseType)
+        else
+          Intf := nil;
       end;
+    end;
        
     if not Assigned(AddMethod) then
       raise EDextJsonException.CreateFmt('Could not find Add method for dictionary type %s', [string(AType^.Name)]);
@@ -1811,7 +1901,15 @@ begin
       end;
 
       if not ValVal.IsEmpty then
-        AddMethod.Invoke(Result, [KeyVal, ValVal]);
+      begin
+        var TargetInst: TValue;
+        if Assigned(InstObj) and (AddMethod.Parent.IsInstance) then
+          TargetInst := InstObj
+        else
+          TargetInst := Result;
+          
+        AddMethod.Invoke(TargetInst, [KeyVal, ValVal]);
+      end;
     end;
   finally
   end;

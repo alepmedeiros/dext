@@ -106,10 +106,6 @@ type
     // Option A: Explicit DbContext parameter
     class procedure Map(const ABuilder: IApplicationBuilder; const APath: string; ADbContext: TDbContext); overload;
     class procedure Map(const ABuilder: IApplicationBuilder; const APath: string; ADbContext: TDbContext; AOptions: TDataApiOptions<T>); overload;
-    class procedure RegisterDefault(ABase: TClass; AImpl: TClass); overload;
-    class procedure RegisterDefault(AInterface: PTypeInfo; AImpl: TClass); overload;
-    class procedure RegisterDefault<TIntf, TImpl: class>; overload;
-
     // Option B: Resolve DbContext from DI (Context.Services)
     class procedure Map(const ABuilder: IApplicationBuilder; const APath: string); overload;
     class procedure Map(const ABuilder: IApplicationBuilder; const APath: string; AOptions: TDataApiOptions<T>); overload;
@@ -1051,21 +1047,6 @@ begin
   finally
     Ctx.Free;
   end;
-end;
-
-class procedure TDataApiHandler<T>.RegisterDefault(ABase, AImpl: TClass);
-begin
-  TActivator.RegisterDefault(ABase, AImpl);
-end;
-
-class procedure TDataApiHandler<T>.RegisterDefault(AInterface: PTypeInfo; AImpl: TClass);
-begin
-  TActivator.RegisterDefault(AInterface, AImpl);
-end;
-
-class procedure TDataApiHandler<T>.RegisterDefault<TIntf, TImpl>;
-begin
-  TActivator.RegisterDefault<TIntf, TImpl>;
 end;
 
 end.

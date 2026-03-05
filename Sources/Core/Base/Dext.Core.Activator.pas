@@ -62,7 +62,7 @@ type
 
     class procedure RegisterDefault(ABase: TClass; AImpl: TClass); overload;
     class procedure RegisterDefault(AInterface: PTypeInfo; AImpl: TClass); overload;
-    class procedure RegisterDefault<TIntf, TImpl: class>; overload;
+    class procedure RegisterDefault<TIntf: interface; TImpl: class>; overload;
     class function ResolveImplementation(AClass: TClass): TClass;
     class function GetDictionaryValueType(AType: PTypeInfo): PTypeInfo;
     class function IsListType(AType: PTypeInfo): Boolean;
@@ -601,6 +601,9 @@ begin
           end;
         end;
 
+        if (ImplRtti = nil) and (AType.Kind = tkClass) then
+          ImplRtti := RttiType;
+
         if (ImplRtti <> nil) and (ImplRtti is TRttiInstanceType) then
         begin
             var TargetClass := TRttiInstanceType(ImplRtti).MetaclassType;
@@ -711,42 +714,108 @@ end;
 
 class function TActivator.IsListType(AType: PTypeInfo): Boolean;
 var
-  LName: string;
+  TypeName: string;
+  Ctx: TRttiContext;
+  RttiType: TRttiType;
+  IntfType: TRttiInterfaceType;
+  ImplIntf: TRttiInterfaceType;
 begin
   if AType = nil then Exit(False);
-  LName := string(AType^.Name);
+  TypeName := string(AType^.Name);
+  
   Result := ((AType.Kind = tkClass) or (AType.Kind = tkInterface)) and
-            (LName.Contains('IList<') or LName.Contains('IEnumerable<') or 
-             LName.Contains('TList<') or LName.Contains('TSmartList<') or
-             (Pos('Dext.Collections', string(AType.TypeData^.UnitName)) > 0) or
-             (LName.EndsWith('List')) 
-            );
+            (TypeName.Contains('IList<') or TypeName.Contains('IEnumerable<') or
+             TypeName.Contains('TList<') or TypeName.Contains('TSmartList<') or
+            (TypeName.EndsWith('List')));
+            
+  if Result then Exit;
+
+  if (AType.Kind = tkClass) or (AType.Kind = tkInterface) then
+  begin
+    Ctx := TRttiContext.Create;
+    try
+      RttiType := Ctx.GetType(AType);
+      
+      if RttiType is TRttiInterfaceType then
+      begin
+        IntfType := TRttiInterfaceType(RttiType);
+        while IntfType <> nil do
+        begin
+          if IntfType.Name.Contains('IList<') or IntfType.Name.Contains('IEnumerable<') then
+            Exit(True);
+          if IntfType.BaseType is TRttiInterfaceType then
+            IntfType := TRttiInterfaceType(IntfType.BaseType)
+          else
+            IntfType := nil;
+        end;
+      end
+      else if RttiType is TRttiInstanceType then
+      begin
+        for ImplIntf in TRttiInstanceType(RttiType).GetImplementedInterfaces do
+        begin
+          if ImplIntf.Name.Contains('IList<') or ImplIntf.Name.Contains('IEnumerable<') then
+            Exit(True);
+        end;
+      end;
+    finally
+      Ctx.Free;
+    end;
+  end;
 end;
 
 class function TActivator.IsDictionaryType(AType: PTypeInfo): Boolean;
 var
-  LName: string;
+  TypeName: string;
 begin
   if AType = nil then Exit(False);
-  LName := string(AType^.Name);
-  Result := (AType.Kind = tkInterface) and 
-            (LName.Contains('IDictionary<') or (Pos('Dext.Collections', string(AType.TypeData^.UnitName)) > 0));
+  TypeName := string(AType^.Name);
+  Result := (AType.Kind = tkInterface) and (TypeName.Contains('IDictionary<'));
 end;
 
 class function TActivator.GetDictionaryKeyType(AType: PTypeInfo): PTypeInfo;
 var
   Context: TRttiContext;
   RttiType: TRttiType;
-  Method: TRttiMethod;
+  IntfType, ImplIntf: TRttiInterfaceType;
+  
+  function TryGetKeyType(ATgt: TRttiType): PTypeInfo;
+  var M: TRttiMethod;
+  begin
+    Result := nil;
+    if ATgt = nil then Exit;
+    M := ATgt.GetMethod('ContainsKey');
+    if Assigned(M) and (Length(M.GetParameters) = 1) then
+      Result := M.GetParameters[0].ParamType.Handle;
+  end;
+
 begin
+  Result := nil;
   Context := TRttiContext.Create;
   try
     RttiType := Context.GetType(AType);
-    if RttiType = nil then Exit(nil);
-    Method := RttiType.GetMethod('ContainsKey');
-    if Assigned(Method) and (Length(Method.GetParameters) = 1) then
-      Exit(Method.GetParameters[0].ParamType.Handle);
-    Result := nil;
+    if RttiType = nil then Exit;
+    
+    Result := TryGetKeyType(RttiType);
+    if Result <> nil then Exit;
+    
+    if RttiType is TRttiInterfaceType then
+    begin
+      IntfType := TRttiInterfaceType(RttiType);
+      while IntfType <> nil do
+      begin
+        Result := TryGetKeyType(IntfType);
+        if Result <> nil then Exit;
+        if IntfType.BaseType is TRttiInterfaceType then IntfType := TRttiInterfaceType(IntfType.BaseType) else IntfType := nil;
+      end;
+    end
+    else if RttiType is TRttiInstanceType then
+    begin
+      for ImplIntf in TRttiInstanceType(RttiType).GetImplementedInterfaces do
+      begin
+        Result := TryGetKeyType(ImplIntf);
+        if Result <> nil then Exit;
+      end;
+    end;
   finally
     Context.Free;
   end;
@@ -756,16 +825,46 @@ class function TActivator.GetDictionaryValueType(AType: PTypeInfo): PTypeInfo;
 var
   Context: TRttiContext;
   RttiType: TRttiType;
-  Method: TRttiMethod;
+  IntfType, ImplIntf: TRttiInterfaceType;
+  
+  function TryGetValueType(ATgt: TRttiType): PTypeInfo;
+  var M: TRttiMethod;
+  begin
+    Result := nil;
+    if ATgt = nil then Exit;
+    M := ATgt.GetMethod('TryGetValue');
+    if Assigned(M) and (Length(M.GetParameters) = 2) then
+      Result := M.GetParameters[1].ParamType.Handle;
+  end;
+
 begin
+  Result := nil;
   Context := TRttiContext.Create;
   try
     RttiType := Context.GetType(AType);
-    if RttiType = nil then Exit(nil);
-    Method := RttiType.GetMethod('TryGetValue');
-    if Assigned(Method) and (Length(Method.GetParameters) = 2) then
-      Exit(Method.GetParameters[1].ParamType.Handle);
-    Result := nil;
+    if RttiType = nil then Exit;
+    
+    Result := TryGetValueType(RttiType);
+    if Result <> nil then Exit;
+    
+    if RttiType is TRttiInterfaceType then
+    begin
+      IntfType := TRttiInterfaceType(RttiType);
+      while IntfType <> nil do
+      begin
+        Result := TryGetValueType(IntfType);
+        if Result <> nil then Exit;
+        if IntfType.BaseType is TRttiInterfaceType then IntfType := TRttiInterfaceType(IntfType.BaseType) else IntfType := nil;
+      end;
+    end
+    else if RttiType is TRttiInstanceType then
+    begin
+      for ImplIntf in TRttiInstanceType(RttiType).GetImplementedInterfaces do
+      begin
+        Result := TryGetValueType(ImplIntf);
+        if Result <> nil then Exit;
+      end;
+    end;
   finally
     Context.Free;
   end;
@@ -775,34 +874,59 @@ class function TActivator.GetListElementType(AType: PTypeInfo): PTypeInfo;
 var
   Context: TRttiContext;
   RttiType: TRttiType;
-  Method: TRttiMethod;
-  Prop: TRttiProperty;
+  IntfType, ImplIntf: TRttiInterfaceType;
+  
+  function TryGetElementType(ATgt: TRttiType): PTypeInfo;
+  var 
+    M: TRttiMethod;
+    P: TRttiProperty;
+  begin
+    Result := nil;
+    if ATgt = nil then Exit;
+    
+    M := ATgt.GetMethod('GetItem');
+    if Assigned(M) and (M.MethodKind = mkFunction) and (Length(M.GetParameters) = 1) then
+      Exit(M.ReturnType.Handle);
+
+    for M in ATgt.GetMethods do
+    begin
+      if (M.Name = 'Add') and (Length(M.GetParameters) = 1) then
+        Exit(M.GetParameters[0].ParamType.Handle);
+    end;
+    
+    P := ATgt.GetProperty('Items');
+    if Assigned(P) then
+      Exit(P.PropertyType.Handle);
+  end;
+
 begin
+  Result := nil;
   Context := TRttiContext.Create;
   try
     RttiType := Context.GetType(AType);
-    if RttiType = nil then Exit(nil);
+    if RttiType = nil then Exit;
     
-    // Try GetItem method (indexer getter)
-    Method := RttiType.GetMethod('GetItem');
-    if Assigned(Method) and (Method.MethodKind = mkFunction) and (Length(Method.GetParameters) = 1) then
-      Exit(Method.ReturnType.Handle);
-
-    // Try Add method (collection addition)
-    for Method in RttiType.GetMethods do
+    Result := TryGetElementType(RttiType);
+    if Result <> nil then Exit;
+    
+    if RttiType is TRttiInterfaceType then
     begin
-      if (Method.Name = 'Add') and (Length(Method.GetParameters) = 1) then
+      IntfType := TRttiInterfaceType(RttiType);
+      while IntfType <> nil do
       begin
-        Exit(Method.GetParameters[0].ParamType.Handle);
+        Result := TryGetElementType(IntfType);
+        if Result <> nil then Exit;
+        if IntfType.BaseType is TRttiInterfaceType then IntfType := TRttiInterfaceType(IntfType.BaseType) else IntfType := nil;
+      end;
+    end
+    else if RttiType is TRttiInstanceType then
+    begin
+      for ImplIntf in TRttiInstanceType(RttiType).GetImplementedInterfaces do
+      begin
+        Result := TryGetElementType(ImplIntf);
+        if Result <> nil then Exit;
       end;
     end;
-    
-    // Try Items property
-    Prop := RttiType.GetProperty('Items');
-    if Assigned(Prop) then
-      Exit(Prop.PropertyType.Handle);
-
-    Result := nil;
   finally
     Context.Free;
   end;

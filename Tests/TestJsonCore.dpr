@@ -5,6 +5,7 @@ program TestJsonCore;
 uses
   Dext.MM,
   System.SysUtils,
+  Dext.DI.Attributes,
   Dext.Utils,
   Dext.Json,
   Dext.Json.Types,
@@ -122,7 +123,7 @@ end;
 procedure TestUuidDeserialization;
 var
   Json: string;
-  ListEntityWithUuid: IList<TEntityWithUuid>;
+  ListEntityWithUuid: IEntityWithUUIDList;
 begin
   Writeln('Testing JSON Deserialization UUID...');
 
@@ -134,9 +135,10 @@ begin
           ']';
 
   try
-    ListEntityWithUuid := TDextJson.Deserialize<IList<TEntityWithUuid>>(Json);
+    ListEntityWithUuid := TDextJson.Deserialize<IEntityWithUUIDList>(Json);
     try
       if ListEntityWithUuid.Count > 0 then
+
       begin
         ListEntityWithUuid.ForEach(
           procedure (AEntityWithUuid: TEntityWithUuid)

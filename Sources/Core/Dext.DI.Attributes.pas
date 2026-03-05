@@ -54,10 +54,10 @@ type
   public
     constructor Create; overload;
     constructor Create(ATargetTypeInfo: Pointer); overload;
-
     property TargetTypeInfo: Pointer read FTargetTypeInfo;
   end;
 
+  ImplementedByAttribute = InjectAttribute;
 
 implementation
 

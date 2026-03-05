@@ -8,6 +8,7 @@ uses
   System.Sysutils,
   System.Rtti,
   System.TypInfo,
+  Dext.DI.Attributes,
   Dext.Json,
   Dext.Json.Types,
   Dext.DI.Core,
@@ -77,6 +78,7 @@ type
 
 var
   Users: TArray<TSimpleUser>;
+  [ImplementedBy(TypeInfo(TList<TSimpleUser>))]
   UserList: IList<TSimpleUser>;
 
 implementation
