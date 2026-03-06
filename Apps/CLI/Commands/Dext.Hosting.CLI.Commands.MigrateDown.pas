@@ -46,11 +46,22 @@ procedure TMigrateDownCommand.Execute(const Args: TCommandLineArgs);
 var
   Context: IDbContext;
   Migrator: TMigrator;
+  SourcePath: string;
   TargetId: string;
 begin
   TargetId := Args.GetOption('target');
   if TargetId = '' then
     TargetId := Args.GetOption('t');
+
+  SourcePath := Args.GetOption('source');
+  if SourcePath = '' then
+    SourcePath := Args.GetOption('s'); // Alias
+
+  if SourcePath <> '' then
+  begin
+    SafeWriteLn('   📂 Loading migrations from: ' + SourcePath);
+    TJsonMigrationLoader.LoadFromDirectory(SourcePath);
+  end;
 
   SafeWriteLn('Starting migration rollback...');
   Context := FContextFactory();

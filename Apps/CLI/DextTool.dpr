@@ -45,26 +45,36 @@ begin
   // Configure Options
   Options := TDbContextOptions.Create;
   try
-    ConnString := Config['ConnectionStrings:DefaultConnection'];
+    // Check Command Line for overrides
+    for var i := 1 to ParamCount do
+    begin
+      if SameText(ParamStr(i), '--connection') or SameText(ParamStr(i), '-c') then
+        if i < ParamCount then ConnString := ParamStr(i+1);
+        
+      if SameText(ParamStr(i), '--driver') or SameText(ParamStr(i), '-d') then
+        if i < ParamCount then Driver := ParamStr(i+1);
+    end;
+
+    if ConnString = '' then
+      ConnString := Config['ConnectionStrings:DefaultConnection'];
+
+    if Driver = '' then 
+      Driver := Config['Database:Driver'];
+
     if ConnString = '' then
       ConnString := 'Data Source=dext_cli.db;Mode=ReadWriteCreate'; // Default fallback
-      
-    Driver := Config['Database:Driver'];
-    if Driver = '' then 
-      Driver := 'SQLite';
-      
+
     // Set up options
-    Options.UseDriver(Driver);
-    // Explicitly set connection params if needed, or rely on ConnectionString parsing 
-    // (FireDAC TFDConnection does not autoparse "Data Source=..." string into Params unless using ADO style, 
-    //  but Dext.Entity.Setup uses Params dictionary manually. 
-    //  Let's simplify: if SQLite, use helper. If generic, use Params).
-    
-    if Driver.ToLower = 'sqlite' then
+    if (ConnString <> '') and (not ConnString.Contains('Data Source=')) or (Driver <> '') and (Driver.ToLower <> 'sqlite') then
     begin
-       // Extract filename from "Data Source=X;..." simple parsing
+      Options.ConnectionString := ConnString;
+      if Driver <> '' then
+        Options.DriverName := Driver;
+    end
+    else
+    begin
+       // SQLite logic
        var DbFile := 'dext_cli.db';
-       // Very basic parser for demo
        if ConnString.Contains('Data Source=') then
        begin
          var Parts := ConnString.Split([';']);
@@ -73,12 +83,6 @@ begin
              DbFile := P.Trim.Substring(12);
        end;
        Options.UseSQLite(DbFile);
-    end
-    else
-    begin
-      // For other drivers, we might need more robust parsing or config binding
-      // For now, assume SQLite default for CLI tool or simple params
-      Options.Params.AddOrSetValue('Database', ConnString);
     end;
 
     // Create Context

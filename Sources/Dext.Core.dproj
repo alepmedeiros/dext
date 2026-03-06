@@ -144,7 +144,6 @@ $(PreBuildEvent)]]></PreBuildEvent>
         <DCCReference Include="Core\Dext.DI.Interfaces.pas"/>
         <DCCReference Include="Core\Dext.Json.pas"/>
         <DCCReference Include="Core\Dext.Json.Types.pas"/>
-        <DCCReference Include="Core\Dext.Logging.Extensions.pas"/>
         <DCCReference Include="Core\Dext.Options.Extensions.pas"/>
         <DCCReference Include="Core\Dext.Options.pas"/>
         <DCCReference Include="Core\Dext.pas"/>
@@ -193,6 +192,7 @@ $(PreBuildEvent)]]></PreBuildEvent>
         <DCCReference Include="Core\Dext.Collections.HashSet.pas"/>
         <DCCReference Include="Core\Dext.Collections.Queue.pas"/>
         <DCCReference Include="Core\Dext.Collections.Stack.pas"/>
+        <DCCReference Include="Core\Dext.Logging.Extensions.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

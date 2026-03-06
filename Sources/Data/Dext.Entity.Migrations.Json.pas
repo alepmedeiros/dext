@@ -104,9 +104,40 @@ begin
 end;
 
 procedure TJsonMigration.Down(Builder: TSchemaBuilder);
+var
+  Provider: IDextJsonProvider;
+  Node: IDextJsonNode;
+  Obj: IDextJsonObject;
+  OpsArr: IDextJsonArray;
+  OpsJson: string;
+  Ops: IList<TMigrationOperation>;
+  Op: TMigrationOperation;
 begin
-  // TODO: Implement Down operations if JSON supports it
-  // For now, we assume JSON migrations are forward-only or we need a separate "down" section
+  Provider := TDextJson.Provider;
+  Node := Provider.Parse(FJsonContent);
+
+  if (Node = nil) or (Node.GetNodeType <> jntObject) then
+    Exit;
+
+  Obj := Node as IDextJsonObject;
+
+  if not Obj.Contains('down') then
+    Exit;
+
+  OpsArr := Obj.GetArray('down');
+  if OpsArr = nil then
+    Exit;
+
+  OpsJson := OpsArr.ToJson(False);
+
+  Ops := TMigrationJsonSerializer.Deserialize(OpsJson);
+
+  while Ops.Count > 0 do
+  begin
+    Op := Ops.First;
+    Ops.Extract(Op); // Transfer ownership from Ops
+    Builder.Operations.Add(Op); // To Builder.Operations
+  end;
 end;
 
 function TJsonMigration.GetId: string;
@@ -132,10 +163,13 @@ begin
     
   Obj := Node as IDextJsonObject;
   
-  if not Obj.Contains('operations') then
+  if Obj.Contains('up') then
+    OpsArr := Obj.GetArray('up')
+  else if Obj.Contains('operations') then
+    OpsArr := Obj.GetArray('operations')
+  else
     Exit; // No operations
     
-  OpsArr := Obj.GetArray('operations');
   if OpsArr = nil then
     Exit;
     

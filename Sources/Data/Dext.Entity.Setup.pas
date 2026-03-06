@@ -33,12 +33,13 @@ type
     FCustomConnection: IDbConnection;
     FNamingStrategy: INamingStrategy;
     FNaming: string;
+    procedure SetConnectionString(const AValue: string);
   public
     constructor Create;
     destructor Destroy; override;
 
     property DriverName: string read FDriverName write FDriverName;
-    property ConnectionString: string read FConnectionString write FConnectionString;
+    property ConnectionString: string read FConnectionString write SetConnectionString;
     property ConnectionDefName: string read FConnectionDefName write FConnectionDefName;
     property ConnectionDefString: string read FConnectionDefString write FConnectionDefString;
     property Params: IDictionary<string, string> read FParams;
@@ -150,6 +151,11 @@ begin
 
   FDConn := TFDConnection.Create(nil);
   try
+    if FConnectionString <> '' then
+    begin
+      FDConn.ConnectionString := FConnectionString;
+    end;
+
     if FConnectionDefName <> '' then
     begin
       FDConn.ConnectionDefName := FConnectionDefName;
@@ -234,6 +240,39 @@ function TDbContextOptionsBuilder.UseSQLite(const DatabaseFile: string): TDbCont
 begin
   FOptions.UseSQLite(DatabaseFile);
   Result := Self;
+end;
+
+procedure TDbContextOptions.SetConnectionString(const AValue: string);
+begin
+  FConnectionString := AValue;
+  
+  // Basic parsing to populate Params for other uses (like Dialect detection)
+  if AValue <> '' then
+  begin
+    var SL := TStringList.Create;
+    try
+      SL.Delimiter := ';';
+      SL.StrictDelimiter := True;
+      SL.DelimitedText := AValue;
+      
+      for var i := 0 to SL.Count - 1 do
+      begin
+        var Line := SL[i];
+        var PosEq := Pos('=', Line);
+        if PosEq > 0 then
+        begin
+          var Key := Copy(Line, 1, PosEq - 1).Trim;
+          var Val := Copy(Line, PosEq + 1, MaxInt).Trim;
+          FParams.AddOrSetValue(Key, Val);
+          
+          if SameText(Key, 'DriverID') then
+            FDriverName := Val;
+        end;
+      end;
+    finally
+      SL.Free;
+    end;
+  end;
 end;
 
 end.

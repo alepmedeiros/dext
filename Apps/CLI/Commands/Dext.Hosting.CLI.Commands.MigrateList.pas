@@ -1,10 +1,10 @@
-unit Dext.Hosting.CLI.Commands.MigrateList;
+﻿unit Dext.Hosting.CLI.Commands.MigrateList;
 
 interface
 
 uses
   System.SysUtils,
-  System.Generics.Collections,
+  Dext.Collections,
   Dext.Entity,
   Dext.Entity.Core,
   Dext.Entity.Migrations,
@@ -48,10 +48,21 @@ procedure TMigrateListCommand.Execute(const Args: TCommandLineArgs);
 var
   Context: IDbContext;
   Migrator: TMigrator;
-  Applied: TList<string>;
+  Applied: IList<string>;
   Available: TArray<IMigration>;
   Status: string;
+  SourcePath: string;
 begin
+  SourcePath := Args.GetOption('source');
+  if SourcePath = '' then
+    SourcePath := Args.GetOption('s'); // Alias
+
+  if SourcePath <> '' then
+  begin
+    SafeWriteLn('   📂 Loading migrations from: ' + SourcePath);
+    TJsonMigrationLoader.LoadFromDirectory(SourcePath);
+  end;
+
   Context := FContextFactory();
   try
     Migrator := TMigrator.Create(Context);
@@ -61,33 +72,17 @@ begin
       
       Available := TMigrationRegistry.Instance.GetMigrations;
       
-      if not Context.Connection.TableExists('__DextMigrations') then
-      begin
-        SafeWriteLn('History table not found. All ' + Length(Available).ToString + ' migrations are PENDING.');
-        Exit;
-      end;
-      
-      Applied := TList<string>.Create;
-      try
-        var Cmd := Context.Connection.CreateCommand('SELECT Id FROM __DextMigrations');
-        var Reader := IDbCommand(Cmd).ExecuteQuery;
-        while Reader.Next do
-          Applied.Add(Reader.GetValue(0).AsString);
-          
-        for var Mig in Available do
-        begin
-          if Applied.Contains(Mig.GetId) then
-            Status := '[Applied]'
-          else
-            Status := '[Pending]';
-            
-          SafeWriteLn(Status.PadRight(12) + Mig.GetId);
-        end;
-        
-      finally
-        Applied.Free;
-      end;
+      Applied := Migrator.GetAppliedMigrations;
 
+      for var Mig in Available do
+      begin
+        if Applied.Contains(Mig.GetId) then
+          Status := '[Applied]'
+        else
+          Status := '[Pending]';
+
+        SafeWriteLn(Status.PadRight(12) + Mig.GetId);
+      end;
     finally
       Migrator.Free;
     end;

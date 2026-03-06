@@ -125,6 +125,7 @@ type
     FOnLog: TProc<string>;
     FDialect: TDatabaseDialect;
     procedure DetectDialect;
+    procedure DoAfterConnect(Sender: TObject);
   public
     constructor Create(AConnection: TFDConnection; AOwnsConnection: Boolean = True);
     destructor Destroy; override;
@@ -987,6 +988,9 @@ begin
   inherited Create;
   FConnection := AConnection;
   FOwnsConnection := AOwnsConnection;
+  
+  // Register AfterConnect to apply session settings (like search_path)
+  FConnection.AfterConnect := DoAfterConnect;
 end;
 
 destructor TFireDACConnection.Destroy;
@@ -1004,6 +1008,32 @@ end;
 procedure TFireDACConnection.Connect;
 begin
   FConnection.Connected := True;
+end;
+
+procedure TFireDACConnection.DoAfterConnect(Sender: TObject);
+var
+  LSchema: string;
+  LDialect: ISQLDialect;
+begin
+  // Set Search Path for PostgreSQL if schema is provided
+  if GetDialect = ddPostgreSQL then
+  begin
+    LSchema := FConnection.Params.Values['Schema'];
+    if LSchema = '' then
+      LSchema := FConnection.Params.Values['MetaDefSchema']; // Alternative FireDAC parameter
+    if LSchema = '' then
+      LSchema := FConnection.Params.Values['SearchPath']; // Another common parameter
+      
+    if LSchema <> '' then
+    begin
+       LDialect := TDialectFactory.CreateDialect(ddPostgreSQL);
+       if LDialect <> nil then
+       begin
+         // Use ExecSQL directly for speed and simplicity
+         FConnection.ExecSQL(Format('SET search_path TO %s, public;', [LDialect.QuoteIdentifier(LSchema)]));
+       end;
+    end;
+  end;
 end;
 
 function TFireDACConnection.CreateCommand(const ASQL: string): IDbCommand;
@@ -1058,13 +1088,18 @@ end;
 function TFireDACConnection.TableExists(const ATableName: string): Boolean;
 var
   List: TStringList;
+  LSchema: string;
 begin
   List := TStringList.Create;
   try
     try
       // Get list of tables
-      // Note: We use empty catalog/schema to search in current context
-      FConnection.GetTableNames('', '', '', List, [osMy], [tkTable], True);
+      // Try to get schema from params
+      LSchema := FConnection.Params.Values['Schema'];
+      if LSchema = '' then
+        LSchema := FConnection.Params.Values['MetaDefSchema'];
+
+      FConnection.GetTableNames('', LSchema, '', List, [osMy], [tkTable], False);
       
       // Check for existence
       // 1. Exact match

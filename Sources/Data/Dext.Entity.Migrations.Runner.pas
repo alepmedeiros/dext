@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -41,12 +41,12 @@ type
   TMigrator = class
   private
     FContext: IDbContext;
-    function GetAppliedMigrations: IList<string>;
     procedure EnsureHistoryTable;
     procedure ApplyMigration(AMigration: IMigration);
     procedure DownMigration(AMigration: IMigration);
   public
     constructor Create(AContext: IDbContext);
+    function GetAppliedMigrations: IList<string>;
     procedure Migrate;
     procedure Rollback(const ATargetId: string = '');
     
@@ -112,7 +112,8 @@ begin
   try
     EnsureHistoryTable;
     
-    CmdIntf := FContext.Connection.CreateCommand('SELECT Id FROM __DextMigrations');
+    CmdIntf := FContext.Connection.CreateCommand('SELECT ' + FContext.Dialect.QuoteIdentifier('Id') + 
+                                               ' FROM ' + FContext.Dialect.QuoteIdentifier('__DextMigrations'));
     Cmd := CmdIntf as IDbCommand;
     Reader := Cmd.ExecuteQuery;
     try
@@ -157,7 +158,8 @@ begin
       end;
       
       // Record in History
-      SQL := 'INSERT INTO __DextMigrations (Id, AppliedAt) VALUES (' + 
+      SQL := 'INSERT INTO ' + FContext.Dialect.QuoteIdentifier('__DextMigrations') + 
+             ' (' + FContext.Dialect.QuoteIdentifier('Id') + ', ' + FContext.Dialect.QuoteIdentifier('AppliedAt') + ') VALUES (' + 
              FContext.Dialect.GetParamPrefix + 'Id, ' + 
              FContext.Dialect.GetParamPrefix + 'AppliedAt)';
              
@@ -206,7 +208,8 @@ begin
       end;
       
       // Remove from History
-      SQL := 'DELETE FROM __DextMigrations WHERE Id = ' + 
+      SQL := 'DELETE FROM ' + FContext.Dialect.QuoteIdentifier('__DextMigrations') + 
+             ' WHERE ' + FContext.Dialect.QuoteIdentifier('Id') + ' = ' + 
              FContext.Dialect.GetParamPrefix + 'Id';
              
       CmdIntf := FContext.Connection.CreateCommand(SQL);
@@ -242,7 +245,7 @@ begin
       Migration := Available[i];
       if Applied.Contains(Migration.GetId) then
       begin
-        if (ATargetId <> '') and (CompareText(Migration.GetId, ATargetId) <= 0) then
+        if (ATargetId <> '') and (CompareText(Migration.GetId, ATargetId) < 0) then
           Break;
           
         DownMigration(Migration);

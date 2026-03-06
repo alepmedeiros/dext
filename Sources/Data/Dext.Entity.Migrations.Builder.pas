@@ -229,7 +229,6 @@ end;
 
 destructor TSchemaBuilder.Destroy;
 begin
-  FOperations := nil;
   inherited;
 end;
 
