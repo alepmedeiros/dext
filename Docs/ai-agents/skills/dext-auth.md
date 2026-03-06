@@ -247,10 +247,3 @@ if Ctx.User.IsInRole('admin') then
 | `Jwt.GenerateToken(User, Role)` | Use `Jwt.GenerateToken(TArray<TClaim>)` |
 | Not adding `.RequireAuthorization` | Endpoints are public by default |
 
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Web.JwtAuthDemo` | JWT token generation, role-based authorization, claims builder, protected routes |
-| `Web.DextStore` | Auth integrated in a full e-commerce API with `[Authorize]` controllers |
-| `Web.ControllerExample` | `[Authorize]`, `[AllowAnonymous]`, JWT middleware setup |

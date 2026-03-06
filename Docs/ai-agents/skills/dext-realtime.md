@@ -134,9 +134,3 @@ Groups.Add(Context.ConnectionId, 'group-name');    // Add to group
 Groups.Remove(Context.ConnectionId, 'group-name'); // Remove from group
 ```
 
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Hubs` | Real-time bidirectional messaging, group management, periodic server push |
-| `Web.EventHub` | Event platform with hub-driven attendee updates and waitlist promotion |

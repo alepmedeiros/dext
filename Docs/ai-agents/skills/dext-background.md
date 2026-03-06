@@ -259,9 +259,3 @@ CTS.Cancel;
 var User := Client.Get<TUser>('/users/1').Await; // Blocks thread
 ```
 
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Core.LoggingDemo` | Async logging with multi-threaded messages, scoped contexts, ring buffer |
-| `Core.TestConfig` | Hierarchical config: JSON files, env vars, layered source overrides |

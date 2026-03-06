@@ -134,22 +134,6 @@ Results.StatusCode(418, 'msg') // Custom status
 Results.Ok                   // 200 without body
 ```
 
-## Endpoint Metadata (OpenAPI / Swagger)
-
-```pascal
-Builder.MapGet<IResult>('/api/health',
-  function: IResult
-  begin
-    Result := Results.Ok('healthy');
-  end)
-  .WithTags('Health')
-  .WithSummary('Check API status')
-  .WithDescription('Returns a simple health message.')
-  .RequireAuthorization;  // optional: requires auth
-```
-
-Methods: `.WithTags(...)`, `.WithSummary(...)`, `.WithDescription(...)`, `.WithMetadata(...)`, `.RequireAuthorization`.
-
 ## Endpoints Module Pattern
 
 Organise routes in a dedicated unit:
@@ -341,14 +325,3 @@ end;
 | `[HttpGet('{id}')]` (no slash) | `[HttpGet('/{id}')]` |
 | Method named `Create` | Use `CreateUser`, `CreateOrder`, etc. |
 | `Results.Unauthorized` | `Results.StatusCode(401)` |
-
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Web.MinimalAPI` | MapGet/MapPost, DI, query params, JSON responses — minimal API basics |
-| `Web.ControllerExample` | `[ApiController]`, parameter binding, validation, filters |
-| `Web.TaskFlowAPI` | Hybrid routing mixing Minimal API and Controllers in one app |
-| `Web.StreamingDemo` | File upload/download, multipart, stream body, Content-Disposition |
-| `Web.TUUIDBindingExample` | Route/body binding for TUUID, UUID v7 generation |
-| `Web.DextStore` | Full e-commerce API with controller pattern, error handling |

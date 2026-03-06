@@ -237,10 +237,3 @@ finally
 end;
 ```
 
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Web.DextStore` | Service/repository pattern with scoped DI across controllers |
-| `Web.ControllerExample` | Constructor injection with multiple service dependencies |
-| `Desktop.MVVM.CustomerCRUD` | DI in desktop apps: Navigator, ViewModel, Controller all injected |

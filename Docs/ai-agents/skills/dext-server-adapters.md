@@ -5,8 +5,10 @@ description: Configure and deploy Dext Web applications using server adapters �
 
 # Dext Server Adapters
 
-Dext decouples the HTTP pipeline from the underlying transport via the `IWebHost` interface. Two adapters are available:
-- **Indy** — self-hosted TCP server (console app, Windows service, VCL sidecar)
+Dext decouples the HTTP pipeline from the underlying transport via the `IWebHost` interface. Three adapters are available:
+
+- **Indy** (Default) — self-hosted TCP server (console app, Windows service, VCL sidecar)
+- **DCS (Cross-Socket)** — Extreme high-performance, asynchronous event-driven TCP server
 - **WebBroker** — ISAPI DLL or CGI executable (IIS in-process, Apache mod_cgi)
 
 ## Current Adapter: Indy
@@ -110,6 +112,7 @@ SSL is configured via `appsettings.json`. Two SSL providers are supported.
 | `Taurus` | `DEXT_ENABLE_TAURUS_TLS` | `Dext.Web.Indy.SSL.Taurus` | 1.1.x / 3.x |
 
 Enable in `Sources\Dext.inc`:
+
 ```pascal
 {.$DEFINE DEXT_ENABLE_SSL}         // Uncomment for OpenSSL
 {.$DEFINE DEXT_ENABLE_TAURUS_TLS}  // Uncomment for Taurus TLS (OpenSSL 3.x)
@@ -130,6 +133,7 @@ App.SetDefaultPort(3000);   // Set default before Run/Start
 ```
 
 Or in `appsettings.json`:
+
 ```json
 { "Server": { "Port": 9000 } }
 ```
@@ -156,6 +160,7 @@ nssm start MyApi
 Use the Indy server on a local port and let IIS or nginx handle HTTPS termination.
 
 **IIS Application Request Routing (`web.config`):**
+
 ```xml
 <system.webServer>
   <rewrite>
@@ -170,6 +175,7 @@ Use the Indy server on a local port and let IIS or nginx handle HTTPS terminatio
 ```
 
 **nginx:**
+
 ```nginx
 server {
     listen 443 ssl;
@@ -183,6 +189,7 @@ server {
 ```
 
 With this pattern:
+
 - Dext runs on HTTP (no SSL needed in `appsettings.json`)
 - IIS/nginx handles the SSL certificate
 - No Indy SSL DLLs required
@@ -194,6 +201,7 @@ With this pattern:
 Unit: `Dext.Web.WebBroker`
 
 Allows deploying a Dext application as:
+
 - **ISAPI DLL** — hosted in-process inside IIS
 - **CGI executable** — standard WebBroker CGI target
 
@@ -282,6 +290,7 @@ App.Start(0);
 ```
 
 `TServerFactory` is defined in `Dext.Web.Interfaces`:
+
 ```pascal
 TServerFactory = reference to function(Port: Integer;
   Pipeline: TRequestDelegate; Services: IServiceProvider): IWebHost;
@@ -289,10 +298,51 @@ TServerFactory = reference to function(Port: Integer;
 
 ---
 
-## Examples
+## DCS Adapter (High-Performance)
 
-| Example | What it shows |
-|---------|---------------|
-| `Web.SslDemo` | SSL/HTTPS with OpenSSL and Taurus — cert paths, `appsettings.json`, DLL requirements |
-| `Web.MinimalAPI` | Standard Indy console bootstrap (`WebApplication`, `App.Run`) |
-| `Web.EventHub` | Full Startup with seeding before `App.Run` |
+Unit: `Dext.Web.DCS`
+
+The Delphi-Cross-Socket (DCS) adapter provides a high-performance, asynchronous event-driven HTTP server alternative to Indy, ideal for ultra-high concurrency and low-latency scenarios.
+
+### Architecture & Key Features
+
+- **OS-Native I/O Models**: Leverages the best asynchronous engine per platform: **IOCP** (Windows), **EPOLL** (Linux/Android), and **KQUEUE** (FreeBSD/macOS/iOS).
+- **Ultra-High Concurrency**: Designed to handle over 100,000+ simultaneous connections (OS limits permitting).
+- **Zero Memory Copy**: Highly optimized for throughput without redundant structural memory allocations.
+- **Dual Stack Support**: Natively handles IPv4 and IPv6 simultaneously.
+
+### Requirements
+
+To use DCS, you must add the DCS library to your search path and enable the compiler directive in `Dext.inc` or project options:
+
+```pascal
+{$DEFINE DEXT_ENABLE_DCS}
+```
+
+> **License Warning**: DCS is LGPL-3.0 licensed. Take care when statically linking it into closed-source commercial applications.
+
+### DCS Bootstrap
+
+Since Indy is the default, switching to DCS requires swapping the Server Factory during initialization:
+
+```pascal
+uses
+  Dext.Web,
+  Dext.Web.DCS, // Add DCS Adapter
+  MyApi.Startup;
+
+begin
+  App := WebApplication;
+  
+  // Swap the default engine for the DCS factory
+  App.UseServerFactory(TDextDCSServer.Factory);
+  
+  App.UseStartup(TStartup.Create);
+  App.Run(9000);
+end;
+```
+
+The DCS server automatically manages optimal I/O threads based on your CPU count.
+
+---
+

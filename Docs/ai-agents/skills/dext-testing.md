@@ -144,11 +144,15 @@ end;
 // Return a value
 FMock.Setup.Returns(SomeValue).When.MethodName(Args);
 
+// Return different values in sequence
+FMock.Setup.Returns(User1).When.GetNext;
+// On second call, returns User2, etc.
+
 // Return nil
 FMock.Setup.Returns(nil).When.MethodName(Arg.Any<T>);
 
-// Raise an exception
-FMock.Setup.Raises(ENotFoundException).When.FindById(999);
+// Throw exception
+FMock.Setup.Throws(ENotFoundException).When.FindById(999);
 
 // Argument matchers
 Arg.Any<Integer>          // Any integer value
@@ -193,18 +197,28 @@ Should(Count).BeLessThan(100);
 // Collections
 Should(List).Contain(Item);
 Should(List).NotContain(Item);
+Should(List).ContainOnly(Item1, Item2);
 Should(List).HaveCount(5);
 Should(List).BeEmpty;
 Should(List).NotBeEmpty;
+Should(List).BeOrdered;
+
+// Objects
+Should(Obj).BeOfType<TUser>;
+Should(Obj).BeAssignableTo<IPerson>;
+Should(Obj1).BeEquivalentTo(Obj2);
+Should(User).HaveProperty('Name').WithValue('Alice');
 
 // Exceptions
-Should(procedure begin Svc.DivByZero end).Throw<EInvalidOp>;
-Should(procedure begin Svc.FindById(-1) end).NotThrow;
+Should.Raise<EArgumentException>(procedure begin Svc.BadCall end);
+Should.RaiseAny(procedure begin Svc.BadCall end);
+Should.NotRaise(procedure begin Svc.ValidCall end);
 
 // Smart assertions (strongly typed, with Prototype)
 var u := Prototype.Entity<TUser>;
 Should(User).HaveValue(u.Name, 'Alice');
 Should(User).HaveValue(u.Age, 30);
+Users.Should.AllMatch(u.Age > 0);
 ```
 
 ## `Assert` (Classic Style)
@@ -302,6 +316,7 @@ $users = Invoke-RestMethod -Uri "$baseUrl/api/users" -Headers $authHeaders
 ```
 
 Notes:
+
 - Use `127.0.0.1` not `localhost` to avoid IPv6 routing issues
 - Set `Accept` and `Content-Type` headers explicitly
 - Enums are serialized as strings by default (`"tsOpen"`, not `1`)
@@ -323,6 +338,7 @@ end;
 ```
 
 Ignore fields that change per-run (timestamps, random IDs):
+
 ```pascal
 Result.MatchSnapshot(procedure(Options: TSnapshotOptions)
   begin
@@ -331,6 +347,7 @@ Result.MatchSnapshot(procedure(Options: TSnapshotOptions)
 ```
 
 Update snapshots after intentional logic changes:
+
 ```bash
 dext test --update-snapshots
 ```
@@ -350,6 +367,7 @@ FMock.VerifyNoOtherCalls;                        // No other calls were made
 ```
 
 Interfaces must have `{$M+}` to be mockable:
+
 ```pascal
 type
   {$M+}
@@ -395,7 +413,9 @@ Users.Should.AllMatch(u.Age > 0);
 
 // Objects
 Obj.Should.BeOfType<TUser>;
+Obj.Should.BeAssignableTo<IPerson>;
 Obj.Should.BeEquivalentTo(Other);
+User.Should.HaveProperty('Name').WithValue('John');
 
 // Exceptions
 Should.Raise<EArgumentException>(procedure begin Svc.Bad end);
@@ -419,10 +439,3 @@ Assert.Multiple(procedure
 | Not freeing child entities in tests | `Item.Free` after `Order.Free` |
 | `Should(Obj).Equal(...)` | `Should(Obj).Be(...)` |
 
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Orm.EntityDemo` | 18 test suites covering ORM CRUD, relationships, and edge cases |
-| `Desktop.MVVM.CustomerCRUD` | Unit tests for controller + view mock with `Mock<ICustomerView>` |
-| `Web.TicketSales` | Business rule tests: stock limits, half-price logic, SLA enforcement |

@@ -5,90 +5,79 @@ description: Use Dext generic collections — IList<T>, IChannel<T>, LINQ operat
 
 # Dext Collections
 
-## Core Import
+## Core Imports
 
 ```pascal
 uses
-  Dext.Collections; // IList<T>, TCollections, IChannel<T>, TChannel<T>
+  Dext.Collections,        // IList<T>, TCollections, IChannel<T>, TChannel<T>
+  Dext.Collections.Frozen; // IFrozenList<T>
 ```
 
-## Why Dext Collections Instead of `TList<T>`?
+## Why Dext Collections Instead of `System.Generics.Collections`?
 
-| Problem with `TList<T>` | Dext Solution |
-|-------------------------|---------------|
-| Manual `.Free` required | `IList<T>` is interface-based — freed automatically via ARC |
-| Verbose filtering loops | Built-in LINQ: `.Where`, `.Select`, `.Any`, `.First` |
-| No ownership semantics | Explicit ownership via `CreateObjectList` vs `CreateList` |
-| Not thread-safe | Lock-free `IChannel<T>` for concurrent scenarios |
+Dext Collections were completely rebuilt from the ground up for the extreme demands of backend throughput.
+
+| Feature | `IList<T>` (Dext) | `TList<T>` / `TObjectList<T>` (RTL) |
+| ------- | ----------------- | ----------------------- |
+| **Memory Management** | Automatic via ARC interfaces | Manual `.Free` required |
+| **Compilation Speed** | Fast (**Code Folding / TRawList**) | Slow (Heavy Generic Code Bloat) |
+| **Dictionary Model** | Open Addressing / Linear Probing (No Cache Misses) | Chaining (Slower memory fragmentation) |
+| **Iteration & Querying** | Built-in fluent LINQ (`.Where`, `.Select`, etc.) | Manual `for` loops required |
+| **Hardware Accel.** | Uses SIMD / AVX where possible | CPU single-instruction only |
+| **Multi-Thread (Reads)**| Lock-Free (`Frozen Collections`) | `TCriticalSection` bottlenecks |
+| **Multi-Thread (Pipes)**| Go-style Lock-Free Channels (`IChannel<T>`) | Thread-locking / TMonitor |
+| **Zero-Allocation** | Natively handles `Vector` and `Span` slices | Endless memory copies |
+
+## Architecture: The Performance Sniper
+
+Dext Collections use four massive architectural pillars:
+
+1. **Binary Code Folding (`TRawList`)**: The backend shares a single engine for all generic lists, dropping compile times by up to **60%** on huge projects since the compiler doesn't duplicate generic binaries.
+2. **Open Addressing Dictionaries (`TRawDictionary`)**: Traditional RTL maps scatter pointers causing cache misses. Dext groups Hash Metadata contiguously for CPU cache alignment, performing up to **6.6x faster** in lookups.
+3. **Zero-Allocation (Vector + Span)**: Manipulate memory slices and huge payloads directly without copying arrays or overloading the memory manager.
+4. **SIMD Processor Acceleration**: Heavy structural scans utilize _Single Instruction, Multiple Data_ to process large byte blocks in a single CPU cycle.
 
 ## Creating Lists
 
+Instantiate lists using the `TCollections` factory. Always refer to lists by their interface type (`IList<T>`).
+
 ```pascal
-uses
-  Dext.Collections;
-
-// Object list — OWNS the objects (auto-frees them)
-var Users := TCollections.CreateObjectList<TUser>;
-
-// Non-owning list — stores references, does NOT free objects
-var RefList := TCollections.CreateList<TUser>;
-
-// Non-owning list (explicit False)
-var RefList := TCollections.CreateList<TUser>(False);
+// Object list — OWNS the objects (auto-frees them when list dies or they are removed)
+var Users: IList<TUser> := TCollections.CreateObjectList<TUser>;
 
 // Primitive list (no ownership concept)
 var Numbers := TCollections.CreateList<Integer>;
+
+// Non-owning list — stores references, does NOT free objects
+var RefList := TCollections.CreateList<TUser>(False); 
 ```
 
-> Always refer to lists by their interface type `IList<T>`, not by the concrete class.
-> `IList<T>` goes out of scope automatically — no `try/finally Free` needed.
+### Ownership Semantics & ORM Rule
 
-## Ownership Semantics
-
-| Factory | OwnsObjects | When to Use |
-|---------|-------------|-------------|
-| `CreateObjectList<T>` | `True` | You create objects and want the list to own them |
-| `CreateList<T>` | `False` | ORM-returned entities (DbContext manages lifecycle) |
-| `CreateList<T>(True)` | `True` | Manual ownership preference |
-| `CreateList<T>(False)` | `False` | Shared references, no ownership |
-
-**ORM Rule**: Always use `OwnsObjects = False` for entity child collections, because the DbContext already manages their lifecycle.
-
-```pascal
-constructor TOrder.Create;
-begin
-  // False = DbContext manages the items, not the list
-  FItems := TCollections.CreateList<TOrderItem>(False);
-end;
-```
+| Factory | Owns Objects? | When to Use |
+| ------- | ------------- | ----------- |
+| `CreateObjectList<T>` | `True` | You create objects and want the list to own and free them |
+| `CreateList<T>(False)`| `False` | **ORM Rule**: Always use `False` for entity collections (`DbContext` manages them) |
 
 ## Basic Operations
 
 ```pascal
 var Users := TCollections.CreateObjectList<TUser>;
 
-// Add
+// Add & Access
 Users.Add(User1);
 Users.AddRange([User2, User3]);
-
-// Access
-var Count := Users.Count;
-var First := Users[0];
-var Last := Users[Users.Count - 1];
+var First := Users[0]; // Or Users.First;
 
 // Remove
 Users.Remove(User1);    // By reference
 Users.Delete(0);        // By index
-Users.Clear;            // Remove all (frees if OwnsObjects=True)
-
-// Iterate
-for var User in Users do
-  WriteLn(User.Name);
+Users.Clear;            // Remove all (frees objects if OwnsObjects=True)
 ```
 
 ## LINQ Operations
 
-Use `Prototype.Entity<T>` for type-safe lambda expressions:
+Use `Prototype.Entity<T>` for strongly-typed fluent lambda expressions. Dext iterators are **lazy** — `.Where` and `.Select` don't copy data until you materialize them with `.ToList` or `.ToArray`.
 
 ```pascal
 uses
@@ -96,130 +85,63 @@ uses
 
 var u := Prototype.Entity<TUser>;
 
-// Filter
+// Filter and Project
 var Admins := Users.Where(u.Role = 'admin').ToList;
-var Active := Users.Where(u.IsActive).ToList;
-var Adults := Users.Where(u.Age >= 18).ToList;
+var AdultNames := Users.Where(u.Age >= 18).Select<string>(u.Name).ToList;
 
 // Check existence
-if Users.Any(u.Role = 'admin') then
+if Users.Any(u.Role = 'admin') then 
   WriteLn('Has admins');
 
 // First match
-var First := Users.FirstOrDefault(u.IsVip);  // nil if not found
-var First := Users.First(u.IsVip);            // Throws if not found
-
-// Project (transform)
-var Names := Users.Select<string>(u.Name).ToList;  // IList<string>
+var VIP := Users.FirstOrDefault(u.IsVip); // Returns nil if not found
 ```
 
-### Performance: Lazy vs Eager Evaluation
+## Multi-Threading Patterns
 
-`.Where` and `.Select` return **lazy iterators** — no copy is made immediately:
+### 1. Frozen Collections (Lock-Free Reads) 🧊
 
-```pascal
-// Efficient: no copy — just iterate
-for var Admin in Users.Where(u.Role = 'admin') do
-  Process(Admin);
-
-// Required when storing or returning results
-var AdminList := Users.Where(u.Role = 'admin').ToList; // IList<TUser>
-Result := Users.Select<string>(u.Name).ToList;          // IList<string>
-```
-
-## IList\<T\> Interface — Key Members
+Instead of fighting `TCriticalSection` bottlenecks inside backend services, construct your lists and freeze them. They become permanently immutable, allowing unlimited, lock-free parallel reads scaling optimally across all CPU cores.
 
 ```pascal
-IList<T> = interface
-  // Count & capacity
-  function Count: Integer;
-  function IsEmpty: Boolean;
+uses Dext.Collections.Frozen;
 
-  // Add
-  procedure Add(const Item: T);
-  procedure AddRange(const Items: array of T);
-
-  // Access
-  function Get(Index: Integer): T;       // or Items[Index]
-  property Items[Index: Integer]: T;
-
-  // Remove
-  procedure Remove(const Item: T);
-  procedure Delete(Index: Integer);
-  procedure Clear;
-
-  // Search
-  function Contains(const Item: T): Boolean;
-  function IndexOf(const Item: T): Integer;
-
-  // LINQ
-  function Where(Expr): IEnumerable<T>;
-  function Select<TResult>(Expr): IEnumerable<TResult>;
-  function Any(Expr): Boolean;
-  function First(Expr): T;
-  function FirstOrDefault(Expr): T;
-  procedure ForEach(Action);
-
-  // Conversion
-  function ToList: IList<T>;
-  function ToArray: TArray<T>;
+var 
+  ReadOnlyUsers: IFrozenList<TUser>;
+begin
+  var Builder := TCollections.CreateList<TUser>;
+  // Poplate builder freely in single-thread ...
+  
+  // Freeze and share! Immutable and Lock-Free across all threads forever.
+  ReadOnlyUsers := Builder.ToFrozenList;
 end;
 ```
 
-## IChannel\<T\> — Concurrent Communication
+### 2. Channels (`IChannel<T>`) — Lock-Free Comms 🚀
 
-Go-inspired channels for lock-free thread communication.
-
-```pascal
-uses
-  Dext.Collections; // IChannel<T>, TChannel<T>
-
-// Bounded channel (backpressure — blocks producer when full)
-var Chan := TChannel<TOrder>.CreateBounded(100);
-
-// Unbounded channel (no limit — use cautiously)
-var Chan := TChannel<TOrder>.CreateUnbounded;
-```
-
-### Producer / Consumer Pattern
+For moving data between threads, use Go-inspired Channels instead of queues wrapped in heavy thread locks.
 
 ```pascal
-var Chan := TChannel<TOrder>.CreateBounded(100);
+uses Dext.Collections;
+
+// Bounded channel creates Backpressure, blocking producer when full to avoid memory floods 
+var Chan: IChannel<TOrder> := TChannel<TOrder>.CreateBounded(100);
 
 // Producer Thread
 TTask.Run(procedure
   begin
     Chan.Write(Order1);
     Chan.Write(Order2);
-    Chan.Close;  // Signal that no more items will be written
+    Chan.Close;  // Signal that production is done
   end);
 
-// Consumer Thread
+// Consumer Thread (Zero manual locking)
 TTask.Run(procedure
   begin
     while Chan.IsOpen do
-      ProcessOrder(Chan.Read);
+      ProcessOrder(Chan.Read); // Blocks gracefully if empty
   end);
 ```
-
-### Channel Operations
-
-```pascal
-Chan.Write(Item);        // Send item (blocks if bounded and full)
-var Item := Chan.Read;   // Receive item (blocks if empty)
-Chan.Close;              // Signal channel is done producing
-var Open := Chan.IsOpen; // Check if still open and has items
-```
-
-## IList\<T\> vs TObjectList\<T\> — Quick Comparison
-
-| Feature | `IList<T>` (Dext) | `TObjectList<T>` (RTL) |
-|---------|-------------------|------------------------|
-| Memory management | Automatic (interface) | Manual `.Free` required |
-| LINQ operations | Built-in | None |
-| ORM return type | ✅ Always | ❌ Never |
-| Thread-safe | Use `IChannel<T>` | `TCriticalSection` needed |
-| `try/finally Free` | Not needed | Required |
 
 ## Common Mistakes
 
@@ -227,14 +149,8 @@ var Open := Chan.IsOpen; // Check if still open and has items
 |-------|---------|
 | `var List: TList<TUser>` | `var List: IList<TUser>` |
 | `TList<TUser>.Create` | `TCollections.CreateList<TUser>` |
-| `List.Free` | Not needed — interface-managed |
-| `CreateObjectList` for ORM child collections | `CreateList(False)` — DbContext owns them |
-| `.Where(...)` without `.ToList` when storing | Always call `.ToList` to materialise |
-| `TChannel` with no backpressure on high volume | Use `CreateBounded(N)` |
+| `List.Free` | Not needed — interface-managed automatically |
+| `CreateObjectList` for ORM child collections | `CreateList(False)` — DbContext owns the lifecycle |
+| `.Where(...)` without `.ToList` | Must call `.ToList` or loop it to materialise the iterator |
+| Using standard `TDictionary` in high load | Use `TCollections.CreateDictionary<K, V>` |
 
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Dext.Examples.ComplexQuerying` | LINQ-style queries on ORM result sets, aggregation, filtering |
-| `Web.DextStore` | `IList<T>` used for cart items, order lines, product catalogues |

@@ -290,10 +290,3 @@ Services
   .AddSingleton<ISimpleNavigator>(NavigatorFactory);
 ```
 
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Desktop.MVVM.CustomerCRUD` | Full MVVM: Magic Binding, Navigator + middleware, validation, mocked tests |
-| `Desktop.MVU.Counter` | Model-View-Update pattern: immutable state, pure update functions |
-| `Desktop.MVU.CounterFrame` | MVU with TFrame designed in IDE, class-based messages, modular separation |

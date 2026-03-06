@@ -9,10 +9,11 @@ description: Structure a Dext Web API project — Startup class, middleware pipe
 
 ```pascal
 uses
-  Dext;       // IConfiguration, TDextServices, IServiceProvider
-  Dext.Web;   // IWebApplication, IStartup, TAppBuilder, WebApplication
-  Dext.Utils; // SetConsoleCharSet, ConsolePause
-  Dext.MM;    // Optional: FastMM5 memory manager
+  Dext;          // IConfiguration, TDextServices, IServiceProvider
+  Dext.Web;      // IWebApplication, IStartup, TAppBuilder, WebApplication
+  Dext.Entity;   // AddDbContext, TDbContextOptions 
+  Dext.Utils;    // SetConsoleCharSet, ConsolePause
+  Dext.MM;       // Optional: FastMM5 memory manager
 ```
 
 ## Standard Project Layout
@@ -257,14 +258,14 @@ uses
 type
   TMyEndpoints = class
   public
-    class procedure MapEndpoints(const Builder: TAppBuilder); static;
+    class procedure MapEndpoints(Builder: TAppBuilder); static;
   end;
 
 implementation
 uses
   MyProject.Services;
 
-class procedure TMyEndpoints.MapEndpoints(const Builder: TAppBuilder);
+class procedure TMyEndpoints.MapEndpoints(Builder: TAppBuilder);
 begin
   Builder.MapGet<IResult>('/health',
     function: IResult
@@ -297,7 +298,14 @@ Configure JSON serialization globally in `Configure`:
 JsonDefaultSettings(JsonSettings.CamelCase.CaseInsensitive.ISODateFormat);
 ```
 
-Available options: `.CamelCase`, `.PascalCase`, `.CaseInsensitive`, `.ISODateFormat`, `.EnumAsString`, `.IgnoreNil`.
+Available fluent config options:
+
+- `CamelCase`, `PascalCase`, `SnakeCase`
+- `CaseInsensitive`
+- `ISODateFormat`, `UnixTimestamp`, `CustomDateFormat(str)`
+- `EnumAsString`, `EnumAsNumber`
+- `IgnoreNullValues`
+- `ServiceProvider(provider)`
 
 ## Standard Middleware Pipeline Order
 
@@ -311,20 +319,3 @@ Available options: `.CamelCase`, `.PascalCase`, `.CaseInsensitive`, `.ISODateFor
 7. UseSwagger(...)       — OpenAPI/Swagger UI (always last)
 ```
 
-## Reference Examples
-
-| Example | Pattern |
-|---------|---------|
-| `Web.EventHub` | Modern minimal APIs (2026) |
-| `Web.TicketSales` | Gold standard: Controllers + JWT + ORM |
-| `Web.SalesSystem` | Minimal APIs + CQRS |
-| `Web.HelpDesk` | Full-stack with integration tests |
-
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Web.MinimalAPI` | Simplest Startup + Minimal API endpoints — ideal starting point |
-| `Web.ControllerExample` | Full Startup with controller registration, JWT, filters, versioning |
-| `Web.Dext.Starter.Admin` | Full-stack SaaS admin template with HTMX, Tailwind, dashboard |
-| `Web.DextStore` | E-commerce API: controllers, services, repositories, seeding |

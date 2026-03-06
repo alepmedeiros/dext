@@ -341,32 +341,3 @@ App.Builder.UseStaticFiles(Options);
 App.Builder.UseMiddleware(TCompressionMiddleware);
 ```
 
-## Examples
-
-The Dext framework provides several high-quality examples, categorized by utilities and complete real-world scenarios.
-
-### Utility & Feature Demos
-
-| Example | What it shows |
-| --- | --- |
-| `Web.CachingDemo` | Response caching middleware, configurable duration, vary-by-query |
-| `Web.ControllerExample` | Traditional MVC controller endpoints with full DI integration |
-| `Web.JwtAuthDemo` | JWT generation, validation, and Claims manipulation |
-| `Web.SwaggerExample` | Swagger with Minimal API — fluent DSL, schema generation |
-| `Web.MinimalAPI` | Basic routing, Dependency Injection, and modern Minimal API mapping |
-| `Web.RateLimitDemo` | Fixed window rate limiting, rejection handling, rate-limit headers |
-| `Web.SmartPropsDemo` | Smart Properties, dynamic filtering, validation, and DTO handling |
-| `Web.SslDemo` | SSL/HTTPS with OpenSSL and Taurus TLS certificate configuration |
-| `Web.StreamingDemo` | Multipart file uploads (single/multiple) and direct file downloads via stream |
-| `Web.SwaggerControllerExample` | Swagger with Controllers — attributes, security integration |
-
-### Business Projects & Complete Scenarios
-
-These projects reflect modern standard practices, utilizing up-to-date fluent syntax, clean architecture, and comprehensive features.
-
-| Example | What it shows |
-| --- | --- |
-| `Web.FoodDelivery` | End-to-end delivery API, ORM mapping, advanced routing, background jobs |
-| `Web.HelpDesk` | Ticketing system, auth, robust schema modeling, relations, Swagger |
-| `Web.SalesSystem` | Complex domain, transaction orchestration, layered repositories |
-| `Web.TicketSales` | Complete ticket/event API, concurrency limits, real-time endpoints |

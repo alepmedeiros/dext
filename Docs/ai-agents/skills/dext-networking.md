@@ -203,8 +203,3 @@ Services.AddSingleton<IExternalApiClient, TExternalApiClient>(
   end);
 ```
 
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Net.RestClient.Demo` | Fluent REST client: async/await, cancellation tokens, typed responses, sync blocking |

@@ -16,32 +16,54 @@ uses
   Dext.Entity, Dext.Types.Lazy; // ILazy<T>
 
 type
+  TUser = class;
+
   [Table('orders')]
   TOrder = class
   private
+    FId: Integer;
     FUserId: Integer;
     FUser: ILazy<TUser>;
     function GetUser: TUser;
-    procedure SetUser(Value: TUser);
+    procedure SetUser(const Value: TUser);
   public
-    [PK, AutoInc] property Id: Integer;
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
 
-    [ForeignKey('user_id')]
+    [ForeignKey('user_id'), BelongsTo]
     property UserId: Integer read FUserId write FUserId;
 
-    property User: TUser read GetUser write SetUser; // Lazy-loaded
+    // Lazy-loaded navigation
+    property User: TUser read GetUser write SetUser; 
   end;
 
   [Table('users')]
   TUser = class
   private
+    FId: Integer;
     FOrders: ILazy<TList<TOrder>>;
+    function GetOrders: TList<TOrder>;
   public
-    [PK, AutoInc] property Id: Integer;
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
 
-    [InverseProperty('User')]
-    property Orders: TList<TOrder> read GetOrders; // Lazy collection
+    [InverseProperty('User'), HasMany]
+    property Orders: TList<TOrder> read GetOrders;
   end;
+
+// Implementation of Getter/Setter
+function TOrder.GetUser: TUser;
+begin
+  if FUser = nil then FUser := TLazy<TUser>.Create;
+  Result := FUser.Value;
+end;
+
+procedure TOrder.SetUser(Value: TUser);
+begin
+  if FUser = nil then FUser := TLazy<TUser>.Create;
+  FUser.Value := Value;
+  if Value <> nil then FUserId := Value.Id;
+end;
 ```
 
 ### Many-to-Many
@@ -76,13 +98,13 @@ uses Dext.Entity.Prototype;
 
 var o := Prototype.Entity<TOrder>;
 
-// Type-safe include
+// 1. Type-safe include (Recommended - protects against typos)
 var Orders := Db.Orders
-  .Include(o.User)    // Loads User in same query
+  .Include(o.User)
   .Include(o.Items)
   .ToList;
 
-// Deep include (string path)
+// 2. Deep include (string path)
 var Orders := Db.Orders
   .Include(o.User)
   .Include('Items.Product')
@@ -104,25 +126,32 @@ All classes share one table; a discriminator column identifies the type:
 
 ```pascal
 type
-  [Table('people')]
-  [Inheritance(TablePerHierarchy)]
+  [Table('people'), Inheritance(TablePerHierarchy)]
   [DiscriminatorColumn('person_type')]
   TPerson = class
+  private
+    FId: Integer;
+    FName: string;
   public
-    [PK, AutoInc] Id: Integer;
-    Name: string;
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
+    property Name: string read FName write FName;
   end;
 
   [DiscriminatorValue('student')]
   TStudent = class(TPerson)
+  private
+    FEnrollment: string;
   public
-    EnrollmentNumber: string;
+    property EnrollmentNumber: string read FEnrollment write FEnrollment;
   end;
 
   [DiscriminatorValue('teacher')]
   TTeacher = class(TPerson)
+  private
+    FSubject: string;
   public
-    Subject: string;
+    property Subject: string read FSubject write FSubject;
   end;
 
 // Polymorphic query — returns TStudent and TTeacher instances
@@ -143,15 +172,21 @@ type
   [Table('vehicles')]
   [Inheritance(TablePerType)]
   TVehicle = class
+  private
+    FId: Integer;
+    FBrand: string;
   public
-    [PK] Id: Integer;
-    Brand: string;
+    [PK]
+    property Id: Integer read FId write FId;
+    property Brand: string read FBrand write FBrand;
   end;
 
   [Table('cars')]
   TCar = class(TVehicle)
+  private
+    FDoors: Integer;
   public
-    NumberOfDoors: Integer;
+    property NumberOfDoors: Integer read FDoors write FDoors;
   end;
 ```
 
@@ -238,21 +273,22 @@ end;
 ### Table Builder API
 
 ```pascal
-T.AddColumn('id').AsInteger.PrimaryKey.AutoIncrement
-T.AddColumn('name').AsString(100).NotNull
-T.AddColumn('email').AsString(255).Nullable
-T.AddColumn('price').AsDecimal(10, 2).Default('0.00')
-T.AddColumn('active').AsBoolean.Default('true')
-T.AddColumn('created_at').AsDateTime
-T.AddColumn('data').AsText    // TEXT/CLOB
-T.AddColumn('blob').AsBlob
-T.AddColumn('uuid').AsGuid
+T.AddColumn('id').AsInteger.PrimaryKey.AutoIncrement;
+T.AddColumn('name').AsString(100).NotNull;
+T.AddColumn('email').AsString(255).Nullable;
+T.AddColumn('price').AsDecimal(10, 2).Default('0.00');
+T.AddColumn('active').AsBoolean.Default('true');
+T.AddColumn('created_at').AsDateTime;
+T.AddColumn('data').AsText;           // CLOB/TEXT for large strings
+T.AddColumn('binary').AsBlob;         // BLOB
+T.AddColumn('uuid').AsGuid;
 
-// Constraints
-T.AddColumn('email').AsString(255).Unique
-T.AddForeignKey('user_id', 'users', 'id').OnDeleteCascade
-T.AddIndex('idx_email', 'email')
-T.AddUniqueIndex('idx_email_unique', 'email')
+// Constraints & Indexes
+T.AddColumn('email').AsString(255).Unique;
+T.AddColumn('status').AsString(20).Check('status IN (''active'', ''inactive'')');
+T.AddForeignKey('user_id', 'users', 'id').OnDeleteCascade;
+T.AddIndex('idx_email', 'email');
+T.AddUniqueIndex('idx_email_unique', 'email');
 
 // Alter
 AlterTable('users', procedure(T: TTableBuilder)
@@ -267,6 +303,7 @@ Execute('CREATE INDEX CONCURRENTLY ...');
 ```
 
 Register migrations — add to the program's `uses` clause:
+
 ```pascal
 uses
   Migration_001_CreateUsers,
@@ -281,6 +318,73 @@ dext migrate:up               # Apply pending
 dext migrate:down             # Rollback last
 dext migrate:list             # Show status
 dext migrate:generate --name AddOrdersTable
+```
+
+## Custom Type Converters
+
+Dext provides a flexible type conversion system to handle data types not supported natively or to customize how Delphi types are stored in the database.
+
+### 1. Attribute-Based Converter
+
+Apply a converter to a specific property using the `[TypeConverter]` attribute.
+
+```pascal
+type
+  [Table('events')]
+  TEvent = class
+  private
+    FPayload: TJSONObject;
+  public
+    // Store TJSONObject as string in DB
+    [TypeConverter(TJsonConverter)]
+    property Payload: TJSONObject read FPayload write FPayload;
+  end;
+```
+
+### 2. Global Registration
+
+Register a converter globally to handle a specific Delphi type across all entities in your application.
+
+```pascal
+uses
+  Dext.Entity.TypeConverters;
+
+initialization
+  // Option A: Register a general converter (CanConvert will be called)
+  TTypeConverterRegistry.Instance.RegisterConverter(TMyGlobalConverter.Create);
+
+  // Option B: Register specifically for a type (most efficient)
+  TTypeConverterRegistry.Instance.RegisterConverterForType(
+    TypeInfo(TMyCustomType), 
+    TMyCustomTypeConverter.Create
+  );
+```
+
+### Example: Unix Timestamp Converter
+
+```pascal
+type
+  TUnixTimestampConverter = class(TTypeConverterBase)
+  public
+    function CanConvert(ATypeInfo: PTypeInfo): Boolean; override;
+    function ToDatabase(const AValue: TValue; ADialect: TDatabaseDialect): TValue; override;
+    function FromDatabase(const AValue: TValue; ATypeInfo: PTypeInfo): TValue; override;
+  end;
+
+function TUnixTimestampConverter.CanConvert(ATypeInfo: PTypeInfo): Boolean;
+begin
+  Result := ATypeInfo = TypeInfo(TDateTime);
+end;
+
+function TUnixTimestampConverter.ToDatabase(const AValue: TValue; ADialect: TDatabaseDialect): TValue;
+begin
+  Result := DateTimeToUnix(AValue.AsType<TDateTime>);
+end;
+
+function TUnixTimestampConverter.FromDatabase(const AValue: TValue; ATypeInfo: PTypeInfo): TValue;
+begin
+  Result := UnixToDateTime(AValue.AsInt64);
+end;
 ```
 
 ## Raw SQL with FromSql
@@ -354,9 +458,15 @@ var Items    := Results.Read<TInvoiceItem>;
 type
   [Table('products')]
   TProduct = class
+  private
+    FId: Integer;
+    FVersion: Integer;
   public
-    [PK, AutoInc] property Id: Integer;
-    [Version] property Version: Integer; // Auto-incremented by Dext on update
+    [PK, AutoInc]
+    property Id: Integer read FId write FId;
+
+    [Version]
+    property Version: Integer read FVersion write FVersion; // Auto-incremented on update
   end;
 
 // On conflict, SaveChanges raises DbUpdateConcurrencyException
@@ -381,33 +491,60 @@ Db.SaveChanges;
 | `TLockMode.Update` | `FOR UPDATE` / `UPDLOCK` |
 | `TLockMode.Shared` | `FOR SHARE` / `HOLDLOCK` |
 
-### Offline Locking
+## Shadow Properties
+
+Shadow properties are properties that are not defined in your Delphi entity class but are defined in the Dext model for that entity type. They are useful for data that shouldn't clutter your domain model (like `LastModifiedBy` or `IsSystemRecord`).
+
+### Configuration
+
+Override `OnModelCreating` to define shadow properties:
 
 ```pascal
-var Token := Db.LockManager.AcquireLock('TProduct', ProductId, TenantId);
-if Token <> '' then
-  // Record is locked for this session
-  ...
-  Db.LockManager.ReleaseLock(Token);
+procedure TAppDbContext.OnModelCreating(Builder: TModelBuilder);
+begin
+  Builder.Entity<TProduct>()
+    .ShadowProperty('TenantId').HasDbType(ftString).HasMaxLength(50);
+end;
+```
+
+### Accessing Shadow Values
+
+Since the property doesn't exist in the class, you must use the `DbContext.Entry` API:
+
+```pascal
+var Product := Db.Products.Find(1);
+
+// Read
+var TenantId := Db.Entry(Product).Member('TenantId').CurrentValue.AsString;
+
+// Write
+Db.Entry(Product).Member('TenantId').CurrentValue := 'MyTenant';
+Db.SaveChanges;
 ```
 
 ## Multi-Tenancy
 
-### Strategy 1: Shared DB (Column-Based)
+### Strategy 1: Shared Database (Column-Based)
 
 ```pascal
 type
   [Table('orders')]
   TOrder = class(TObject, ITenantAware)
+  private
+    FId: Integer;
+    FTenantId: string;
+    FDescription: string;
   public
-    [PK] property Id: Integer;
-    property TenantId: string; // Auto-populated by DbContext
-    property Description: string;
+    [PK]
+    property Id: Integer read FId write FId;
+    property TenantId: string read FTenantId write FTenantId; // Auto-populated
+    property Description: string read FDescription write FDescription;
   end;
   // Or inherit from TTenantEntity
 ```
 
 Configure in pipeline:
+
 ```pascal
 App.Builder.UseMultiTenancy(procedure(Options: TMultiTenancyOptions)
   begin
@@ -426,12 +563,3 @@ App.Builder.UseMultiTenancy(procedure(Options: TMultiTenancyOptions)
     Options.ResolveFromHost; // customer1.myapp.com → schema "customer1"
   end);
 ```
-
-## Examples
-
-| Example | What it shows |
-|---------|---------------|
-| `Orm.EntityDemo` | Relationships, lazy loading, soft delete, optimistic concurrency |
-| `Orm.Specification` | Specification pattern with expression trees and SQL generation |
-| `Dext.Examples.ComplexQuerying` | JSON column queries, aggregations, advanced filtering |
-| `Dext.Examples.MultiTenancy` | SaaS multi-tenant: tenant middleware, data isolation, per-tenant scoping |
