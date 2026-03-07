@@ -159,12 +159,22 @@ type
     
     function MapPut<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder; overload;
     function MapDelete<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder; overload;
+
+    /// <summary>
+    ///  Marks the last registered route as requiring authorization (defaults to 'Basic').
+    /// </summary>
+    function RequireAuthorization: IApplicationBuilder; overload;
+    function RequireAuthorization(const AScheme: string): IApplicationBuilder; overload;
+    function RequireAuthorization(const ASchemes: array of string): IApplicationBuilder; overload;
   end;
 
 
 procedure UpdateRouteMetadata(App: IApplicationBuilder; RequestType: PTypeInfo; ResponseType: PTypeInfo);
 
 implementation
+
+uses
+  Dext.OpenAPI.Extensions;
 
 { TDextAppBuilderHelper }
 
@@ -231,6 +241,21 @@ end;
 function TDextAppBuilderHelper.MapDelete<T, TResult>(const Path: string; Handler: THandlerResultFunc<T, TResult>): IApplicationBuilder;
 begin
   Result := TApplicationBuilderExtensions.MapDelete<T, TResult>(Self.Unwrap, Path, Handler);
+end;
+
+function TDextAppBuilderHelper.RequireAuthorization: IApplicationBuilder;
+begin
+  Result := TEndpointMetadataExtensions.RequireAuthorization(Self.Unwrap, ['Basic']);
+end;
+
+function TDextAppBuilderHelper.RequireAuthorization(const AScheme: string): IApplicationBuilder;
+begin
+  Result := TEndpointMetadataExtensions.RequireAuthorization(Self.Unwrap, AScheme);
+end;
+
+function TDextAppBuilderHelper.RequireAuthorization(const ASchemes: array of string): IApplicationBuilder;
+begin
+  Result := TEndpointMetadataExtensions.RequireAuthorization(Self.Unwrap, ASchemes);
 end;
 
 

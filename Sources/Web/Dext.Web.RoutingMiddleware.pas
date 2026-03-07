@@ -47,7 +47,7 @@ type
 implementation
 
 uses
-  Dext.Web.Indy;
+  System.Rtti, System.SysUtils, Dext.Web.Indy;
 
 { TRoutingMiddleware }
 
@@ -83,7 +83,28 @@ begin
         IndyContext.SetRouteParams(RouteParams);
       end;
 
-      // TODO: Store Metadata in Context.Items if available for other middlewares (e.g. Auth)
+      // Store Metadata in Context.Items if available for other middlewares (e.g. Auth)
+      AContext.Items.AddOrSetValue('endpoint_metadata', TValue.From<TEndpointMetadata>(Metadata));
+
+      // Authorization Check
+      if Length(Metadata.Security) > 0 then
+      begin        
+        if (AContext.User = nil) or not AContext.User.Identity.IsAuthenticated then
+        begin          
+          AContext.Response.StatusCode := 401;
+          for var Scheme in Metadata.Security do
+          begin
+            if SameText(Scheme, 'Basic') then
+            begin
+              AContext.Response.AddHeader('WWW-Authenticate', 'Basic realm="Dext API"');
+              break;
+            end;
+          end;
+          AContext.Response.SetContentType('application/json; charset=utf-8');
+          AContext.Response.Write('{"error": "Unauthorized", "message": "Authentication required. Please provide valid credentials."}');
+          Exit;
+        end;        
+      end;
 
       Handler(AContext);
     finally

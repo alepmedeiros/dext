@@ -147,7 +147,6 @@
         <DCCReference Include="Data\Dext.Entity.TypeSystem.pas"/>
         <DCCReference Include="Data\Dext.Entity.Migrations.Runner.pas"/>
         <DCCReference Include="Data\Dext.Entity.Query.pas"/>
-        <DCCReference Include="Data\Dext.Entity.Scaffolding.pas"/>
         <DCCReference Include="Data\Dext.Entity.Migrations.Serializers.Json.pas"/>
         <DCCReference Include="Data\Dext.Entity.Naming.pas"/>
         <DCCReference Include="Data\Dext.Entity.Migrations.Operations.pas"/>
@@ -167,6 +166,7 @@
         <DCCReference Include="Data\Dext.Entity.Validator.pas"/>
         <DCCReference Include="Data\Dext.Entity.Collections.pas"/>
         <DCCReference Include="Data\Dext.Entity.ProxyFactory.pas"/>
+        <DCCReference Include="Data\Dext.Entity.Scaffolding.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

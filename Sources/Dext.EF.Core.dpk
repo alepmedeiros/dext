@@ -58,7 +58,6 @@ contains
   Dext.Entity.TypeSystem in 'Data\Dext.Entity.TypeSystem.pas',
   Dext.Entity.Migrations.Runner in 'Data\Dext.Entity.Migrations.Runner.pas',
   Dext.Entity.Query in 'Data\Dext.Entity.Query.pas',
-  Dext.Entity.Scaffolding in 'Data\Dext.Entity.Scaffolding.pas',
   Dext.Entity.Migrations.Serializers.Json in 'Data\Dext.Entity.Migrations.Serializers.Json.pas',
   Dext.Entity.Naming in 'Data\Dext.Entity.Naming.pas',
   Dext.Entity.Migrations.Operations in 'Data\Dext.Entity.Migrations.Operations.pas',
@@ -77,7 +76,8 @@ contains
   Dext.Entity.Drivers.FireDAC.Links in 'Data\Dext.Entity.Drivers.FireDAC.Links.pas',
   Dext.Entity.Validator in 'Data\Dext.Entity.Validator.pas',
   Dext.Entity.Collections in 'Data\Dext.Entity.Collections.pas',
-  Dext.Entity.ProxyFactory in 'Data\Dext.Entity.ProxyFactory.pas';
+  Dext.Entity.ProxyFactory in 'Data\Dext.Entity.ProxyFactory.pas',
+  Dext.Entity.Scaffolding in 'Data\Dext.Entity.Scaffolding.pas';
 
 end.
 

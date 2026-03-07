@@ -1417,7 +1417,7 @@ end;
 
 function THttpAppBuilderHelper.RequireAuthorization: AppBuilder;
 begin
-  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.RequireAuthorization(Self.Unwrap, []);
+  Dext.OpenAPI.Extensions.TEndpointMetadataExtensions.RequireAuthorization(Self.Unwrap, ['Basic']);
   Result := Self;
 end;
 
