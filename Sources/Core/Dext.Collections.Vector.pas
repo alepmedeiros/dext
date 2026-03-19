@@ -1,4 +1,4 @@
-﻿unit Dext.Collections.Vector;
+unit Dext.Collections.Vector;
 
 interface
 
@@ -22,6 +22,8 @@ type
     FHeapData: Pointer;       // Heap Data (when SVO is outgrown)
     FVersion: Integer;        // For Span invalidation
     
+    
+    procedure InternalSort(L, R: NativeInt; const AComparer: IComparer<T>);
     
     function GetDataPtr: Pointer; inline;
     function GetItemPtr(Index: NativeInt): Pointer; inline;
@@ -55,6 +57,8 @@ type
     
     // Iteration
     function GetEnumerator: TSpanEnumerator<T>; inline;
+    
+    procedure Sort(const AComparer: IComparer<T>);
     
     property Items[Index: NativeInt]: T read GetItem write SetItem; default;
     property Count: NativeInt read FCount;
@@ -294,6 +298,39 @@ end;
 function TVector<T>.ToArray: TArray<T>;
 begin
   ToArray(Result);
+end;
+
+procedure TVector<T>.InternalSort(L, R: NativeInt; const AComparer: IComparer<T>);
+var
+  I, J: NativeInt;
+  Pivot, Temp: T;
+begin
+  I := L;
+  J := R;
+  Pivot := GetItem(L + (R - L) div 2);
+  repeat
+    while AComparer.Compare(GetItem(I), Pivot) < 0 do Inc(I);
+    while AComparer.Compare(GetItem(J), Pivot) > 0 do Dec(J);
+    if I <= J then
+    begin
+      if I <> J then
+      begin
+        Temp := GetItem(I);
+        SetItem(I, GetItem(J));
+        SetItem(J, Temp);
+      end;
+      Inc(I);
+      Dec(J);
+    end;
+  until I > J;
+  if L < J then InternalSort(L, J, AComparer);
+  if I < R then InternalSort(I, R, AComparer);
+end;
+
+procedure TVector<T>.Sort(const AComparer: IComparer<T>);
+begin
+  if FCount > 1 then
+    InternalSort(0, FCount - 1, AComparer);
 end;
 
 function TVector<T>.GetEnumerator: TSpanEnumerator<T>;

@@ -1,4 +1,4 @@
-unit Dext.Entity.DataSet;
+﻿unit Dext.Entity.DataSet;
 
 interface
 
@@ -62,7 +62,7 @@ type
     procedure SetIndexFieldNames(const Value: string);
     procedure ApplyFilterAndSort; overload;
     procedure ApplyFilterAndSort(AFiltered: Boolean); overload;
-    function CompareObjects(const A, B: TObject; const AFields: string): Integer;
+    function CompareObjectsInternal(A, B: TObject; const APropNames: TArray<string>; RttiType: TRttiType): Integer;
     procedure BuildFieldDefs;
     
     /// <summary>
@@ -404,9 +404,8 @@ end;
 procedure TEntityDataSet.ApplyFilterAndSort(AFiltered: Boolean);
 var
   Expr: IExpression;
-  i, j: Integer;
+  i: Integer;
   Passing: Boolean;
-  SorterList: IList<Integer>;
   CurrentRealIdx: Integer;
 begin
   // Salvar o índice real do item atual para restaurar FCurrentRec depois
@@ -442,19 +441,19 @@ begin
 
   if (FIndexFieldNames <> '') and (FVirtualIndex.Count > 1) then
   begin
-    SorterList := TCollections.CreateList<Integer>(False);
-    for j := 0 to FVirtualIndex.Count - 1 do
-      SorterList.Add(FVirtualIndex[j]);
-
-    SorterList.Sort(TComparer<Integer>.Construct(
-      function(const A, B: Integer): Integer
-      begin
-        Result := CompareObjects(FItems[A], FItems[B], FIndexFieldNames);
-      end));
-
-    FVirtualIndex.Clear;
-    for j := 0 to SorterList.Count - 1 do
-      FVirtualIndex.Add(SorterList[j]);
+    var LNames := FIndexFieldNames.Split([';']);
+    var LContext := TRttiContext.Create;
+    try
+      var LType := LContext.GetType(FEntityClass);
+      FVirtualIndex.Sort(TComparer<Integer>.Construct(
+        function(const A, B: Integer): Integer
+        begin
+          // A and B are indices in FItems
+          Result := CompareObjectsInternal(FItems[A], FItems[B], LNames, LType);
+        end));
+    finally
+      LContext.Free;
+    end;
   end;
 
   // Restaurar a posição do cursor na visão virtual
@@ -524,63 +523,137 @@ begin
       Result := True;
       Break;
     end;
-  end; // Fim do Locate
+  end;
 end;
 
-function TEntityDataSet.CompareObjects(const A, B: TObject; const AFields: string): Integer;
+function TEntityDataSet.CompareObjectsInternal(A, B: TObject; const APropNames: TArray<string>; RttiType: TRttiType): Integer;
 var
-  Context: TRttiContext;
   i: Integer;
-  PA, PB: Pointer;
+  IsDesc: Boolean;
+  PropName: string;
   PropMap: TPropertyMap;
-  PropNames: TArray<string>;
-  RttiProp: TRttiProperty;
-  RttiType: TRttiType;
   ValA, ValB: Variant;
+  RttiProp: TRttiProperty;
 begin
   Result := 0;
-  if AFields = '' then Exit;
+  PropName := '';
+  for i := 0 to High(APropNames) do
+  begin
+    var Token: string := APropNames[i].Trim;
+    if Token = '' then Continue;
+    IsDesc := Token.EndsWith(' DESC', True);
+    PropName := Token;
+    if IsDesc then
+      PropName := Token.Substring(0, Token.Length - 5).Trim;
 
-  PropNames := AFields.Split([';']);
-  Context := TRttiContext.Create;
-  try
-    RttiType := Context.GetType(FEntityClass);
-    for i := 0 to High(PropNames) do
+    ValA := Unassigned;
+    ValB := Unassigned;
+    var Matched: Boolean := False;
+
+    // 1. Try Fast-Path via Mapper (Value Extraction)
+    PropMap := nil;
+    if FEntityMap.Properties.TryGetValue(PropName, PropMap) then
     begin
-      if not FEntityMap.Properties.TryGetValue(PropNames[i], PropMap) then Continue;
-
       if PropMap.FieldValueOffset > 0 then
       begin
-        PA := Pointer(PByte(A) + PropMap.FieldValueOffset);
-        PB := Pointer(PByte(B) + PropMap.FieldValueOffset);
-
         case PropMap.DataType of
-          ftInteger, ftSmallint: Result := PInteger(PA)^ - PInteger(PB)^;
-          ftLargeint:            if PInt64(PA)^ < PInt64(PB)^ then Result := -1 else if PInt64(PA)^ > PInt64(PB)^ then Result := 1;
-          ftFloat:               if PDouble(PA)^ < PDouble(PB)^ then Result := -1 else if PDouble(PA)^ > PDouble(PB)^ then Result := 1;
-          ftCurrency:            if PCurrency(PA)^ < PCurrency(PB)^ then Result := -1 else if PCurrency(PA)^ > PCurrency(PB)^ then Result := 1;
-          ftString, ftWideString: Result := CompareText(PString(PA)^, PString(PB)^);
-          ftDateTime, ftDate, ftTime: if PDateTime(PA)^ < PDateTime(PB)^ then Result := -1 else if PDateTime(PA)^ > PDateTime(PB)^ then Result := 1;
-          ftBoolean:             Result := Ord(PBoolean(PA)^) - Ord(PBoolean(PB)^);
-        end;
-      end
-      else if RttiType <> nil then
-      begin
-        RttiProp := RttiType.GetProperty(PropNames[i]);
-        if RttiProp <> nil then
-        begin
-          ValA := RttiProp.GetValue(A).AsVariant;
-          ValB := RttiProp.GetValue(B).AsVariant;
-          if ValA < ValB then Result := -1
-          else if ValA > ValB then Result := 1
-          else Result := 0;
+          ftInteger, ftAutoInc, ftShortint, ftWord:
+            begin
+              ValA := PInteger(Pointer(PByte(A) + PropMap.FieldValueOffset))^;
+              ValB := PInteger(Pointer(PByte(B) + PropMap.FieldValueOffset))^;
+              Matched := True;
+            end;
+          ftBoolean:
+            begin
+              // Use PByte for Boolean as it's typically 1 byte in memory
+              ValA := PByte(Pointer(PByte(A) + PropMap.FieldValueOffset))^;
+              ValB := PByte(Pointer(PByte(B) + PropMap.FieldValueOffset))^;
+              Matched := True;
+            end;
+          ftFloat, ftCurrency:
+            begin
+              ValA := PDouble(Pointer(PByte(A) + PropMap.FieldValueOffset))^;
+              ValB := PDouble(Pointer(PByte(B) + PropMap.FieldValueOffset))^;
+              Matched := True;
+            end;
         end;
       end;
-
-      if Result <> 0 then Break;
     end;
-  finally
-    Context.Free;
+
+    // 2. Try RTTI Fallback
+    if (not Matched) and (RttiType <> nil) then
+    begin
+      RttiProp := nil;
+      for var LP in RttiType.GetProperties do
+        if SameText(LP.Name, PropName) then
+        begin
+          RttiProp := LP;
+          Break;
+        end;
+
+      if RttiProp <> nil then
+      begin
+        ValA := RttiProp.GetValue(A).AsVariant;
+        ValB := RttiProp.GetValue(B).AsVariant;
+      end
+      else
+      begin
+        var RttiFld: TRttiField := nil;
+        for var LF in RttiType.GetFields do
+          if SameText(LF.Name, PropName) or SameText(LF.Name, 'F' + PropName) then
+          begin
+            RttiFld := LF;
+            Break;
+          end;
+        
+        if RttiFld <> nil then
+        begin
+          ValA := RttiFld.GetValue(A).AsVariant;
+          ValB := RttiFld.GetValue(B).AsVariant;
+        end;
+      end;
+    end;
+
+    // Compare Variants obtained either via Fast-Path or RTTI
+    if (not VarIsEmpty(ValA)) and (not VarIsEmpty(ValB)) then
+    begin
+      if ValA < ValB then Result := -1 else if ValA > ValB then Result := 1;
+    end;
+
+    if Result <> 0 then
+    begin
+      if IsDesc then Result := -Result;
+      Break;
+    end;
+  end;
+
+  // Stable sort tie-breaker (important for tests)
+  if (Result = 0) and (not SameText(PropName, 'Id')) then
+  begin
+    PropMap := nil;
+    if FEntityMap.Properties.TryGetValue('Id', PropMap) then
+    begin
+      var IdA := PInteger(Pointer(PByte(A) + PropMap.FieldValueOffset))^;
+      var IdB := PInteger(Pointer(PByte(B) + PropMap.FieldValueOffset))^;
+      if IdA < IdB then Result := -1 else if IdA > IdB then Result := 1;
+    end
+    else if RttiType <> nil then
+    begin
+      // Last-resort RTTI tie-breaker
+      RttiProp := nil;
+      for var LP in RttiType.GetProperties do
+        if SameText(LP.Name, 'Id') then
+        begin
+          RttiProp := LP;
+          Break;
+        end;
+      if RttiProp <> nil then
+      begin
+        ValA := RttiProp.GetValue(A).AsVariant;
+        ValB := RttiProp.GetValue(B).AsVariant;
+        if ValA < ValB then Result := -1 else if ValA > ValB then Result := 1;
+      end;
+    end;
   end;
 end;
 
@@ -818,7 +891,8 @@ procedure TEntityDataSet.InternalInitFieldDefs;
     case ATypeInfo.Kind of
       tkInteger, tkEnumeration:
       begin
-        if ATypeInfo = TypeInfo(Boolean) then
+        var LTypeName := string(ATypeInfo.Name);
+        if (ATypeInfo = TypeInfo(Boolean)) or (LTypeName = 'Boolean') or (LTypeName = 'WordBool') or (LTypeName = 'ByteBool') or (LTypeName = 'LongBool') then
           Exit(ftBoolean)
         else
           Exit(ftInteger);
@@ -873,7 +947,7 @@ begin
       // Calcular resolved type dinamicamente
       ResolvedType := PropMap.DataType;
 
-      // Se tivermos Shadow mapping, ler do RTTI da Classe estática
+      // Se tivermos Shadow mapping, ler do RTTI da Classe estática (Prop ou Field)
       if (ResolvedType = ftUnknown) and (RttiType <> nil) then
       begin
         Prop := RttiType.GetProperty(PropMap.PropertyName);
@@ -883,6 +957,23 @@ begin
             ResolvedType := ftBlob
           else
             ResolvedType := MapTypeToFieldType(Prop.PropertyType.Handle);
+        end
+        else
+        begin
+           var LFld := RttiType.GetField(PropMap.PropertyName);
+           if LFld = nil then LFld := RttiType.GetField('F' + PropMap.PropertyName);
+           
+           if LFld <> nil then
+           begin
+              if IsTBytesType(LFld.FieldType.Handle) then
+                ResolvedType := ftBlob
+              else
+                ResolvedType := MapTypeToFieldType(LFld.FieldType.Handle);
+                
+              // Update FieldOffset if not yet set
+              if PropMap.FieldValueOffset <= 0 then
+                PropMap.FieldValueOffset := LFld.Offset;
+           end;
         end;
       end;
 

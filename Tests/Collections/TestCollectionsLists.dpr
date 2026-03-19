@@ -10,7 +10,8 @@ uses
   Dext.Core.Activator,
   Dext.Json,
   Dext.Json.Types,
-  Dext.Collections;
+  Dext.Collections
+  Dext.Utils;
 
 type
   // 1. Entidade de Teste
@@ -140,5 +141,5 @@ begin
     on E: Exception do
       Writeln(E.ClassName, ': ', E.Message);
   end;
-  Readln;
+  ConsolePause;
 end.

@@ -23,7 +23,8 @@ begin
           TEntityDataSetTests,
           TProductDataSetTests,
           TMasterDetailDataSetTests,
-          TEntityDataSetCRUDTests
+          TEntityDataSetCRUDTests,
+          TEntityDataSetStressTests
         ]).Run
     );
   except

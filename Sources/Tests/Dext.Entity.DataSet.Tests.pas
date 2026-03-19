@@ -201,7 +201,7 @@ type
   end;
 
   // =========================================================================
-  //  NOVO: Fixture de testes CRUD Real (TList reference)
+  //  Fixture de testes CRUD e Edição
   // =========================================================================
   [TestFixture]
   TEntityDataSetCRUDTests = class
@@ -228,6 +228,30 @@ type
     procedure Test_Insert_Between_Records;
     [Test]
     procedure Test_Insert_With_Sort;
+  end;
+
+  // =========================================================================
+  //  Fixture de testes de Stress e Transição de Estado
+  // =========================================================================
+  [TestFixture]
+  TEntityDataSetStressTests = class
+  private
+    FDataSet: TEntityDataSet;
+    FUsers: IList<TObject>;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_Stress_1k_Records_Filter;
+    [Test]
+    procedure Test_Edit_Into_Filter_Hides_Record;
+    [Test]
+    procedure Test_MultiFieldSort_Composite;
+    [Test]
+    procedure Test_Edit_Record_While_Filtered_Maintains_Position;
   end;
 
 implementation
@@ -786,5 +810,107 @@ begin
   Should(FDataSet.FieldByName('Name').AsString).Be('Romero').Because('Sort after insert: Romero third');
 end;
 
-initialization
+{ TEntityDataSetStressTests }
+
+procedure TEntityDataSetStressTests.Setup;
+var
+  i: Integer;
+begin
+  FUsers := TCollections.CreateList<TObject>(True);
+  for i := 1 to 1000 do
+  begin
+    var User := TUserTest.Create;
+    User.Id := i;
+    User.Name := 'User ' + i.ToString.PadLeft(4, '0');
+    User.Score := i * 1.5;
+    User.Active := (i mod 2 = 0);
+    FUsers.Add(User);
+  end;
+
+  FDataSet := TEntityDataSet.Create(nil);
+  FDataSet.Load(FUsers, TUserTest, False);
+  FDataSet.Open;
+end;
+
+procedure TEntityDataSetStressTests.TearDown;
+begin
+  FDataSet.Free;
+  FUsers := nil; // ARC handled by TCollections
+end;
+
+procedure TEntityDataSetStressTests.Test_Stress_1k_Records_Filter;
+begin
+  FDataSet.Filter := 'Score > 1000';
+  FDataSet.Filtered := True;
+  
+  // Total 1000 users. i*1.5 > 1000 => i > 666.6 => 1000 - 666 = 334 records
+  Should(FDataSet.RecordCount).Be(334);
+  
+  FDataSet.First;
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(667);
+  
+  FDataSet.Last;
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(1000);
+end;
+
+procedure TEntityDataSetStressTests.Test_Edit_Into_Filter_Hides_Record;
+begin
+  FDataSet.Filter := 'Active = True';
+  FDataSet.Filtered := True;
+  
+  Should(FDataSet.RecordCount).Be(500).Because('Half of the records are active');
+  
+  FDataSet.First;
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(2);
+  
+  // Edit record 2 to be inactive
+  FDataSet.Edit;
+  FDataSet.FieldByName('Active').AsBoolean := False;
+  FDataSet.Post;
+  
+  Should(FDataSet.RecordCount).Be(499).Because('One active record became inactive');
+  Should(FDataSet.FieldByName('Id').AsInteger).NotBe(2).Because('The inactive record should no longer be visible');
+end;
+
+procedure TEntityDataSetStressTests.Test_MultiFieldSort_Composite;
+begin
+  // Sort by Active (False=0, True=1) then Id DESC
+  FDataSet.IndexFieldNames := 'Active;Id DESC';
+  
+  FDataSet.First;
+  // First record should be Active=False (0) and the highest Id (999)
+  Should(FDataSet.FieldByName('Active').AsBoolean).BeFalse;
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(999);
+  
+  FDataSet.Next;
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(997);
+  
+  // Go to start of Active=True block
+  FDataSet.Filter := 'Active = True';
+  FDataSet.Filtered := True;
+  FDataSet.First;
+  Should(FDataSet.FieldByName('Active').AsBoolean).BeTrue;
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(1000);
+end;
+
+procedure TEntityDataSetStressTests.Test_Edit_Record_While_Filtered_Maintains_Position;
+begin
+  FDataSet.Filter := 'Id <= 5';
+  FDataSet.Filtered := True;
+  
+  FDataSet.First; // Id = 1 (inactive)
+  FDataSet.Next;  // Id = 2 (active)
+  
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(2);
+  
+  // Edit Name only (Active remains True)
+  FDataSet.Edit;
+  FDataSet.FieldByName('Name').AsString := 'Updated 2';
+  FDataSet.Post;
+  
+  // Should stay on ID 2
+  Should(FDataSet.FieldByName('Id').AsInteger).Be(2);
+  Should(FDataSet.FieldByName('Name').AsString).Be('Updated 2');
+end;
+
 end.
