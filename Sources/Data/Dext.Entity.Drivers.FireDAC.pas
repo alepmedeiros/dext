@@ -372,7 +372,16 @@ begin
     ftBCD:
       Param.AsBCD := AValue.AsType<Currency>;
     ftFMTBcd:
-      Param.AsFMTBCD := StrToBcd(AValue.AsString);
+      case AValue.Kind of
+        tkFloat:
+          Param.AsFMTBCD := DoubleToBcd(AValue.AsExtended);
+        tkInteger, tkInt64:
+          Param.AsFMTBCD := DoubleToBcd(AValue.AsInt64);
+        tkString, tkUString, tkWString, tkLString:
+          Param.AsFMTBCD := StrToBcd(AValue.AsString);
+      else
+        Param.AsFMTBCD := DoubleToBcd(AValue.AsExtended);
+      end;
     ftDate:
       Param.AsDate := AValue.AsType<TDate>;
     ftTime:
