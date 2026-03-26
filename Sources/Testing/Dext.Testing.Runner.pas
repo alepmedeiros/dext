@@ -1447,6 +1447,7 @@ begin
         Info.ErrorMessage := E.Message;
         // Try to get stack trace if available
         Info.StackTrace := E.StackTrace;
+
         Inc(FSummary.Failed);
         // Log.Error('Failed Test: %s. Error: %s', [Info.DisplayName, E.Message]);
       end;

@@ -27,17 +27,17 @@ begin
     var TestResult := TTest
       .Configure
       .Verbose
-      .RegisterFixtures([TDataSetSmartTypesTests
-//        TEntityDataSetCRUDTests,
-//        TEntityDataSetTests,
-//        TProductDataSetTests,
-//        TMasterDetailDataSetTests,
-//        TEntityDataSetStressTests,
-//        TDataSetSmartTypesTests,
-//        TShadowDataSetTests,
-//        TCalculatedFieldsTests,
-//        TSmartTypesTests,
-//        TSmartTypesMatrixTests
+      .RegisterFixtures([
+        TEntityDataSetCRUDTests,
+        TEntityDataSetTests,
+        TProductDataSetTests,
+        TMasterDetailDataSetTests,
+        TEntityDataSetStressTests,
+        TDataSetSmartTypesTests,
+        TShadowDataSetTests,
+        TCalculatedFieldsTests,
+        TSmartTypesTests,
+        TSmartTypesMatrixTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);

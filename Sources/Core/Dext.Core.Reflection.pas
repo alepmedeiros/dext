@@ -127,11 +127,6 @@ begin
       begin
         IsLazy := True;
         ValueField := Field;
-        var valueTypeMethod := Field.FieldType.GetMethods('GetValueType');
-        if valueTypeMethod <> nil then
-        begin
-          var vt := valueTypeMethod.Invoke())
-        end;
       end;
     end;
 
@@ -140,19 +135,14 @@ begin
     begin
       var LTypeName := string(RttiType.Handle.Name);
       if (LTypeName.Contains('Prop<') or LTypeName.Contains('Nullable<') or
-         // LTypeName.Contains('Lazy<') or LTypeName.Contains('TProp<') or
          LTypeName.Contains('Proxy<') or LTypeName.Contains('TProxy<') or
-         LTypeName.Contains('PropType')) then //and
-//         (not LTypeName.StartsWith('ILazy')) and
-//         (not LTypeName.StartsWith('TLazy')) then
+         LTypeName.Contains('PropType')) then
       begin
         IsSmartProp := True;
         
         // Tenta encontrar o campo por convenção se o GetFields falhou
         if ValueField = nil then
           ValueField := RttiType.GetField('FValue');
-//        if ValueField = nil then
-//          ValueField := RttiType.GetField('FInstance');
         if ValueField = nil then
           ValueField := RttiType.GetField('FProxy'); // Added for Proxy<T>
         if ValueField = nil then
@@ -160,25 +150,15 @@ begin
       end;
     end;
 
-//    if (InnerType = nil) and IsLazy then
-//    begin
-//      for var p in RttiType.GetProperties do
-//      begin
-//        if p.Name = 'Value' then
-//          InnerType := p.PropertyType.Handle;
-//        WriteLn('[DEBUG] Property ', p.PropertyType.Name)
-//      end;
-//    end;
-
     // Se não encontrou o tipo interno via campos/propriedades, tenta via nome (último recurso)
-    if (InnerType = nil) and IsSmartProp then
+    if (InnerType = nil) and (IsSmartProp or IsLazy) then
     begin
-      // Try 'Value' property first (e.g. Lazy<T>, Nullable<T>)
+      // Try 'Value' property first (e.g. Nullable<T>)
       var LValueProp := RttiType.GetProperty('Value');
       if LValueProp <> nil then
         InnerType := LValueProp.PropertyType.Handle;
 
-      if (InnerType = nil) and (ValueField <> nil) then
+      if (InnerType = nil) and (ValueField <> nil) and not IsLazy then
         InnerType := ValueField.FieldType.Handle;
 
       if InnerType = nil then
@@ -419,7 +399,7 @@ begin
   if not (ASource.Kind in [tkRecord, tkClass]) then Exit;
 
   var Meta := GetMetadata(ASource.TypeInfo);
-  if Meta.IsSmartProp and (Meta.ValueField <> nil) then
+  if (Meta.IsSmartProp or Meta.IsLazy) and (Meta.ValueField <> nil) then
   begin
     PData := ASource.GetReferenceToRawData;
     if PData = nil then Exit;
@@ -447,7 +427,6 @@ begin
           Unwrapped := LLazy.Value;
        end;
     end;
-    
     // RECURSIVE UNWRAP
     if TryUnwrapProp(Unwrapped, ADest) then
       Result := True

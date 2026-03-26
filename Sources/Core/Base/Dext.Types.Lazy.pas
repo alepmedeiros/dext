@@ -41,7 +41,6 @@ type
     ['{40223BA9-0C66-49E7-AA33-BDAEF9F506D6}']
     function GetIsValueCreated: Boolean;
     function GetValue: TValue;
-    function GetValueType: PTypeInfo;
     property IsValueCreated: Boolean read GetIsValueCreated;
     property Value: TValue read GetValue;
   end;
@@ -55,11 +54,10 @@ type
   // Forward declarations
   TLazy<T> = class;
   TValueLazy<T> = class;
-  {$M+}
+  {$RTTI EXPLICIT PROPERTIES([])}
   Lazy<T> = record
   private
-    FValueType: T;
-    FInstance: ILazy;
+    FInstance: ILazy<T>;
     function GetIsValueCreated: Boolean;
     function GetValue: T;
   public
@@ -86,7 +84,6 @@ type
     function GetIsValueCreated: Boolean;
     function GetValue: TValue;
     function GetValueT: T;
-    function GetValueType: PTypeInfo;
   public
     constructor Create(const AValueFactory: TFunc<T>; AOwnsValue: Boolean = True);
     destructor Destroy; override;
@@ -99,7 +96,6 @@ type
     function GetIsValueCreated: Boolean;
     function GetValue: TValue;
     function GetValueT: T;
-    function GetValueType: PTypeInfo;
   public
     constructor Create(const AValue: T; AOwnsValue: Boolean = False);
     destructor Destroy; override;
@@ -164,11 +160,6 @@ begin
   Result := FValue;
 end;
 
-function TLazy<T>.GetValueType: PTypeInfo;
-begin
-  Result := TypeInfo(T);
-end;
-
 { TValueLazy<T> }
 
 constructor TValueLazy<T>.Create(const AValue: T; AOwnsValue: Boolean);
@@ -204,30 +195,22 @@ begin
   Result := FValue;
 end;
 
-function TValueLazy<T>.GetValueType: PTypeInfo;
-begin
-  Result := TypeInfo(T);
-end;
-
 { Lazy<T> }
 
 class function Lazy<T>.Create: Lazy<T>;
 begin
   // Default constructor returns empty/default
   Result.FInstance := TValueLazy<T>.Create(Default(T));
-  Result.FValueType := Default(T);
 end;
 
 constructor Lazy<T>.Create(const AValueFactory: TFunc<T>);
 begin
   FInstance := TLazy<T>.Create(AValueFactory);
-  FValueType := Default(T);
 end;
 
 constructor Lazy<T>.CreateFrom(const AValue: T);
 begin
   FInstance := TValueLazy<T>.Create(AValue);
-  FValueType := Default(T);
 end;
 
 function Lazy<T>.GetIsValueCreated: Boolean;
@@ -241,9 +224,9 @@ end;
 function Lazy<T>.GetValue: T;
 begin
   if FInstance <> nil then
-    Result := FInstance.Value.AsType<T>
+    Result := FInstance.Value
   else
-    Result := FValueType;
+    Result := Default(T);
 end;
 
 class operator Lazy<T>.Implicit(const Value: Lazy<T>): T;
