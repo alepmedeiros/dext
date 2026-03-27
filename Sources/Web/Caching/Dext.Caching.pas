@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -145,6 +145,7 @@ type
   private
     FOriginal: IHttpResponse;
     FBodyBuffer: TStringBuilder;
+    FStatusCode: Integer;
   public
     constructor Create(AOriginal: IHttpResponse);
     destructor Destroy; override;
@@ -152,8 +153,8 @@ type
     // IHttpResponse methods
     function GetStatusCode: Integer;
     function GetContentType: string;
-    procedure SetStatusCode(AValue: Integer);
     function Status(AValue: Integer): IHttpResponse;
+    procedure SetStatusCode(AValue: Integer);
     procedure SetContentType(const AValue: string);
     procedure SetContentLength(const AValue: Int64);
     procedure Write(const AContent: string); overload;
@@ -605,6 +606,7 @@ begin
   inherited Create;
   FOriginal := AOriginal;
   FBodyBuffer := TStringBuilder.Create;
+  FStatusCode := 200;
 end;
 
 destructor TResponseCaptureWrapper.Destroy;
@@ -613,15 +615,15 @@ begin
   inherited;
 end;
 
-procedure TResponseCaptureWrapper.SetStatusCode(AValue: Integer);
-begin
-  FOriginal.StatusCode := AValue;
-end;
-
 function TResponseCaptureWrapper.Status(AValue: Integer): IHttpResponse;
 begin
   SetStatusCode(AValue);
   Result := Self;
+end;
+
+procedure TResponseCaptureWrapper.SetStatusCode(AValue: Integer);
+begin
+  FStatusCode := AValue;
 end;
 
 procedure TResponseCaptureWrapper.SetContentType(const AValue: string);
@@ -708,7 +710,7 @@ end;
 
 function TResponseCaptureWrapper.GetStatusCode: Integer;
 begin
-  Result := FOriginal.StatusCode;
+  Result := FStatusCode;
 end;
 
 function TResponseCaptureWrapper.GetContentType: string;

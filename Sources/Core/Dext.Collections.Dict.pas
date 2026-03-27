@@ -38,6 +38,7 @@ uses
   Dext.Collections.Comparers,
   Dext.Collections.RawDict;
 
+{$M+}
 type
   /// <summary>Key-value pair record</summary>
   TPair<K, V> = record
@@ -180,6 +181,7 @@ type
     function ToArray: TArray<TPair<string, string>>;
   end;
 
+{$M-}
 implementation
 
 { TDextStringDictionary }

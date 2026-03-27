@@ -38,6 +38,7 @@ uses
   Dext.Auth.Identity,
   Dext.Configuration.Interfaces;
 
+{$M+}
 type
   IHttpContext = interface;
   IHttpRequest = interface;
@@ -313,6 +314,7 @@ type
     procedure Add(const AFile: IFormFile);
   end;
 
+{$M-}
 implementation
 
 uses
