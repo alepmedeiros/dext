@@ -9,7 +9,6 @@ uses
   Dext.Testing.Attributes,
   Dext.Testing.Fluent,
   Dext.Utils,
-  // Unit tests
   Dext.Entity.SmartTypes.Tests in 'Dext.Entity.SmartTypes.Tests.pas',
   Dext.Entity.FluentQuery.Tests in 'Dext.Entity.FluentQuery.Tests.pas',
   Dext.Entity.DataSet.Tests in 'Dext.Entity.DataSet.Tests.pas',
@@ -35,7 +34,17 @@ begin
         TMasterDetailDataSetTests,
         TEntityDataSetStressTests,
         TDataSetSmartTypesTests,
-        TShadowDataSetTests
+        TShadowDataSetTests,
+        TCalculatedFieldsTests,
+        TSmartTypesTests,
+        TSmartTypesMatrixTests,
+        TEntityDataSetTests,
+        TProductDataSetTests,
+        TMasterDetailDataSetTests,
+        TEntityDataSetCRUDTests,
+        TEntityDataSetStressTests,
+        TSmartPropertyDataSetTests,
+        TFloatingPointDataSetTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);

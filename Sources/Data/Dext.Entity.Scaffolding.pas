@@ -102,6 +102,7 @@ uses
   FireDAC.Phys.Intf,
   FireDAC.Stan.Intf, // Needed for mkTableFields constants if used, or just rely on strings
   System.StrUtils,
+  Dext.Core.Reflection,
   Dext.Entity.Context,
   Dext.Entity.Drivers.FireDAC,
   Dext.Types.Lazy,
@@ -465,7 +466,7 @@ begin
       // Fields
       for Col in Table.Columns do
       begin
-        FieldName := 'F' + CleanName(Col.Name);
+        FieldName := TReflection.NormalizeFieldName(CleanName(Col.Name));
         DelphiType := SQLTypeToDelphiType(Col.DataType, Col.Scale);
         
         if Col.IsNullable and (DelphiType <> 'string') and (DelphiType <> 'TBytes') then
@@ -524,7 +525,7 @@ begin
       for Col in Table.Columns do
       begin
         PropName := CleanName(Col.Name);
-        FieldName := 'F' + PropName;
+        FieldName := TReflection.NormalizeFieldName(PropName);
         DelphiType := SQLTypeToDelphiType(Col.DataType, Col.Scale);
         
         if Col.IsNullable and (DelphiType <> 'string') and (DelphiType <> 'TBytes') then

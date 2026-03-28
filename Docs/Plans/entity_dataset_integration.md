@@ -109,17 +109,19 @@ Para trafegar dados entre camadas (API -> Client) com máxima eficiência.
 - [x] **Blob Support:** Suporte e testes exaustivos para campos "Blob" (Texto longo - CLOB e Imagens - BLOB).
 - [x] **Master-Detail:** Implementar e testar cenários de Mestre-Detalhe vinculados.
 - [x] **Performance & RTTI Fix:** Otimização do pipeline de RTTI (Context global) e correção de memory leaks.
-- [ ] **Shadow Properties:** Validar leitura/escrita de propriedades persistentes que não possuem campo físico na classe (`TEntityMap`).
-- [ ] **Calculated Fields:** Suporte nativo a campos calculados via evento `OnCalcFields` do `TDataSet`.
+- [x] **Shadow Properties:** Validar leitura/escrita de propriedades persistentes que não possuem campo físico na classe (`TEntityMap`).
+- [x] **Eventos de Modificação:** Garantir disparo de eventos (BeforePost, AfterPost, etc).
+- [x] **Tratamento de Exceções:** Lidar com comportamentos anômalos no ciclo de vida do DataSet e reportar adequadamente para a UI (DBGrid).
+- [x] **Calculated Fields:** Suporte nativo a campos calculados via evento `OnCalcFields` do `TDataSet`.
 
 ### 🔄 Fase 5: Integração & Conversão de Dados
 
 *Objetivo: Facilitar a interoperabilidade entre listas, JSON e o engine do DataSet.*
 
-- [ ] **IList<T> Integration:** Melhorar integração nativa com `IList<T>` e coleções fluentes.
-- [ ] **Fluent Load:** Refinar método `.Load` para suportar diferentes origens de dados de forma transparente.
-- [ ] **Entity to Json:** Bridge para exportar dados do DataSet/Entidade para JSON.
-- [ ] **Json to Entity:** Bridge para importar dados de JSON diretamente para entidades via DataSet.
+- [x] **IList<T> Integration:** Melhorar integração nativa com `IList<T>` e coleções fluentes.
+- [x] **Fluent Load:** Refinar método `.Load` para suportar diferentes origens de dados de forma transparente.
+- [x] **Entity to Json:** Bridge para exportar dados do DataSet/Entidade para JSON.
+- [x] **Json to Entity:** Bridge para importar dados de JSON diretamente para entidades via DataSet.
 
 ### 🎨 Fase 6: Experiência Design-Time & IDE
 

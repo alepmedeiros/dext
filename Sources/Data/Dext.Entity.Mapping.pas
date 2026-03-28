@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -39,6 +39,7 @@ uses
   Dext.Entity.Attributes,
   Dext.Entity.TypeConverters,
   Dext.Core.SmartTypes,
+  Dext.Core.Reflection,
   Dext.Specifications.Interfaces;
 
 type
@@ -159,7 +160,8 @@ type
     IsCreatedAt: Boolean;
     IsUpdatedAt: Boolean;
     // Internal engine optimization
-    FieldOffset: Integer;      // Offset of FInfo
+    FieldOffset: Integer;      // Offset of Null flag (Boolean) - Used by TEntityDataSet
+    MetadataOffset: Integer;   // Offset of FInfo (IPropInfo) - Used by Prototype
     FieldValueOffset: Integer; // Offset of FValue
     PropertyType: PTypeInfo;   // Type of T in Prop<T>
     // Shadow Property support
@@ -168,6 +170,8 @@ type
     IsJsonColumn: Boolean;
     UseJsonB: Boolean; // PostgreSQL JSONB vs JSON
     IsLazy: Boolean; // New: Support for Auto-Proxies / Explicit Lazy
+    IsEnum: Boolean; // New: Flag to identify enumeration types
+    Prop: TRttiProperty; // Cached RTTI property
     constructor Create(const APropName: string);
   end;
 
@@ -380,12 +384,13 @@ type
 
 implementation
 
-{ TEntityMap }
+uses
+  System.StrUtils;
 
 constructor TEntityMap.Create(AEntityType: PTypeInfo);
 begin
   FEntityType := AEntityType;
-  FProperties := TCollections.CreateDictionary<string, TPropertyMap>(True);
+  FProperties := TCollections.CreateDictionaryIgnoreCase<string, TPropertyMap>(True);
   FKeys := TCollections.CreateList<string>;
   FQueryFilters := TCollections.CreateList<IExpression>;
   FIsSoftDelete := False;
@@ -396,6 +401,31 @@ begin
   FDiscriminatorValue := Null;
 
   DiscoverAttributes;
+end;
+
+function TypeInfoToFieldType(ATypeInfo: PTypeInfo): TFieldType;
+begin
+  if ATypeInfo = nil then Exit(ftUnknown);
+  case ATypeInfo.Kind of
+    tkInteger: Result := ftInteger;
+    tkChar, tkWChar, tkLString, tkWString, tkUString: Result := ftWideString;
+    tkFloat:
+    begin
+      if (ATypeInfo = TypeInfo(TDateTime)) or SameText(string(ATypeInfo.Name), 'TDateTime') then Result := ftDateTime
+      else if (ATypeInfo = TypeInfo(TDate)) or SameText(string(ATypeInfo.Name), 'TDate') then Result := ftDate
+      else if (ATypeInfo = TypeInfo(TTime)) or SameText(string(ATypeInfo.Name), 'TTime') then Result := ftTime
+      else if (ATypeInfo = TypeInfo(Currency)) or SameText(string(ATypeInfo.Name), 'Currency') then Result := ftCurrency
+      else Result := ftFloat;
+    end;
+    tkInt64: Result := ftLargeint;
+    tkEnumeration:
+    begin
+      if (ATypeInfo = TypeInfo(Boolean)) or SameText(string(ATypeInfo.Name), 'Boolean') then Result := ftBoolean
+      else Result := ftInteger;
+    end;
+  else
+    Result := ftUnknown;
+  end;
 end;
 
 procedure TEntityMap.ProcessAttribute(APropMap: TPropertyMap; AAttr: TCustomAttribute);
@@ -414,7 +444,7 @@ begin
       if FieldAttribute(AAttr).Name <> '' then
         APropMap.FieldName := FieldAttribute(AAttr).Name
       else
-        APropMap.FieldName := 'F' + APropMap.PropertyName;
+        APropMap.FieldName := TReflection.NormalizeFieldName(APropMap.PropertyName);
     end;
     if AAttr is PrimaryKeyAttribute then 
     begin
@@ -513,36 +543,39 @@ begin
     
     for var Fld in Typ.GetFields do
     begin
-      // 1. Smart Properties (detected by [SmartProp] attribute or Prop<T> naming)
-      var IsSmart := Fld.FieldType.Name.StartsWith('Prop<');
-      if not IsSmart then
-      begin
-        for Attr in Fld.FieldType.GetAttributes do
-          if SameText(Attr.ClassName, 'SmartPropAttribute') then
-          begin
-            IsSmart := True;
-            Break;
-          end;
-      end;
+      // 1. Smart Properties (detected by TReflection which handles attributes, naming and aliases)
+      var Metadata := TReflection.GetMetadata(Fld.FieldType.Handle);
+      var IsSmart := Metadata.IsSmartProp or Metadata.IsNullable or Metadata.IsLazy;
 
       if IsSmart then
       begin
-        var FldName := Fld.Name;
-        if (FldName.Length > 1) and (FldName[1] = 'F') and FldName[2].IsUpper then
-          FldName := FldName.Substring(1);
-        
+        var FldName := TReflection.NormalizeFieldName(Fld.Name);
+          
         PropMap := GetOrAddProperty(FldName);
         PropMap.FieldOffset := -1; // Reset to avoid incorrect null detection for records
         PropMap.FieldValueOffset := -1;
+        PropMap.IsLazy := Metadata.IsLazy;
 
-        for var InnerFld in Fld.FieldType.GetFields do
+        // Skip fast path for Lazy to force RTTI (which triggers Load)
+        if not PropMap.IsLazy then
         begin
-          if SameText(InnerFld.Name, 'FHasValue') or SameText(InnerFld.Name, 'FInfo') then
-            PropMap.FieldOffset := Fld.Offset + InnerFld.Offset
-          else if SameText(InnerFld.Name, 'FValue') then
+          // CRITICAL: We separate NullFlag and MetadataOffset.
+          // TEntityDataSet uses FieldOffset to check for NULL via PBoolean (must be boolean).
+          // Prototype usage needs FInfo, which is an Interface (must NOT be treated as null flag).
+          if Metadata.HasValueField <> nil then
           begin
-            PropMap.FieldValueOffset := Fld.Offset + InnerFld.Offset;
-            PropMap.PropertyType := InnerFld.FieldType.Handle;
+            if Metadata.HasValueField.FieldType.Handle = TypeInfo(Boolean) then
+              PropMap.FieldOffset := Fld.Offset + Metadata.HasValueField.Offset
+            else if Metadata.HasValueField.FieldType.TypeKind = tkInterface then
+              PropMap.MetadataOffset := Fld.Offset + Metadata.HasValueField.Offset;
+          end;
+
+          if Metadata.ValueField <> nil then
+          begin
+            PropMap.FieldValueOffset := Fld.Offset + Metadata.ValueField.Offset;
+            PropMap.PropertyType := Metadata.InnerType;
+            PropMap.DataType := TypeInfoToFieldType(Metadata.InnerType);
+            PropMap.IsEnum := (Metadata.InnerType <> nil) and (Metadata.InnerType.Kind = tkEnumeration) and (Metadata.InnerType <> TypeInfo(Boolean));
           end;
         end;
         
@@ -554,7 +587,7 @@ begin
       else if (Fld.Visibility in [mvPublic, mvPublished]) or (Length(Fld.GetAttributes) > 0) then
       begin
         var FldName := Fld.Name;
-        if (FldName.Length > 1) and (FldName[1] = 'F') and FldName[2].IsUpper then
+        if (FldName.Length > 1) and (FldName[1] = 'F') then
           FldName := FldName.Substring(1);
           
         PropMap := GetOrAddProperty(FldName);
@@ -562,6 +595,8 @@ begin
         begin
            PropMap.FieldValueOffset := Fld.Offset;
            PropMap.PropertyType := Fld.FieldType.Handle;
+           PropMap.DataType := TypeInfoToFieldType(Fld.FieldType.Handle);
+           PropMap.IsEnum := (Fld.FieldType.TypeKind = tkEnumeration) and (Fld.FieldType.Handle <> TypeInfo(Boolean));
         end;
         
         for Attr in Fld.GetAttributes do
@@ -571,17 +606,55 @@ begin
 
     for Prop in Typ.GetProperties do
     begin
-      PropMap := nil;
+      PropMap := GetOrAddProperty(Prop.Name);
       
+      // Basic type info
+      if PropMap.PropertyType = nil then
+        PropMap.PropertyType := Prop.PropertyType.Handle;
+      if PropMap.DataType = ftUnknown then
+        PropMap.DataType := TypeInfoToFieldType(Prop.PropertyType.Handle);
+
+      PropMap.IsEnum := (Prop.PropertyType.TypeKind = tkEnumeration) and (Prop.PropertyType.Handle <> TypeInfo(Boolean));
+      PropMap.Prop := Prop; // Cache the RTTI property for fast access
+      
+      // If the property has a getter or setter method, we should not use direct field access (Fast Path)
+      // as it might bypass business logic or calculated values.
+      if Prop is TRttiInstanceProperty then
+      begin
+        var LPropInfo := TRttiInstanceProperty(Prop).PropInfo;
+        if Assigned(LPropInfo) then
+        begin
+          // If GetProc points to a field (high-byte $FF), it's a direct field access property (e.g., 'read FCurrencyVal').
+          // In this case, we extract the actual memory offset of the private field to enable the 'Fast Path' performance boost.
+          // Note: We MUST NOT overwrite offsets for SmartProps (Nullable/Lazy) already detected in the Fields loop.
+          if (not PropMap.IsLazy) and ((NativeInt(LPropInfo.GetProc) and $FF000000) = $FF000000) then
+          begin
+            if PropMap.FieldValueOffset = 0 then
+              PropMap.FieldValueOffset := NativeInt(LPropInfo.GetProc) and $00FFFFFF;
+          end
+          else
+          begin
+             // It's a method getter - we cannot use direct memory access (Fast Path).
+             PropMap.FieldValueOffset := 0;
+          end;
+
+          // Double check SetProc to ensure it's also a field mapping or a method
+          if (PropMap.FieldValueOffset <> 0) and (NativeInt(LPropInfo.SetProc) <> 0) and 
+             ((NativeInt(LPropInfo.SetProc) and $FF000000) <> $FF000000) then
+          begin
+             PropMap.FieldValueOffset := 0;
+          end;
+        end;
+      end;
+
       if Prop.PropertyType.TypeKind in [tkClass, tkInterface] then
       begin
         // Filter out classes that have a registered converter (e.g. TStrings)
         // These should be treated as columns, not navigation properties.
-        var LConverter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+        var LTypeConv := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
         
-        if LConverter = nil then
+        if LTypeConv = nil then
         begin
-          PropMap := GetOrAddProperty(Prop.Name);
           PropMap.IsNavigation := True;
           if Prop.PropertyType.TypeKind = tkInterface then
             PropMap.Relationship := rtOneToMany // Likely IList<T>
@@ -590,75 +663,69 @@ begin
         end
         else
         begin
-           // It's a convertible class (like TStrings). Treat as a normal column but enable default lazy load for large types.
-           PropMap := GetOrAddProperty(Prop.Name);
-           PropMap.IsNavigation := False;
-           PropMap.Relationship := rtNone;
-           PropMap.Converter := LConverter;
+            // It's a convertible class (like TStrings). Treat as a normal column.
+            PropMap.IsNavigation := False;
+            PropMap.Relationship := rtNone;
+            PropMap.Converter := LTypeConv;
         end;
       end;
 
-      if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
+      // Try to find the backing field by convention (FPropName) if offset is not set
+      if PropMap.FieldValueOffset <= 0 then
+      begin
+        var BackingFld := Typ.GetField(TReflection.NormalizeFieldName(Prop.Name));
+        if BackingFld <> nil then
+        begin
+           // If the backing field is a SmartProp, we need to extract the inner offset
+           if TReflection.IsSmartProp(BackingFld.FieldType.Handle) then
+           begin
+             var Meta := TReflection.GetMetadata(BackingFld.FieldType.Handle);
+                if Meta.IsSmartProp then
+                begin
+                  // Detect Lazy
+                  if Meta.RttiType.Name.Contains('Lazy<') then
+                    PropMap.IsLazy := True;
+
+                  // Lazy types store an interface (ILazy), not the value T directly in the record.
+                  // We MUST NOT set FieldValueOffset for them if we want to support direct memory access for T.
+                  // Instead, we skip direct offset mapping so the engine falls back to RTTI (which handles ILazy).
+                  if not PropMap.IsLazy then
+                  begin
+                    PropMap.FieldValueOffset := BackingFld.Offset + Meta.ValueField.Offset;
+
+                    // Only use FieldOffset if it's a Boolean (real null flag)
+                    if (Meta.HasValueField <> nil) and (Meta.HasValueField.FieldType.Handle = TypeInfo(Boolean)) then
+                      PropMap.FieldOffset := BackingFld.Offset + Meta.HasValueField.Offset;
+                  end;
+                  
+                  PropMap.PropertyType := Meta.InnerType;
+                  // Update FieldOffset if not yet set
+                  if PropMap.FieldValueOffset <= 0 then
+                    PropMap.FieldValueOffset := BackingFld.Offset;
+
+                  PropMap.Prop := Prop;
+                end;
+           end
+           else
+           begin
+             PropMap.FieldValueOffset := BackingFld.Offset;
+           end;
+        end;
+      end;
 
       for Attr in Prop.GetAttributes do
         ProcessAttribute(PropMap, Attr);
       
       // Resolve Converter (Optimization)
-      // Even if no attributes, we might want to resolve converter for standard types (like TDateTime or Enums)
-      if PropMap <> nil then
+      if PropMap.Converter = nil then
+        PropMap.Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
+
+      // Automatically mark large types (TStrings, TBytes) as Lazy
+      if (PropMap.Converter <> nil) and not PropMap.IsPK and not PropMap.IsNavigation then
       begin
-        // If a specific converter class is defined (fluent or attribute), use it
-        if (PropMap.ConverterClass <> nil) then
-        begin
-            // We need to instantiate it. For now, assume parameterless constructor or standard pattern.
-            // TValueConverterRegistry helpers often take instances.
-            // Ideally, we should cache these instances or use Dependency Injection.
-            // Simple instantiation via RTTI for now.
-            var RttiCtx := TRttiContext.Create;
-            try
-              var RType := RttiCtx.GetType(PropMap.ConverterClass);
-              if (RType <> nil) and (RType.IsInstance) then
-              begin
-                  var Method := RType.GetMethod('Create');
-                  if Method <> nil then
-                    PropMap.Converter := Method.Invoke(RType.AsInstance.MetaclassType, []).AsType<ITypeConverter>
-                  else
-                  begin
-                      // Try basic Create
-                      var Obj := PropMap.ConverterClass.Create;
-                      if Supports(Obj, ITypeConverter, PropMap.Converter) then
-                        // OK
-                      else
-                        PropMap.Converter := nil; 
-                  end;
-              end;
-            finally
-              RttiCtx.Free;
-            end;
-        end;
-
-        if PropMap.Converter = nil then
-          PropMap.Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
-
-        // Automatically mark large types (TStrings, TBytes) as Lazy if not explicitly configured otherwise
-        // unless they are part of the primary key or explicitly excluded.
-        if (PropMap.Converter <> nil) and not PropMap.IsPK and not PropMap.IsNavigation then
-        begin
-            var LTypeName := string(Prop.PropertyType.Handle.Name);
-            if (LTypeName = 'TStrings') or (LTypeName = 'TBytes') then
-              PropMap.IsLazy := True;
-        end;
-
-        // Try to resolve backing field offset to enable fast-path even for properties
-        if (PropMap <> nil) and (PropMap.FieldValueOffset <= 0) then
-        begin
-          var BackingFld := Typ.GetField('F' + Prop.Name);
-          if BackingFld <> nil then
-          begin
-             PropMap.FieldValueOffset := BackingFld.Offset;
-             PropMap.PropertyType := Prop.PropertyType.Handle;
-          end;
-        end;
+          var LTypeName := string(Prop.PropertyType.Handle.Name);
+          if (LTypeName = 'TStrings') or (LTypeName = 'TBytes') then
+            PropMap.IsLazy := True;
       end;
     end;
   finally
@@ -714,11 +781,13 @@ begin
   IsCreatedAt := False;
   IsUpdatedAt := False;
   FieldOffset := -1; 
+  MetadataOffset := -1;
   FieldValueOffset := -1;
   PropertyType := nil;
   IsShadow := False;
   IsJsonColumn := False;
   UseJsonB := True; // Default for PostgreSQL
+  IsEnum := False;
 end;
 
 { TRelationshipBuilder<T> }
@@ -1159,7 +1228,7 @@ end;
 
 function TPropertyBuilder<T>.UseField: IPropertyBuilder<T>;
 begin
-  FPropMap.FieldName := 'F' + FPropMap.PropertyName;
+  FPropMap.FieldName := TReflection.NormalizeFieldName(FPropMap.PropertyName);
   Result := Self;
 end;
 

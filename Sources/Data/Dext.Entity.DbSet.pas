@@ -598,7 +598,7 @@ begin
       // Convention: Property "Name" has backing field "FName"
       if (Prop.PropertyType.TypeKind = tkRecord) then
       begin
-        var FieldName := 'F' + Prop.Name;
+        var FieldName := TReflection.NormalizeFieldName(Prop.Name);
         Field := Typ.GetField(FieldName);
         if Field <> nil then
           FFields.Add(ColName.ToLower, Field);
@@ -1029,13 +1029,7 @@ begin
   HandleTimestamps(AEntity, True);
   Generator := CreateGenerator;
   try
-    try
-        Sql := Generator.GenerateInsert(T(AEntity));
-    except
-        on E: Exception do
-             raise;
-    end;
-
+    Sql := Generator.GenerateInsert(T(AEntity));
     // Find AutoInc property and column
     AutoIncColumn := '';
     AutoIncProp := nil;
@@ -2477,31 +2471,6 @@ begin
         end);
     end;
 
-//  var Spec := LSpec as ISpecification;
-//  var Count := TFunc<ISpecification, Integer>(
-//      function(S: ISpecification): Integer
-//      begin
-//        Result := LSelf.Count(S as ISpecification<T>);
-//      end);
-//  var Any := TFunc<ISpecification, Boolean>(
-//      function(S: ISpecification): Boolean
-//      begin
-//        Result := LSelf.Any(S as ISpecification<T>);
-//      end);
-//  var FirstOrDefault := TFunc<ISpecification, T>(
-//      function(S: ISpecification): T
-//      begin
-//        Result := LSelf.FirstOrDefault(S as ISpecification<T>);
-//      end);
-//
-//  Result := TFluentQuery<T>.Create(
-//    LFactory,
-//    Spec,
-//    Count,
-//    Any,
-//    FirstOrDefault,
-//    FContext.Connection
-//  );
   Result := TFluentQuery<T>.Create(
     LFactory,
     LSpec as ISpecification,

@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -26,6 +26,8 @@
 unit Dext.Types.Nullable;
 
 interface
+
+{$RTTI EXPLICIT FIELDS([vcPrivate..vcPublic]) PROPERTIES([vcPrivate..vcPublic])}
 
 uses
   System.SysUtils,

@@ -371,24 +371,6 @@ const
   // ?? Local Types & Helpers
   // ===========================================================================
 type
-  Lazy<T> = record
-  private
-    FInstance: ILazy;
-    function GetIsValueCreated: Boolean;
-    function GetValue: T;
-  public
-    class function Create: Lazy<T>; overload; static;
-    constructor Create(const AValueFactory: TFunc<T>; AOwnsValue: Boolean = True); overload;
-    constructor CreateFrom(const AValue: T; AOwnsValue: Boolean = False);
-
-    class operator Implicit(const Value: Lazy<T>): T;
-    class operator Implicit(const Value: T): Lazy<T>;
-    class operator Implicit(const ValueFactory: TFunc<T>): Lazy<T>;
-
-    property IsValueCreated: Boolean read GetIsValueCreated;
-    property Value: T read GetValue;
-  end;
-
   /// <summary>
   ///   Persistence Setup Helper
   /// </summary>
@@ -556,55 +538,6 @@ begin
       Options.Free;
     end
   );
-end;
-
-{ Lazy<T> }
-
-class function Lazy<T>.Create: Lazy<T>;
-begin
-  // Default constructor returns empty/default
-  Result.FInstance := TValueLazy<T>.Create(Default(T));
-end;
-
-constructor Lazy<T>.Create(const AValueFactory: TFunc<T>; AOwnsValue: Boolean);
-begin
-  FInstance := TLazy<T>.Create(AValueFactory, AOwnsValue);
-end;
-
-constructor Lazy<T>.CreateFrom(const AValue: T; AOwnsValue: Boolean = False);
-begin
-  FInstance := TValueLazy<T>.Create(AValue, AOwnsValue);
-end;
-
-function Lazy<T>.GetIsValueCreated: Boolean;
-begin
-  if FInstance <> nil then
-    Result := FInstance.IsValueCreated
-  else
-    Result := False;
-end;
-
-function Lazy<T>.GetValue: T;
-begin
-  if FInstance <> nil then
-    Result := FInstance.Value.AsType<T>
-  else
-    Result := Default(T);
-end;
-
-class operator Lazy<T>.Implicit(const Value: Lazy<T>): T;
-begin
-  Result := Value.Value;
-end;
-
-class operator Lazy<T>.Implicit(const Value: T): Lazy<T>;
-begin
-  Result.CreateFrom(Value);
-end;
-
-class operator Lazy<T>.Implicit(const ValueFactory: TFunc<T>): Lazy<T>;
-begin
-  Result.Create(ValueFactory);
 end;
 
 

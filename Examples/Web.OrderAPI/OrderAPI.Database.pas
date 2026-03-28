@@ -1,4 +1,4 @@
-unit OrderAPI.Database;
+﻿unit OrderAPI.Database;
 
 {***************************************************************************}
 {  Order API - Database Context                                             }
@@ -9,8 +9,7 @@ interface
 
 uses
   System.SysUtils,
-  Dext.Entity,
-  OrderAPI.Entities;
+  Dext.Entity;
 
 type
   /// <summary>
@@ -19,24 +18,8 @@ type
   /// </summary>
   {$M+}
   TOrderDbContext = class(TDbContext)
-  protected
-    procedure OnModelCreating(Builder: TModelBuilder); override;
   end;
 
 implementation
-
-{ TOrderDbContext }
-
-procedure TOrderDbContext.OnModelCreating(Builder: TModelBuilder);
-begin
-  inherited;
-  
-  // Registrar todas as entidades
-  Builder.Entity<TCategory>;
-  Builder.Entity<TProduct>;
-  Builder.Entity<TRestaurantTable>;
-  Builder.Entity<TOrder>;
-  Builder.Entity<TOrderItem>;
-end;
 
 end.

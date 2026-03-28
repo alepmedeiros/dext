@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -136,13 +136,17 @@ begin
       for PropMap in EntityMap.Properties.Values do
       begin
         // 1. Inject IPropInfo (Metadata for SQL generation)
-        if PropMap.FieldOffset <> -1 then
+        // CRITICAL: We use MetadataOffset (FInfo interface) instead of FieldOffset (Boolean flag).
+        if PropMap.MetadataOffset <> -1 then
         begin
           ColumnName := PropMap.ColumnName;
           if ColumnName = '' then ColumnName := PropMap.PropertyName;
 
           PropInfo := TPropInfo.Create(PropMap.ColumnName, PropMap.PropertyName);
-          IPropInfo(PPointer(NativeInt(InstancePtr) + PropMap.FieldOffset)^) := PropInfo;
+          // Manually AddRef since we're storing it in raw memory as a raw pointer
+          // This prevents the interface from being freed when this scope ends.
+          PropInfo._AddRef;
+          PPointer(NativeInt(InstancePtr) + PropMap.MetadataOffset)^ := Pointer(PropInfo);
         end;
 
         // 2. Inject Sub-Prototypes (Recursive Drill-down Support)

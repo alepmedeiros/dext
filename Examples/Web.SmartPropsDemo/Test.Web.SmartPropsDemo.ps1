@@ -14,6 +14,10 @@ function Invoke-DextRequest {
         [string]$Method = "GET",
         [string]$Body = $null
     )
+    # Print Request Info
+    Write-Host "   [REQUEST]: $Method $Uri" -ForegroundColor Gray
+    if ($Body) { Write-Host "   [BODY]: $Body" -ForegroundColor Gray }
+    
     try {
         $params = @{
             Uri             = $Uri
@@ -24,7 +28,13 @@ function Invoke-DextRequest {
         if ($Body) { $params.Body = $Body }
         
         $resp = Invoke-WebRequest @params
-        try { return ($resp.Content | ConvertFrom-Json) } catch { return $resp.Content }
+        
+        # Print Response Info
+        Write-Host "   [RESPONSE]: $($resp.StatusCode)" -ForegroundColor Gray
+        $content = $resp.Content
+        Write-Host "   [CONTENT]: $content" -ForegroundColor Gray
+        
+        try { return ($content | ConvertFrom-Json) } catch { return $content }
     }
     catch {
         $resp = $_.Exception.Response

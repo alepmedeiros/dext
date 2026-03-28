@@ -93,7 +93,7 @@ begin
           Prop := RType.GetProperty(FPropName);
           
           PropField := RType.GetField(PropMap.FieldName);
-          if PropField = nil then PropField := RType.GetField('F' + FPropName);
+          if PropField = nil then PropField := RType.GetField(TReflection.NormalizeFieldName(FPropName));
 
           if PropMap.IsNavigation then
           begin

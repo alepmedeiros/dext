@@ -344,7 +344,7 @@ end;
 class function BooleanExpression.FromRuntime(const AValue: Boolean): BooleanExpression;
 begin
   Result.FRuntimeValue := AValue;
-  Result.FExpression := nil;
+  Result.FExpression := TConstantExpression.Create(AValue);
 end;
 
 class operator BooleanExpression.Implicit(const Value: BooleanExpression): Boolean;
@@ -603,12 +603,15 @@ end;
 
 function Prop<T>.AsString: string;
 begin
-  Result := string(Self);
+  if IsQueryMode then
+    Result := Name
+  else
+    Result := TValueConverter.Convert<string>(TValue.From<T>(FValue));
 end;
 
 function Prop<T>.ToString: string;
 begin
-  Result := string(Self);
+  Result := AsString;
 end;
 
 function Prop<T>.AsInteger: Integer;

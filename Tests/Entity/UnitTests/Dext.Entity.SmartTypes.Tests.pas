@@ -4,6 +4,8 @@ interface
 
 uses
   System.SysUtils,
+  System.DateUtils,
+  System.Rtti,
   Dext.Assertions,
   Dext.Testing.Attributes,
   Dext.Core.SmartTypes,
@@ -34,7 +36,68 @@ type
     procedure TestNullableAssertions;
   end;
 
+  [TestFixture('SmartTypes Combinatorial Matrix')]
+  TSmartTypesMatrixTests = class
+  private
+    procedure CheckType<T>(const Value: T; const ExpectedStr: string;
+      TestConversionBack: Boolean = True);
+  public
+    [Test]
+    procedure Test_All_Fundament_Types_Consistency;
+  end;
+
 implementation
+
+{ TSmartTypesMatrixTests }
+
+procedure TSmartTypesMatrixTests.CheckType<T>(const Value: T; const
+  ExpectedStr: string; TestConversionBack: Boolean = True);
+var
+  P: Prop<T>;
+begin
+  P := Value;
+  Should(P.AsString).Be(ExpectedStr);
+  Should(Nullable<T>(P).HasValue).BeTrue;
+
+  if not TestConversionBack then Exit;
+
+  var expect := TValue.From<T>(T(P)).AsVariant;
+  var actual := TValue.From<T>(Value).AsVariant;
+  // Test conversion back to T using Variant as bridge for generics
+  Should(expect).Be(actual);
+end;
+
+procedure TSmartTypesMatrixTests.Test_All_Fundament_Types_Consistency;
+var
+  G: TGuid;
+begin
+  // String
+  CheckType<string>('Dext', 'Dext');
+  
+  // Integer
+  CheckType<Integer>(123, '123');
+  
+  // Int64
+  CheckType<Int64>(9223372036854775807, '9223372036854775807');
+  
+  // Double
+  CheckType<Double>(123.45, '123.45');
+  
+  // Boolean
+  CheckType<Boolean>(True, 'True');
+  CheckType<Boolean>(False, 'False');
+  
+  // DateTime
+  var D := EncodeDateTime(2025, 12, 19, 14, 30, 0, 0);
+  CheckType<TDateTime>(D, DateTimeToStr(D));
+  
+  // Currency
+  CheckType<Currency>(1234.56, '1234.56');
+  
+  // Guid
+  G := TGuid.Create('{D6A5D5A1-949B-4B7C-9F8A-E7C1D1B1B1B1}');
+  CheckType<TGuid>(G, GUIDToString(G), False);
+end;
 
 { TSmartTypesTests }
 

@@ -28,7 +28,7 @@ type
     FScore: Double;
     FActive: Boolean;
   public
-    [PrimaryKey, AutoInc]
+    [PrimaryKey]
     property Id: Integer read FId write FId;
     property Name: string read FName write FName;
     property Score: Double read FScore write FScore;
@@ -99,6 +99,37 @@ type
   end;
 
   // =========================================================================
+  //  Entity with Smart Properties for mapping tests
+  // =========================================================================
+  TTestSmartEntity = class
+  private
+    FId: Integer;
+    FLazyDescription: Lazy<string>;
+    FPropPrice: Prop<Double>;
+    FNullableAge: Nullable<Integer>;
+  public
+    [PrimaryKey, AutoInc]
+    property Id: Integer read FId write FId;
+    property Description: Lazy<string> read FLazyDescription write FLazyDescription;
+    property Price: Prop<Double> read FPropPrice write FPropPrice;
+    property Age: Nullable<Integer> read FNullableAge write FNullableAge;
+  end;
+
+  [TestFixture('TEntityDataSet Smart Properties')]
+  TSmartPropertyDataSetTests = class
+  private
+    FDataSet: TEntityDataSet;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_Smart_Fields_Naming_And_Types;
+  end;
+
+  // =========================================================================
   //  SmartTypes Entity
   // =========================================================================
   TSmartProduct = class
@@ -137,6 +168,41 @@ type
   end;
 
   // =========================================================================
+  //  Floating Point and Currency tests
+  // =========================================================================
+
+  [Table('floating_point')]
+  TFloatingPointTest = class
+  private
+    FId: Integer;
+    FDoubleVal: Double;
+    FCurrencyVal: Currency;
+  public
+    [PrimaryKey] property Id: Integer read FId write FId;
+    property DoubleVal: Double read FDoubleVal write FDoubleVal;
+    property CurrencyVal: Currency read FCurrencyVal write FCurrencyVal;
+  end;
+
+  [TestFixture('TEntityDataSet Floating Point and Currency')]
+  TFloatingPointDataSetTests = class
+  private
+    FDataSet: TEntityDataSet;
+    FObj: TFloatingPointTest;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_Double_Value;
+    [Test]
+    procedure Test_Currency_Value;
+    [Test]
+    procedure Test_Format_And_Precision;
+  end;
+
+  // =========================================================================
   //  Fixtures
   // =========================================================================
 
@@ -161,6 +227,14 @@ type
     procedure Test_Filter_Expression;
     [Test]
     procedure Test_Locate_Success;
+    [Test]
+    procedure Test_GenericArrayLoad;
+    [Test]
+    procedure Test_GenericIListLoad;
+    [Test]
+    procedure Test_ExportToJson;
+    [Test]
+    procedure Test_LoadFromJson;
   end;
 
   [TestFixture('TEntityDataSet Complex Types and Blobs')]
@@ -291,6 +365,23 @@ type
     procedure Test_ShadowProperty_Write_Updates_Context;
   end;
 
+  [TestFixture('TEntityDataSet Calculated Fields')]
+  TCalculatedFieldsTests = class
+  private
+    FDataSet: TEntityDataSet;
+    procedure OnCalcFields(DataSet: TDataSet);
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_Calculated_Field;
+    [Test]
+    procedure Test_Internal_Calculated_Field;
+  end;
+
 implementation
 
 { TEntityDataSetTests }
@@ -343,6 +434,78 @@ procedure TEntityDataSetTests.Test_Locate_Success;
 begin
   Should(FDataSet.Locate('Name', 'Romero', [])).BeTrue;
   Should(FDataSet.FieldByName('Id').AsInteger).Be(2);
+end;
+
+procedure TEntityDataSetTests.Test_GenericArrayLoad;
+var
+  TypedDS: TEntityDataSet;
+  TypedArray: TArray<TUserTest>;
+begin
+  SetLength(TypedArray, 1);
+  TypedArray[0] := TUserTest.Create;
+  TypedArray[0].Name := 'Alex';
+  
+  TypedDS := TEntityDataSet.Create(nil);
+  try
+    TypedDS.Load<TUserTest>(TypedArray);
+    Should(TypedDS.RecordCount).Be(1);
+    Should(TypedDS.FieldByName('Name').AsString).Be('Alex');
+  finally
+    TypedDS.Free;
+    TypedArray[0].Free;
+  end;
+end;
+
+procedure TEntityDataSetTests.Test_GenericIListLoad;
+var
+  TypedDS: TEntityDataSet;
+  TypedList: IList<TUserTest>;
+  U: TUserTest;
+begin
+  TypedList := TCollections.CreateList<TUserTest>(True);
+  U := TUserTest.Create;
+  U.Name := 'Alex List';
+  TypedList.Add(U);
+  
+  TypedDS := TEntityDataSet.Create(nil);
+  try
+    TypedDS.Load<TUserTest>(TypedList);
+    Should(TypedDS.RecordCount).Be(1);
+    Should(TypedDS.FieldByName('Name').AsString).Be('Alex List');
+  finally
+    TypedDS.Free;
+  end;
+end;
+
+procedure TEntityDataSetTests.Test_ExportToJson;
+begin
+  var Json := FDataSet.AsJsonArray;
+  Should(Json.Contains('Cesar')).BeTrue;
+  Should(Json.Contains('Romero')).BeTrue;
+  
+  FDataSet.First;
+  var ObjJson := FDataSet.AsJsonObject;
+  Should(ObjJson.Contains('Cesar')).BeTrue;
+  Should(ObjJson.Contains('Romero')).BeFalse;
+end;
+
+procedure TEntityDataSetTests.Test_LoadFromJson;
+var
+  Json: string;
+  TypedDS: TEntityDataSet;
+begin
+  Json := '[{"Id":1,"Name":"JSON 1","Active":true},{"Id":2,"Name":"JSON 2","Active":false}]';
+  TypedDS := TEntityDataSet.Create(nil);
+  try
+    TypedDS.LoadFromJson<TUserTest>(Json);
+    Should(TypedDS.RecordCount).Be(2);
+    TypedDS.First;
+    Should(TypedDS.FieldByName('Name').AsString).Be('JSON 1');
+    TypedDS.Next;
+    Should(TypedDS.FieldByName('Name').AsString).Be('JSON 2');
+  finally
+    TypedDS.Free;
+  end;
 end;
 
 { TProductDataSetTests }
@@ -498,6 +661,65 @@ begin
   FDataSet.Filter := 'Price > 20';
   FDataSet.Filtered := True;
   Should(FDataSet.RecordCount).Be(2);
+end;
+
+{ TCalculatedFieldsTests }
+
+procedure TCalculatedFieldsTests.Setup;
+begin
+  FDataSet := TEntityDataSet.Create(nil);
+  var U := TUserTest.Create;
+  U.Id := 10;
+  U.Score := 20;
+  var Lst := TCollections.CreateList<TObject>(True);
+  Lst.Add(U);
+  FDataSet.Load(Lst, TUserTest, False);
+  FDataSet.Close;
+  
+  // Add calculated field manually
+  var Fld := TFloatField.Create(FDataSet);
+  Fld.FieldName := 'CalculatedScore';
+  Fld.FieldKind := fkCalculated;
+  Fld.DataSet := FDataSet;
+
+  FDataSet.OnCalcFields := Self.OnCalcFields;
+  FDataSet.Open;
+end;
+
+procedure TCalculatedFieldsTests.TearDown;
+begin
+  FDataSet.Free;
+end;
+
+procedure TCalculatedFieldsTests.OnCalcFields(DataSet: TDataSet);
+begin
+  DataSet.FieldByName('CalculatedScore').AsFloat := DataSet.FieldByName('Score').AsFloat * 2;
+end;
+
+procedure TCalculatedFieldsTests.Test_Calculated_Field;
+begin
+  Should(FDataSet.FieldByName('CalculatedScore').AsFloat).Be(40);
+end;
+
+procedure TCalculatedFieldsTests.Test_Internal_Calculated_Field;
+begin
+  FDataSet.Close;
+  
+  // Add internal calc field manually
+  var Fld := TFloatField.Create(FDataSet);
+  Fld.FieldName := 'InternalCalc';
+  Fld.FieldKind := fkInternalCalc;
+  Fld.DataSet := FDataSet;
+  
+  FDataSet.Open;
+  
+  // Set value manually (simulating internal calc logic or event)
+  FDataSet.First;
+  FDataSet.Edit;
+  FDataSet.FieldByName('InternalCalc').AsFloat := 55;
+  FDataSet.Post;
+  
+  Should(FDataSet.FieldByName('InternalCalc').AsFloat).Be(55);
 end;
 
 { TMasterDetailDataSetTests }
@@ -780,6 +1002,81 @@ begin
   finally
     U.Free;
   end;
+end;
+
+{ TSmartPropertyDataSetTests }
+
+procedure TSmartPropertyDataSetTests.Setup;
+begin
+  FDataSet := TEntityDataSet.Create(nil);
+  FDataSet.Load<TTestSmartEntity>(TArray<TTestSmartEntity>.Create());
+end;
+
+procedure TSmartPropertyDataSetTests.TearDown;
+begin
+  FDataSet.Free;
+end;
+
+procedure TSmartPropertyDataSetTests.Test_Smart_Fields_Naming_And_Types;
+var
+  LField: TField;
+begin
+  FDataSet.Open;
+  
+  // Verify Description (Lazy<string> -> ftWideString)
+  LField := FDataSet.FindField('Description');
+  Should(LField).NotBeNull;
+  Should(LField.DataType).Be(ftWideString);
+
+  // Verify Price (Prop<Double> -> ftFloat)
+  LField := FDataSet.FindField('Price');
+  Should(LField).NotBeNull;
+  Should(LField.DataType).Be(ftFloat);
+
+  // Verify Age (Nullable<Integer> -> ftInteger)
+  LField := FDataSet.FindField('Age');
+  Should(LField).NotBeNull;
+  Should(LField.DataType).Be(ftInteger);
+end;
+
+{ TFloatingPointDataSetTests }
+
+procedure TFloatingPointDataSetTests.Setup;
+begin
+  FObj := TFloatingPointTest.Create;
+  FObj.Id := 1;
+  FObj.DoubleVal := 123.456;
+  FObj.CurrencyVal := 987.6543;
+
+  FDataSet := TEntityDataSet.Create(nil);
+  FDataSet.Load([FObj], TFloatingPointTest);
+end;
+
+procedure TFloatingPointDataSetTests.TearDown;
+begin
+  FDataSet.Free;
+  FObj.Free;
+end;
+
+procedure TFloatingPointDataSetTests.Test_Double_Value;
+begin
+  FDataSet.Open;
+  Should(FDataSet.FieldByName('DoubleVal').AsFloat).Be(123.456);
+end;
+
+procedure TFloatingPointDataSetTests.Test_Currency_Value;
+begin
+  // Currency has 4 decimal places precision.
+  FDataSet.Open;
+  Should(FDataSet.FieldByName('CurrencyVal').AsCurrency).Be(987.6543);
+end;
+
+procedure TFloatingPointDataSetTests.Test_Format_And_Precision;
+begin
+  // A common issue with Currency in DataSets is scientific notation
+  // if not handled as ftCurrency.
+  FDataSet.Open;
+  Should(FDataSet.FieldByName('CurrencyVal').DataType).Be(ftCurrency);
 end;
 
 end.

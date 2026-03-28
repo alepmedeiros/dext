@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -152,6 +152,21 @@ type
     function Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue; override;
   end;
 
+  // Float -> String (Invariant)
+  TFloatToStringConverter = class(TBaseConverter)
+    function Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue; override;
+  end;
+
+  // Integer -> String (Invariant)
+  TIntegerToStringConverter = class(TBaseConverter)
+    function Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue; override;
+  end;
+
+  // Boolean -> String (Invariant)
+  TBooleanToStringConverter = class(TBaseConverter)
+    function Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue; override;
+  end;
+
 implementation
 
 uses
@@ -239,6 +254,21 @@ begin
   RegisterConverter(tkInteger, tkEnumeration, NumericToEnum);
   RegisterConverter(tkInt64, tkEnumeration, NumericToEnum);
   RegisterConverter(tkFloat, tkEnumeration, NumericToEnum);
+
+  // Invariant String support
+  var FloatToStrConv := TFloatToStringConverter.Create;
+  RegisterConverter(tkFloat, tkUString, FloatToStrConv);
+  RegisterConverter(tkFloat, tkString, FloatToStrConv);
+  
+  var IntToStrConv := TIntegerToStringConverter.Create;
+  RegisterConverter(tkInteger, tkUString, IntToStrConv);
+  RegisterConverter(tkInteger, tkString, IntToStrConv);
+  RegisterConverter(tkInt64, tkUString, IntToStrConv);
+  RegisterConverter(tkInt64, tkString, IntToStrConv);
+
+  var BoolToStrConv := TBooleanToStringConverter.Create;
+  RegisterConverter(tkEnumeration, tkUString, BoolToStrConv);
+  RegisterConverter(tkEnumeration, tkString, BoolToStrConv);
 end;
 
 class destructor TValueConverterRegistry.Destroy;
@@ -371,10 +401,22 @@ begin
     Result := Converter.Convert(AValue, ATargetType)
   else
   begin
-    // Fallback 1: Target is String (use TValue.ToString which is very robust)
+    // Fallback 1: Target is String
     if ATargetType.Kind in [tkString, tkUString, tkWString] then
     begin
-       Result := AValue.ToString;
+       // Handle special types that TValue.ToString doesn't handle well
+       if AValue.TypeInfo = TypeInfo(TDateTime) then
+         Result := DateTimeToStr(AValue.AsType<TDateTime>)
+       else if AValue.TypeInfo = TypeInfo(TDate) then
+         Result := DateToStr(AValue.AsType<TDate>)
+       else if AValue.TypeInfo = TypeInfo(TTime) then
+         Result := TimeToStr(AValue.AsType<TTime>)
+       else if AValue.TypeInfo = TypeInfo(TGUID) then
+         Result := GUIDToString(AValue.AsType<TGUID>)
+       else if AValue.TypeInfo = TypeInfo(TUUID) then
+         Result := AValue.AsType<TUUID>.ToString
+       else
+         Result := AValue.ToString;
        Exit;
     end;
 
@@ -440,7 +482,15 @@ end;
 
 function TVariantToStringConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
 begin
-  Result := VarToStr(AValue.AsVariant);
+  if AValue.Kind in [tkFloat, tkInteger, tkInt64] then
+  begin
+    if AValue.Kind = tkFloat then
+      Result := FloatToStr(AValue.AsExtended, TFormatSettings.Invariant)
+    else
+      Result := IntToStr(AValue.AsInt64);
+  end
+  else
+    Result := VarToStr(AValue.AsVariant);
 end;
 
 { TVariantToBooleanConverter }
@@ -456,6 +506,8 @@ begin
     Result := Integer(V) <> 0
   else if VarIsStr(V) then
     Result := StrToBoolDef(V, False)
+  else if AValue.Kind = tkEnumeration then
+    Result := AValue.AsOrdinal <> 0
   else
     Result := Boolean(V);
 end;
@@ -798,6 +850,42 @@ end;
 function TVariantToUUIDConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
 begin
   Result := TValue.From<TUUID>(TUUID.FromString(VarToStr(AValue.AsVariant)));
+end;
+
+{ TFloatToStringConverter }
+
+function TFloatToStringConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
+begin
+  if AValue.TypeInfo = TypeInfo(TDateTime) then
+    Result := DateTimeToStr(AValue.AsType<TDateTime>)
+  else if AValue.TypeInfo = TypeInfo(TDate) then
+    Result := DateToStr(AValue.AsType<TDate>)
+  else if AValue.TypeInfo = TypeInfo(TTime) then
+    Result := TimeToStr(AValue.AsType<TTime>)
+  else
+    Result := FloatToStr(AValue.AsExtended, TFormatSettings.Invariant);
+end;
+
+{ TIntegerToStringConverter }
+
+function TIntegerToStringConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
+begin
+  Result := IntToStr(AValue.AsInt64);
+end;
+
+{ TBooleanToStringConverter }
+
+function TBooleanToStringConverter.Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue;
+begin
+  if AValue.Kind = tkEnumeration then
+  begin
+    if AValue.TypeInfo = TypeInfo(Boolean) then
+      Result := BoolToStr(AValue.AsBoolean, True) // Returns 'True' or 'False' (Invariant)
+    else
+      Result := GetEnumName(AValue.TypeInfo, AValue.AsOrdinal);
+  end
+  else
+    Result := AValue.ToString;
 end;
 
 end.

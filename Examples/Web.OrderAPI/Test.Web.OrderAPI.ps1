@@ -74,6 +74,10 @@ function Invoke-ApiRequest {
         $statusCode = $response.StatusCode
         $content = $response.Content | ConvertFrom-Json -ErrorAction SilentlyContinue
         
+        if ($Verbose -or ($statusCode -ne $ExpectedStatus)) {
+            Write-Host "  Response Body: $($response.Content)" -ForegroundColor Gray
+        }
+
         return @{
             Success    = ($statusCode -eq $ExpectedStatus)
             StatusCode = $statusCode
@@ -84,16 +88,26 @@ function Invoke-ApiRequest {
     catch {
         $resp = $_.Exception.Response
         $statusCode = if ($resp) { [int]$resp.StatusCode } else { 0 }
-        $errMessage = $_.Exception.Message
-        if ($_.Exception.InnerException) {
-            $errMessage += " | " + $_.Exception.InnerException.Message
+        
+        $rawBody = ""
+        if ($resp) {
+            try {
+                $stream = $resp.GetResponseStream()
+                $reader = New-Object System.IO.StreamReader($stream)
+                $rawBody = $reader.ReadToEnd()
+            } catch { }
+        }
+
+        if ($rawBody) {
+             Write-Host "  Error Body: $rawBody" -ForegroundColor Yellow
         }
 
         return @{
             Success    = ($statusCode -eq $ExpectedStatus)
             StatusCode = $statusCode
             Content    = $null
-            Error      = $errMessage
+            Error      = $_.Exception.Message
+            Raw        = $rawBody
         }
     }
 }
