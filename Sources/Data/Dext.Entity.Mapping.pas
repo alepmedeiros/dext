@@ -169,6 +169,7 @@ type
     IsJsonColumn: Boolean;
     UseJsonB: Boolean; // PostgreSQL JSONB vs JSON
     IsLazy: Boolean; // New: Support for Auto-Proxies / Explicit Lazy
+    IsEnum: Boolean; // New: Flag to identify enumeration types
     Prop: TRttiProperty; // Cached RTTI property
     constructor Create(const APropName: string);
   end;
@@ -565,6 +566,7 @@ begin
             PropMap.FieldValueOffset := Fld.Offset + Metadata.ValueField.Offset;
             PropMap.PropertyType := Metadata.InnerType;
             PropMap.DataType := TypeInfoToFieldType(Metadata.InnerType);
+            PropMap.IsEnum := (Metadata.InnerType <> nil) and (Metadata.InnerType.Kind = tkEnumeration) and (Metadata.InnerType <> TypeInfo(Boolean));
           end;
         end;
         
@@ -585,6 +587,7 @@ begin
            PropMap.FieldValueOffset := Fld.Offset;
            PropMap.PropertyType := Fld.FieldType.Handle;
            PropMap.DataType := TypeInfoToFieldType(Fld.FieldType.Handle);
+           PropMap.IsEnum := (Fld.FieldType.TypeKind = tkEnumeration) and (Fld.FieldType.Handle <> TypeInfo(Boolean));
         end;
         
         for Attr in Fld.GetAttributes do
@@ -602,6 +605,7 @@ begin
       if PropMap.DataType = ftUnknown then
         PropMap.DataType := TypeInfoToFieldType(Prop.PropertyType.Handle);
 
+      PropMap.IsEnum := (Prop.PropertyType.TypeKind = tkEnumeration) and (Prop.PropertyType.Handle <> TypeInfo(Boolean));
       PropMap.Prop := Prop; // Cache the RTTI property for fast access
       
       // If the property has a getter or setter method, we should not use direct field access (Fast Path)
@@ -772,6 +776,7 @@ begin
   IsShadow := False;
   IsJsonColumn := False;
   UseJsonB := True; // Default for PostgreSQL
+  IsEnum := False;
 end;
 
 { TRelationshipBuilder<T> }

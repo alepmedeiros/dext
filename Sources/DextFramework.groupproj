@@ -48,9 +48,6 @@
         <Projects Include="..\Examples\Web.SmartPropsDemo\Web.SmartPropsDemo.dproj">
             <Dependencies/>
         </Projects>
-        <Projects Include="..\..\Repro.dproj">
-            <Dependencies/>
-        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -194,23 +191,14 @@
     <Target Name="Web_SmartPropsDemo:Make">
         <MSBuild Projects="..\Examples\Web.SmartPropsDemo\Web.SmartPropsDemo.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Repro">
-        <MSBuild Projects="..\..\Repro.dproj"/>
-    </Target>
-    <Target Name="Repro:Clean">
-        <MSBuild Projects="..\..\Repro.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Repro:Make">
-        <MSBuild Projects="..\..\Repro.dproj" Targets="Make"/>
-    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_EF_Design;Dext_Web_Core;Dext_Testing;Dext_Web_Hubs;Dext_Net;Dext_Hosting;Dext_UI;DextTool;DextSidecar;Desktop_EntityDataSet_Demo;Dext_Entity_UnitTests;Dext_Entity_Tests;Web_SmartPropsDemo;Repro"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_EF_Design;Dext_Web_Core;Dext_Testing;Dext_Web_Hubs;Dext_Net;Dext_Hosting;Dext_UI;DextTool;DextSidecar;Desktop_EntityDataSet_Demo;Dext_Entity_UnitTests;Dext_Entity_Tests;Web_SmartPropsDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_EF_Design:Clean;Dext_Web_Core:Clean;Dext_Testing:Clean;Dext_Web_Hubs:Clean;Dext_Net:Clean;Dext_Hosting:Clean;Dext_UI:Clean;DextTool:Clean;DextSidecar:Clean;Desktop_EntityDataSet_Demo:Clean;Dext_Entity_UnitTests:Clean;Dext_Entity_Tests:Clean;Web_SmartPropsDemo:Clean;Repro:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_EF_Design:Clean;Dext_Web_Core:Clean;Dext_Testing:Clean;Dext_Web_Hubs:Clean;Dext_Net:Clean;Dext_Hosting:Clean;Dext_UI:Clean;DextTool:Clean;DextSidecar:Clean;Desktop_EntityDataSet_Demo:Clean;Dext_Entity_UnitTests:Clean;Dext_Entity_Tests:Clean;Web_SmartPropsDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_EF_Design:Make;Dext_Web_Core:Make;Dext_Testing:Make;Dext_Web_Hubs:Make;Dext_Net:Make;Dext_Hosting:Make;Dext_UI:Make;DextTool:Make;DextSidecar:Make;Desktop_EntityDataSet_Demo:Make;Dext_Entity_UnitTests:Make;Dext_Entity_Tests:Make;Web_SmartPropsDemo:Make;Repro:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_EF_Design:Make;Dext_Web_Core:Make;Dext_Testing:Make;Dext_Web_Hubs:Make;Dext_Net:Make;Dext_Hosting:Make;Dext_UI:Make;DextTool:Make;DextSidecar:Make;Desktop_EntityDataSet_Demo:Make;Dext_Entity_UnitTests:Make;Dext_Entity_Tests:Make;Web_SmartPropsDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

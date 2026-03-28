@@ -2,16 +2,17 @@
 
 {***************************************************************************}
 {                                                                           }
-{  Order API - Sistema de Comandas para Bares e Restaurantes               }
+{  Order API - Sistema de Comandas para Bares e Restaurantes                }
 {                                                                           }
 {  Exemplo de Referência para Migração DelphiMVC -> Dext                    }
-{  Refatorado com padrão Startup (IStartup)                                }
+{  Refatorado com padrão Startup (IStartup)                                 }
 {                                                                           }
 {***************************************************************************}
 
 {$APPTYPE CONSOLE}
 
 uses
+  Dext.MM,
   System.SysUtils,
   Dext,
   Dext.Web,

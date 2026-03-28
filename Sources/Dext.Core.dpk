@@ -119,7 +119,8 @@ contains
   Dext.Collections.HashSet in 'Core\Dext.Collections.HashSet.pas',
   Dext.Collections.Queue in 'Core\Dext.Collections.Queue.pas',
   Dext.Collections.Stack in 'Core\Dext.Collections.Stack.pas',
-  Dext.Logging.Extensions in 'Core\Dext.Logging.Extensions.pas';
+  Dext.Logging.Extensions in 'Core\Dext.Logging.Extensions.pas',
+  Dext.Core.Enums in 'Core\Dext.Core.Enums.pas';
 
 end.
 

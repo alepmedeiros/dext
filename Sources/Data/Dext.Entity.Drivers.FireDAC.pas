@@ -361,7 +361,10 @@ begin
     ftString, ftWideString, ftMemo, ftWideMemo:
       Param.AsWideString := AValue.AsString;
     ftSmallint, ftInteger, ftWord, ftShortint:
-      Param.AsInteger := AValue.AsInteger;
+      if AValue.Kind = tkEnumeration then
+        Param.AsInteger := AValue.AsOrdinal
+      else
+        Param.AsInteger := AValue.AsInteger;
     ftLargeint:
       Param.AsLargeInt := AValue.AsInt64;
     ftFloat, ftCurrency, ftExtended:

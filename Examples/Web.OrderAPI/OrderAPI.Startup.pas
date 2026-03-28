@@ -3,10 +3,12 @@
 interface
 
 uses
+  System.IOUtils,
   System.SysUtils,
-  Dext,     // Base interfaces and DI
+  Dext,        // Base interfaces and DI
+  Dext.Utils,  // Base interfaces and DI
   Dext.Entity, // Persistence features
-  Dext.Web, // Web features, BasicAuth, Swagger
+  Dext.Web,    // Web features, BasicAuth, Swagger
   OrderAPI.Entities,
   OrderAPI.Database,
   OrderAPI.Services;
@@ -20,7 +22,6 @@ type
     
     // Helper for Seeding (Static)
     class procedure SeedDatabase(const App: IWebApplication);
-
   private
     procedure ConfigureDatabase(Options: TDbContextOptions);
   end;
@@ -88,8 +89,11 @@ end;
 
 procedure TStartup.ConfigureDatabase(Options: TDbContextOptions);
 begin
+  if FileExists('order_api.db') then
+    DeleteFile('order_api.db');
+
   // SQLite com otimizações para concorrência
-  Options.UseSQLite('orderapi.db');
+  Options.UseSQLite('order_api.db');
   
   // WAL mode é crítico para concurrent reads/writes
   Options.Params.AddOrSetValue('JournalMode', 'WAL');
@@ -97,7 +101,7 @@ begin
   Options.Params.AddOrSetValue('Synchronous', 'Normal');
   
   // Pooling para multi-thread
-  Options.WithPooling(False, 20);
+  Options.WithPooling(True, 20);
 end;
 
 class procedure TStartup.SeedDatabase(const App: IWebApplication);
@@ -110,14 +114,14 @@ var
   I: Integer;
   ServiceProvider: IServiceProvider;
 begin
-  WriteLn('[*] Initializing Database...');
+  SafeWriteLn('[*] Initializing Database...');
   
   // Create Scope from Provider
   ServiceProvider := App.Services.BuildServiceProvider;
   
   if ServiceProvider = nil then
   begin
-    WriteLn('[ERROR] ServiceProvider could not be built.');
+    SafeWriteLn('[ERROR] ServiceProvider could not be built.');
     Exit;
   end;
 
@@ -135,16 +139,16 @@ begin
     DbContext.Entities<TOrderItem>;
 
     DbContext.EnsureCreated; 
-    WriteLn('[OK] Database tables created/verified');
-    
+    SafeWriteLn('[OK] Database tables created/verified');
+
     // Check if seeded
     if DbContext.Entities<TCategory>.ToList.Count > 0 then
     begin
-      WriteLn('[INFO] Database already seeded');
+      SafeWriteLn('[INFO] Database already seeded');
       Exit;
     end;
 
-    WriteLn('[*] Seeding database...');
+    SafeWriteLn('[*] Seeding database...');
 
     // Categorias
     Cat := TCategory.Create;
@@ -233,10 +237,10 @@ begin
     end;
 
     DbContext.SaveChanges;
-    WriteLn('[OK] Database seeded with sample data');
+    SafeWriteLn('[OK] Database seeded with sample data');
   end
   else
-    WriteLn('[WARN] Could not get DbContext for seeding');
+    SafeWriteLn('[WARN] Could not get DbContext for seeding');
 end;
 
 end.

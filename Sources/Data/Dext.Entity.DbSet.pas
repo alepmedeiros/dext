@@ -1029,13 +1029,7 @@ begin
   HandleTimestamps(AEntity, True);
   Generator := CreateGenerator;
   try
-    try
-        Sql := Generator.GenerateInsert(T(AEntity));
-    except
-        on E: Exception do
-             raise;
-    end;
-
+    Sql := Generator.GenerateInsert(T(AEntity));
     // Find AutoInc property and column
     AutoIncColumn := '';
     AutoIncProp := nil;

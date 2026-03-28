@@ -2055,8 +2055,6 @@ begin
       Result := SB.ToString;
     end;
     
-    WriteLn('[DEBUG_SQL] GenerateSelect: Final SQL: ', Result);
-    
     // Add to cache
     if (ASpec <> nil) and (Result <> '') then
     begin

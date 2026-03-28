@@ -340,7 +340,7 @@ type
   [TestFixture('TEntityDataSet SmartTypes Support')]
   TDataSetSmartTypesTests = class
   public
-    [_Test]
+    [Test]
     procedure Test_Read_SmartTypes;
     [Test]
     procedure Test_Read_Nullable_Empty;
