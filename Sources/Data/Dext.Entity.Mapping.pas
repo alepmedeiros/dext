@@ -558,8 +558,10 @@ begin
         // Skip fast path for Lazy to force RTTI (which triggers Load)
         if not PropMap.IsLazy then
         begin
-          if Metadata.HasValueField <> nil then
-            PropMap.FieldOffset := Fld.Offset + Metadata.HasValueField.Offset;
+          // Only use FieldOffset if it is a Boolean (real null flag as in Nullable<T>)
+          // Avoids confusing FInfo (Interface) with a null flag in Prop<T>
+          if (Metadata.HasValueField <> nil) and (Metadata.HasValueField.FieldType.Handle = TypeInfo(Boolean)) then
+             PropMap.FieldOffset := Fld.Offset + Metadata.HasValueField.Offset;
 
           if Metadata.ValueField <> nil then
           begin
@@ -684,7 +686,8 @@ begin
                   begin
                     PropMap.FieldValueOffset := BackingFld.Offset + Meta.ValueField.Offset;
 
-                    if Meta.HasValueField <> nil then
+                    // Only use FieldOffset if it's a Boolean (real null flag)
+                    if (Meta.HasValueField <> nil) and (Meta.HasValueField.FieldType.Handle = TypeInfo(Boolean)) then
                       PropMap.FieldOffset := BackingFld.Offset + Meta.HasValueField.Offset;
                   end;
                   

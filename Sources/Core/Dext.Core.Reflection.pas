@@ -1,4 +1,4 @@
-unit Dext.Core.Reflection;
+﻿unit Dext.Core.Reflection;
 
 interface
 

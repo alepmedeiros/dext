@@ -29,3 +29,4 @@ node_modules/
 *.~*
 *.a
 /Sources/*.bpi
+*.dsv
