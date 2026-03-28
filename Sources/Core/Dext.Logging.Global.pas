@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {           Dext Framework                                                  }
 {           Copyright (C) 2025 Cesar Romero & Dext Contributors             }
 {***************************************************************************}
@@ -96,12 +96,12 @@ begin
   
   // Sidecar Sink (Fire and Forget)
   // Auto-discovery via Environment Variable (set by Sidecar or execution context)
-  var Port := 3030;
   var PortStr := GetEnvironmentVariable('DEXT_SIDECAR_PORT');
   if PortStr <> '' then
-    Port := StrToIntDef(PortStr, 3030);
-    
-  FFactory.AddSink(TSidecarSink.Create('http://localhost:' + Port.ToString));
+  begin
+    var Port := StrToIntDef(PortStr, 3030);
+    FFactory.AddSink(TSidecarSink.Create('http://localhost:' + Port.ToString));
+  end;
   
   // Let's Create the Logger instance
   FLogger := FFactory.CreateLogger('App');
