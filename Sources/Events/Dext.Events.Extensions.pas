@@ -244,7 +244,7 @@ begin
       Registry := TEventHandlerRegistry.Create;
 
       for HEntry in Acc.Handlers do
-        Registry.RegisterHandler(HEntry.EventType,
+        Registry.RegisterHandler(HEntry.EventType, HEntry.HandlerClass,
           MakeActivatorFactory(HEntry.HandlerClass));
 
       for BEntry in Acc.Behaviors do

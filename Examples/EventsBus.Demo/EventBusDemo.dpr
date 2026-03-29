@@ -356,7 +356,5 @@ begin
       WriteLn('Unhandled: ' + E.ClassName + ': ' + E.Message);
   end;
 
-  WriteLn;
-  Write('Press Enter to exit...');
   ConsolePause;
 end.

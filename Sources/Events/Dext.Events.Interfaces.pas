@@ -137,15 +137,20 @@ type
     procedure DispatchBackground(AEventType: PTypeInfo; const AEvent: TValue);
   end;
 
+  THandlerEntry = record
+    Factory: TFunc<IServiceProvider, TObject>;
+    HandlerClass: TClass;
+  end;
+
   /// <summary>
-  ///   Internal registry: maps event TypeInfo to handler factory lists and
+  ///   Internal registry: maps event TypeInfo to handler entry lists and
   ///   manages global + per-event behavior factory lists.
   ///   Populated at startup by AddEventHandler/AddEventBehavior.
   ///   Do not consume directly — use IEventBus.
   /// </summary>
   IEventHandlerRegistry = interface
     ['{E5C18A6C-7B3D-8F9E-2A4C-6B0D5E1F7A3C}']
-    procedure RegisterHandler(AEventType: PTypeInfo;
+    procedure RegisterHandler(AEventType: PTypeInfo; AHandlerClass: TClass;
       const AFactory: TFunc<IServiceProvider, TObject>);
     // Global behavior — applied to all event types
     procedure RegisterBehavior(
@@ -154,8 +159,7 @@ type
     procedure RegisterEventBehavior(AEventType: PTypeInfo;
       const AFactory: TFunc<IServiceProvider, TObject>);
 
-    function GetHandlerFactories(AEventType: PTypeInfo):
-      TArray<TFunc<IServiceProvider, TObject>>;
+    function GetHandlers(AEventType: PTypeInfo): TArray<THandlerEntry>;
     function GetBehaviorFactories:
       TArray<TFunc<IServiceProvider, TObject>>;
     function GetEventBehaviorFactories(AEventType: PTypeInfo):

@@ -84,14 +84,24 @@ uses
 
 type
   THandlerFactoryList = IList<TFunc<IServiceProvider, TObject>>;
+  THandlerEntryList = IList<THandlerEntry>;
+
+  /// <summary>
+  ///   Snapshot for a specific handler.
+  ///   Caches the factory and the pre-resolved TRttiMethod ('Handle').
+  /// </summary>
+  THandlerSnapshot = record
+    Factory: TFunc<IServiceProvider, TObject>;
+    Method: TRttiMethod;
+  end;
 
   /// <summary>
   ///   Frozen dispatch snapshot for one event type.
   ///   BehaviorFactories holds the pre-merged global + per-event behaviors.
-  ///   Both arrays are immutable once built and safe to read concurrently.
+  ///   Immutable once built and safe to read concurrently.
   /// </summary>
   TDispatchSnapshot = record
-    HandlerFactories: TArray<TFunc<IServiceProvider, TObject>>;
+    Handlers: TArray<THandlerSnapshot>;
     BehaviorFactories: TArray<TFunc<IServiceProvider, TObject>>;
     EventTypeName: string;
   end;
@@ -103,7 +113,7 @@ type
   /// </summary>
   TEventHandlerRegistry = class(TInterfacedObject, IEventHandlerRegistry)
   private
-    FHandlers: IDictionary<Pointer, THandlerFactoryList>;
+    FHandlers: IDictionary<Pointer, THandlerEntryList>;
     FEventBehaviors: IDictionary<Pointer, THandlerFactoryList>;
     // Concrete TList<T>: direct TRawList backend, record enumerator on for-in.
     FBehaviors: TList<TFunc<IServiceProvider, TObject>>;
@@ -111,14 +121,13 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure RegisterHandler(AEventType: PTypeInfo;
+    procedure RegisterHandler(AEventType: PTypeInfo; AHandlerClass: TClass;
       const AFactory: TFunc<IServiceProvider, TObject>);
     procedure RegisterBehavior(
       const AFactory: TFunc<IServiceProvider, TObject>);
     procedure RegisterEventBehavior(AEventType: PTypeInfo;
       const AFactory: TFunc<IServiceProvider, TObject>);
-    function GetHandlerFactories(AEventType: PTypeInfo):
-      TArray<TFunc<IServiceProvider, TObject>>;
+    function GetHandlers(AEventType: PTypeInfo): TArray<THandlerEntry>;
     function GetBehaviorFactories:
       TArray<TFunc<IServiceProvider, TObject>>;
     function GetEventBehaviorFactories(AEventType: PTypeInfo):
@@ -153,9 +162,9 @@ type
     FServiceProvider: IServiceProvider;
     FRegistry: IEventHandlerRegistry;
     FSnapshotCache: IDictionary<Pointer, TDispatchSnapshot>;
-    FSnapshotLock: TMultiReadExclusiveWriteSynchronizer; // guards snapshot cache
+    FSnapshotLock: TMultiReadExclusiveWriteSynchronizer;
+    FRttiCtx: TRttiContext;
     FCreateScope: Boolean;
-
     function AcquireSnapshot(AEventType: PTypeInfo): TDispatchSnapshot;
     function DoDispatch(AEventType: PTypeInfo; const AEvent: TValue;
       const ASnapshot: TDispatchSnapshot;
@@ -223,7 +232,7 @@ end;
 constructor TEventHandlerRegistry.Create;
 begin
   inherited Create;
-  FHandlers      := TCollections.CreateDictionary<Pointer, THandlerFactoryList>;
+  FHandlers      := TCollections.CreateDictionary<Pointer, THandlerEntryList>;
   FEventBehaviors := TCollections.CreateDictionary<Pointer, THandlerFactoryList>;
   FBehaviors     := TList<TFunc<IServiceProvider, TObject>>.Create(False);
   FLock          := TMultiReadExclusiveWriteSynchronizer.Create;
@@ -239,18 +248,21 @@ begin
 end;
 
 procedure TEventHandlerRegistry.RegisterHandler(AEventType: PTypeInfo;
-  const AFactory: TFunc<IServiceProvider, TObject>);
+  AHandlerClass: TClass; const AFactory: TFunc<IServiceProvider, TObject>);
 var
-  List: THandlerFactoryList;
+  List: THandlerEntryList;
+  Entry: THandlerEntry;
 begin
   FLock.BeginWrite;
   try
     if not FHandlers.TryGetValue(AEventType, List) then
     begin
-      List := TCollections.CreateList<TFunc<IServiceProvider, TObject>>;
+      List := TCollections.CreateList<THandlerEntry>;
       FHandlers.Add(AEventType, List);
     end;
-    List.Add(AFactory);
+    Entry.Factory      := AFactory;
+    Entry.HandlerClass := AHandlerClass;
+    List.Add(Entry);
   finally
     FLock.EndWrite;
   end;
@@ -285,10 +297,10 @@ begin
   end;
 end;
 
-function TEventHandlerRegistry.GetHandlerFactories(
-  AEventType: PTypeInfo): TArray<TFunc<IServiceProvider, TObject>>;
+function TEventHandlerRegistry.GetHandlers(
+  AEventType: PTypeInfo): TArray<THandlerEntry>;
 var
-  List: THandlerFactoryList;
+  List: THandlerEntryList;
 begin
   FLock.BeginRead;
   try
@@ -348,6 +360,7 @@ begin
   FCreateScope     := ACreateScope;
   FSnapshotCache   := TCollections.CreateDictionary<Pointer, TDispatchSnapshot>;
   FSnapshotLock    := TMultiReadExclusiveWriteSynchronizer.Create;
+  FRttiCtx         := TRttiContext.Create;
 end;
 
 destructor TEventBus.Destroy;
@@ -362,8 +375,10 @@ end;
 function TEventBus.AcquireSnapshot(AEventType: PTypeInfo): TDispatchSnapshot;
 var
   GlobalBeh, EventBeh: TArray<TFunc<IServiceProvider, TObject>>;
+  RAWHandlers: TArray<THandlerEntry>;
   GlobalLen: Integer;
   I: Integer;
+  Method: TRttiMethod;
 begin
   // Hot-path: read lock — multiple threads can read concurrently post-warm-up.
   FSnapshotLock.BeginRead;
@@ -373,25 +388,43 @@ begin
   finally
     FSnapshotLock.EndRead;
   end;
-
+ 
   // Cold-path: first Publish for this event type — build and store snapshot.
   FSnapshotLock.BeginWrite;
   try
     if not FSnapshotCache.TryGetValue(AEventType, Result) then
     begin
       Result.EventTypeName    := string(AEventType.Name);
-      Result.HandlerFactories := FRegistry.GetHandlerFactories(AEventType);
-
+ 
+      // Resolve handlers and their 'Handle' methods once.
+      RAWHandlers := FRegistry.GetHandlers(AEventType);
+      SetLength(Result.Handlers, Length(RAWHandlers));
+      for I := 0 to High(RAWHandlers) do
+      begin
+        Result.Handlers[I].Factory := RAWHandlers[I].Factory;
+ 
+        // Cache the TRttiMethod. E2555: generic instantiation might hide 'Handle'
+        // in virtual method tables, so we use RTTI to find it by name.
+        // We use the same persistent FRttiCtx to ensure objects stay valid.
+        Method := FRttiCtx.GetType(RAWHandlers[I].HandlerClass).GetMethod('Handle');
+        if not Assigned(Method) then
+          raise EEventBusException.CreateFmt(
+            'Hander class "%s" does not have a "Handle" method',
+            [RAWHandlers[I].HandlerClass.ClassName]);
+ 
+        Result.Handlers[I].Method := Method;
+      end;
+ 
       GlobalBeh := FRegistry.GetBehaviorFactories;
       EventBeh  := FRegistry.GetEventBehaviorFactories(AEventType);
       GlobalLen := Length(GlobalBeh);
-
+ 
       SetLength(Result.BehaviorFactories, GlobalLen + Length(EventBeh));
       for I := 0 to GlobalLen - 1 do
         Result.BehaviorFactories[I] := GlobalBeh[I];
       for I := 0 to High(EventBeh) do
         Result.BehaviorFactories[GlobalLen + I] := EventBeh[I];
-
+ 
       FSnapshotCache.AddOrSetValue(AEventType, Result);
     end;
   finally
@@ -405,44 +438,32 @@ function TEventBus.DoDispatch(AEventType: PTypeInfo; const AEvent: TValue;
 var
   Behaviors: TArray<IEventBehavior>;
   Pipeline: TEventNextDelegate;
-  RttiCtx: TRttiContext;
   I, J: Integer;
   Errors: IList<string>;
 begin
   Result.EventTypeName   := ASnapshot.EventTypeName;
   Result.HandlersInvoked := 0;
   Result.HandlersFailed  := 0;
-
+ 
   SetLength(Behaviors, Length(ASnapshot.BehaviorFactories));
   for I := 0 to High(ASnapshot.BehaviorFactories) do
   begin
-    // Supports() is required here: 'as IEventBehavior' on a TObject-typed
-    // variable is rejected by Delphi 11/12 (E2015) because TObject does not
-    // statically declare IEventBehavior. Supports() queries at runtime via GUID.
     var BehaviorObj: TObject := ASnapshot.BehaviorFactories[I](AScopedProvider);
     if not Supports(BehaviorObj, IEventBehavior, Behaviors[I]) then
       raise EEventBusException.CreateFmt(
         'Behavior "%s" does not implement IEventBehavior', [BehaviorObj.ClassName]);
   end;
-
-  for I := 0 to High(ASnapshot.HandlerFactories) do
+ 
+  for I := 0 to High(ASnapshot.Handlers) do
   begin
     Inc(Result.HandlersInvoked);
     try
-      // CRITICAL: inline-var creates a new stack slot per iteration so that
-      // the closures below capture different variables for each handler.
-      var HandlerObj: TObject := ASnapshot.HandlerFactories[I](AScopedProvider);
-      var Method: TRttiMethod := RttiCtx.GetType(HandlerObj.ClassType)
-                                         .GetMethod('Handle');
-
-      // Delphi generic instantiations (IEventHandler<T>) can produce a
-      // synthetic PTypeInfo for the Handle parameter that differs from the
-      // canonical TypeInfo(T) passed through the TValue.  TRttiMethod.Invoke
-      // uses pointer equality for const/var/out record parameters, so we must
-      // re-wrap the raw data with the TypeInfo RTTI actually expects.
-      // Safety: only re-wrap when the type NAMES match (same type, different
-      // pointers).  A name mismatch means a wrong handler — let Invoke fail
-      // with a clear error rather than silently reinterpreting record data.
+      // Resolve handler instance from DI
+      var HandlerObj: TObject := ASnapshot.Handlers[I].Factory(AScopedProvider);
+      var Method: TRttiMethod := ASnapshot.Handlers[I].Method;
+ 
+      // Parameter validation & re-boxing (canonical vs synthetic TypeInfo)
+      // Safety: pointer mismatch but name match = same record type from different units.
       var LocalEvent: TValue := AEvent;
       var Params := Method.GetParameters;
       if (Length(Params) = 1) and (Params[0].ParamType <> nil)
@@ -456,7 +477,7 @@ begin
         TValue.Make(LocalEvent.GetReferenceToRawData,
                     Params[0].ParamType.Handle, LocalEvent);
       end;
-
+ 
       if Length(Behaviors) = 0 then
       begin
         // Fast-path: direct RTTI call — no closure allocation.
@@ -465,22 +486,22 @@ begin
       else
       begin
         // Pipeline path: build behavior chain inside-out.
-        // Each local captures its own copy of HandlerObj / LocalEvent per iteration.
         var LocalHandlerObj: TObject := HandlerObj;
         var LocalMethod: TRttiMethod := Method;
+        var LocalEventVal: TValue     := LocalEvent;
         Pipeline :=
           procedure
           begin
-            LocalMethod.Invoke(LocalHandlerObj, [LocalEvent]);
+            LocalMethod.Invoke(LocalHandlerObj, [LocalEventVal]);
           end;
-
+ 
         // Wrap in behaviors — reverse order so first-registered runs outermost.
         for J := High(Behaviors) downto 0 do
-          Pipeline := WrapBehavior(Behaviors[J], AEventType, LocalEvent, Pipeline);
-
+          Pipeline := WrapBehavior(Behaviors[J], AEventType, LocalEventVal, Pipeline);
+ 
         Pipeline();
       end;
-
+ 
     except
       on E: Exception do
       begin
@@ -491,7 +512,7 @@ begin
       end;
     end;
   end;
-
+ 
   if Assigned(Errors) and (Errors.Count > 0) then
     raise EEventDispatchAggregate.Create(
       Format('%d of %d handler(s) failed for event "%s"',
@@ -508,7 +529,7 @@ var
 begin
   Snapshot := AcquireSnapshot(AEventType);
 
-  if Length(Snapshot.HandlerFactories) = 0 then
+  if Length(Snapshot.Handlers) = 0 then
   begin
     Result.EventTypeName   := Snapshot.EventTypeName;
     Result.HandlersInvoked := 0;
@@ -533,21 +554,25 @@ var
   EventCopy: TValue;
   BackgroundScope: IServiceScope;
   Snapshot: TDispatchSnapshot;
+  ScopedProvider: IServiceProvider;
 begin
   Snapshot := AcquireSnapshot(AEventType);
 
-  if Length(Snapshot.HandlerFactories) = 0 then
+  if Length(Snapshot.Handlers) = 0 then
     Exit;
 
   EventCopy       := AEvent;
   BackgroundScope := FServiceProvider.CreateScope;
-
-  TTask.Run(
+  ScopedProvider  := BackgroundScope.ServiceProvider;
+ 
+  TTask.Run(TProc(
     procedure
     begin
-      DoDispatch(AEventType, EventCopy, Snapshot, BackgroundScope.ServiceProvider);
+      // Background threads need their own scoped provider for thread-safe
+      // handler resolution (especially for database context reuse).
+      DoDispatch(AEventType, EventCopy, Snapshot, ScopedProvider);
     end
-  );
+  ));
 end;
 
 function TEventBus.Publish<T>(const AEvent: T): TPublishResult;
