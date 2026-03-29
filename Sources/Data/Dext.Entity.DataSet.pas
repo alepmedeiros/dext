@@ -86,7 +86,8 @@ type
     procedure ApplyAttributesToField(AField: TField; AContainer: TRttiObject);
     procedure BuildFieldDefs;
     
-    function ReadFieldValue(Field: TField; out Value: Variant): Boolean;
+    function ReadFieldValue(Field: TField; out Value: Variant): Boolean; overload;
+    function ReadFieldValue(Field: TField; ABuffer: TRecBuf; out Value: Variant): Boolean; overload;
   protected
     // TDataSet overrides for filtering and sorting
     procedure InternalHandleException; override;
@@ -880,7 +881,7 @@ begin
           else
           begin
             // RTTI Fallback (via ReadFieldValue que já usa FCurrentRec)
-            ReadFieldValue(LFields[J], FieldVal);
+            ReadFieldValue(LFields[J], TRecBuf(TempBuf), FieldVal);
           end;
         end;
 
@@ -1828,6 +1829,11 @@ end;
 //  ReadFieldValue - Core universal method: reads a property from the entity
 // ---------------------------------------------------------------------------
 function TEntityDataSet.ReadFieldValue(Field: TField; out Value: Variant): Boolean;
+begin
+  Result := ReadFieldValue(Field, ActiveBuffer, Value);
+end;
+
+function TEntityDataSet.ReadFieldValue(Field: TField; ABuffer: TRecBuf; out Value: Variant): Boolean;
 var
   BlobData: TArray<Byte>;
   CurrentObj: TObject;
@@ -1841,7 +1847,7 @@ begin
   Value := Unassigned;
 
   if not Active then Exit;
-  Header := PEntityRecordHeader(ActiveBuffer);
+  Header := PEntityRecordHeader(Pointer(ABuffer));
 
   // 1. Identify target object
   CurrentObj := nil;
@@ -1851,14 +1857,7 @@ begin
     if (Header.BookmarkIndex = -2) then
       CurrentObj := FInsertObj
     else if (Header.BookmarkIndex >= 0) and (Header.BookmarkIndex < FVirtualIndex.Count) then
-    begin
-      // Se estamos pedindo um campo via código (programático), priorizamos o cursor oficial FCurrentRec
-      // a menos que o buffer ativo seja EXATAMENTE o que está sendo pintado no momento.
-      if (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) and (Header.BookmarkIndex <> FCurrentRec) then
-        CurrentObj := FItems[FVirtualIndex[FCurrentRec]]
-      else
-        CurrentObj := FItems[FVirtualIndex[Header.BookmarkIndex]];
-    end;
+      CurrentObj := FItems[FVirtualIndex[Header.BookmarkIndex]];
   end;
 
   // 2. Fallback to global cursor (programmatic Field.Value access or navigation outside the painting loop)

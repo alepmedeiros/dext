@@ -29,6 +29,13 @@ type
     property Price: Double read FPrice write FPrice;
   end;
 
+  // Hacker para o TDataLink (permitir acesso a membros publicos/protegidos)
+  TMyDataLink = class(TDataLink)
+  public
+    property ActiveRecord;
+    property BufferCount;
+  end;
+
   [TestFixture('TEntityDataSet New Features')]
   TEntityDataSetFeaturesTests = class
   private
@@ -44,6 +51,8 @@ type
     procedure Test_DisplayAttributes_Mapping;
     [Test]
     procedure Test_OnPrepareField_Event;
+    [Test]
+    procedure Test_Grid_Painting_Simulation_MultiBuffer;
   end;
 
 implementation
@@ -99,8 +108,59 @@ begin
   Should(FDataSet.FieldByName('Price').ReadOnly).BeFalse;
 end;
 
-initialization
-  // A fixture será registrada automaticamente pelo Test Runner se estiver no dpr
-  // Ou usamos o registro explícito se necessário.
+procedure TEntityDataSetFeaturesTests.Test_Grid_Painting_Simulation_MultiBuffer;
+var
+  L: IList<TProductFeaturesTest>;
+  LDataSource: TDataSource;
+  LDataLink: TMyDataLink;
+  P1, P2: TProductFeaturesTest;
+begin
+  L := TCollections.CreateList<TProductFeaturesTest>(True);
+  P1 := TProductFeaturesTest.Create;
+  P1.Id := 1; P1.Name := 'Product 1';
+  P2 := TProductFeaturesTest.Create;
+  P2.Id := 2; P2.Name := 'Product 2';
+  L.Add(P1);
+  L.Add(P2);
+
+  FDataSet.Load<TProductFeaturesTest>(L);
+  FDataSet.Open;
+
+  LDataSource := TDataSource.Create(nil);
+  LDataLink := TMyDataLink.Create;
+  try
+    LDataSource.DataSet := FDataSet;
+    LDataLink.DataSource := LDataSource;
+    
+    // Simula a Grid tendo espaco para buffers (BufferCount > 1)
+    LDataLink.BufferCount := 5;
+
+    // 1. Dataset posicionado no primeiro registro (FCurrentRec = 0)
+    FDataSet.First;
+    Should(FDataSet.FieldByName('Id').AsInteger).Be(1);
+    Should(LDataLink.ActiveRecord).Be(0);
+
+    // 2. SIMULACAO DA GRID PINTANDO A SEGUNDA LINHA:
+    // A Grid seta o ActiveRecord do DataLink como 1.
+    // Isso dispara o mecanismo interno do TDataSet (via unit Data.DB) 
+    // que aponta o ActiveBuffer para o segundo buffer da lista.
+    LDataLink.ActiveRecord := 1;
+
+    // 3. VALIDACAO DA CORRECAO:
+    // O TEntityDataSet deve ler o BookmarkIndex contido no ActiveBuffer (que agora eh 1),
+    // e retornar o valor do segundo objeto ('Product 2'), 
+    // mesmo que globalmente o cursor ainda esteja em First (0).
+    Should(FDataSet.FieldByName('Id').AsInteger).Be(2).Because('O Dataset deve respeitar o buffer alternativo setado pela Grid/DataLink');
+    Should(FDataSet.FieldByName('Name').AsString).Be('Product 2');
+
+    // 4. Volta para o indice 0 para confirmar restauracao do contexto
+    LDataLink.ActiveRecord := 0;
+    Should(FDataSet.FieldByName('Id').AsInteger).Be(1);
+
+  finally
+    LDataLink.Free;
+    LDataSource.Free;
+  end;
+end;
 
 end.

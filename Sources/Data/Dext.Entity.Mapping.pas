@@ -30,6 +30,8 @@ interface
 uses
   Dext.Collections,
   System.SysUtils,
+  System.Classes,
+  System.UITypes,
   Dext.Collections.Dict,
   System.TypInfo,
   System.Rtti,
@@ -107,6 +109,11 @@ type
     function IsCreatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
     function IsUpdatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
     function IsShadow(AValue: Boolean = True): IPropertyBuilder<T>;
+    function HasDisplayLabel(const AValue: string): IPropertyBuilder<T>;
+    function HasDisplayWidth(AValue: Integer): IPropertyBuilder<T>;
+    function HasDisplayFormat(const AValue: string): IPropertyBuilder<T>;
+    function HasEditMask(const AValue: string): IPropertyBuilder<T>;
+    function HasAlignment(AValue: TAlignment): IPropertyBuilder<T>;
   end;
 
   /// <summary>
@@ -173,6 +180,12 @@ type
     IsLazy: Boolean; // New: Support for Auto-Proxies / Explicit Lazy
     IsEnum: Boolean; // New: Flag to identify enumeration types
     Prop: TRttiProperty; // Cached RTTI property
+    // UI Metadata
+    DisplayLabel: string;
+    DisplayFormat: string;
+    DisplayWidth: Integer;
+    EditMask: string;
+    Alignment: TAlignment;
     constructor Create(const APropName: string);
   end;
 
@@ -261,6 +274,11 @@ type
     function IsCreatedAt(AValue: Boolean = True): TEntityBuilder<T>;
     function IsUpdatedAt(AValue: Boolean = True): TEntityBuilder<T>;
     function IsShadow(AValue: Boolean = True): TEntityBuilder<T>;
+    function DisplayLabel(const AValue: string): TEntityBuilder<T>;
+    function DisplayWidth(AValue: Integer): TEntityBuilder<T>;
+    function DisplayFormat(const AValue: string): TEntityBuilder<T>;
+    function EditMask(const AValue: string): TEntityBuilder<T>;
+    function Alignment(AValue: TAlignment): TEntityBuilder<T>;
     function Ignore: TEntityBuilder<T>;
     
     // Relationship Support (Returning IRelationshipBuilder)
@@ -325,6 +343,11 @@ type
     function IsCreatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
     function IsUpdatedAt(AValue: Boolean = True): IPropertyBuilder<T>;
     function IsShadow(AValue: Boolean = True): IPropertyBuilder<T>;
+    function HasDisplayLabel(const AValue: string): IPropertyBuilder<T>;
+    function HasDisplayWidth(AValue: Integer): IPropertyBuilder<T>;
+    function HasDisplayFormat(const AValue: string): IPropertyBuilder<T>;
+    function HasEditMask(const AValue: string): IPropertyBuilder<T>;
+    function HasAlignment(AValue: TAlignment): IPropertyBuilder<T>;
   end;
 
   /// <summary>
@@ -441,7 +464,9 @@ begin
       (AAttr is TypeConverterAttribute) or (AAttr is HasManyAttribute) or (AAttr is BelongsToAttribute) or
       (AAttr is HasOneAttribute) or (AAttr is InversePropertyAttribute) or (AAttr is DeleteBehaviorAttribute) or
       (AAttr is ManyToManyAttribute) or (AAttr is VersionAttribute) or (AAttr is CreatedAtAttribute) or
-      (AAttr is UpdatedAtAttribute) or (AAttr is JsonColumnAttribute) or (AAttr is DbTypeAttribute) then
+      (AAttr is UpdatedAtAttribute) or (AAttr is JsonColumnAttribute) or (AAttr is DbTypeAttribute) or
+      (AAttr is CaptionAttribute) or (AAttr is DisplayFormatAttribute) or (AAttr is DisplayWidthAttribute) or
+      (AAttr is EditMaskAttribute) or (AAttr is AlignmentAttribute) then
   begin
     if AAttr is ColumnAttribute then APropMap.ColumnName := ColumnAttribute(AAttr).Name;
     if AAttr is FieldAttribute then 
@@ -515,6 +540,13 @@ begin
       APropMap.IsJsonColumn := True;
       APropMap.UseJsonB := JsonColumnAttribute(AAttr).UseJsonB;
     end;
+    
+    // UI Metadata
+    if AAttr is CaptionAttribute then APropMap.DisplayLabel := CaptionAttribute(AAttr).Value;
+    if AAttr is DisplayFormatAttribute then APropMap.DisplayFormat := DisplayFormatAttribute(AAttr).Value;
+    if AAttr is DisplayWidthAttribute then APropMap.DisplayWidth := DisplayWidthAttribute(AAttr).Value;
+    if AAttr is EditMaskAttribute then APropMap.EditMask := EditMaskAttribute(AAttr).Value;
+    if AAttr is AlignmentAttribute then APropMap.Alignment := AlignmentAttribute(AAttr).Alignment;
   end;
 end;
 
@@ -797,6 +829,11 @@ begin
   IsJsonColumn := False;
   UseJsonB := True; // Default for PostgreSQL
   IsEnum := False;
+  DisplayLabel := '';
+  DisplayFormat := '';
+  DisplayWidth := 0;
+  EditMask := '';
+  Alignment := taLeftJustify;
 end;
 
 { TRelationshipBuilder<T> }
@@ -1016,6 +1053,36 @@ end;
 function TEntityBuilder<T>.IsShadow(AValue: Boolean): TEntityBuilder<T>;
 begin
   GetCurrentProp.IsShadow := AValue;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.DisplayLabel(const AValue: string): TEntityBuilder<T>;
+begin
+  GetCurrentProp.DisplayLabel := AValue;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.DisplayWidth(AValue: Integer): TEntityBuilder<T>;
+begin
+  GetCurrentProp.DisplayWidth := AValue;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.DisplayFormat(const AValue: string): TEntityBuilder<T>;
+begin
+  GetCurrentProp.DisplayFormat := AValue;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.EditMask(const AValue: string): TEntityBuilder<T>;
+begin
+  GetCurrentProp.EditMask := AValue;
+  Result := Self;
+end;
+
+function TEntityBuilder<T>.Alignment(AValue: TAlignment): TEntityBuilder<T>;
+begin
+  GetCurrentProp.Alignment := AValue;
   Result := Self;
 end;
 
@@ -1321,6 +1388,36 @@ end;
 function TPropertyBuilder<T>.IsShadow(AValue: Boolean): IPropertyBuilder<T>;
 begin
   FPropMap.IsShadow := AValue;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.HasDisplayLabel(const AValue: string): IPropertyBuilder<T>;
+begin
+  FPropMap.DisplayLabel := AValue;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.HasDisplayWidth(AValue: Integer): IPropertyBuilder<T>;
+begin
+  FPropMap.DisplayWidth := AValue;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.HasDisplayFormat(const AValue: string): IPropertyBuilder<T>;
+begin
+  FPropMap.DisplayFormat := AValue;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.HasEditMask(const AValue: string): IPropertyBuilder<T>;
+begin
+  FPropMap.EditMask := AValue;
+  Result := Self;
+end;
+
+function TPropertyBuilder<T>.HasAlignment(AValue: TAlignment): IPropertyBuilder<T>;
+begin
+  FPropMap.Alignment := AValue;
   Result := Self;
 end;
 

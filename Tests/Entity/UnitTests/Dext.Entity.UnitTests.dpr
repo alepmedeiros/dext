@@ -1,4 +1,4 @@
-program Dext.Entity.UnitTests;
+﻿program Dext.Entity.UnitTests;
 
 {$APPTYPE CONSOLE}
 

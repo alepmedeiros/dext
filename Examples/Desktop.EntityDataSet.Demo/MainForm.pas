@@ -63,8 +63,7 @@ begin
   end;
 
   // Carregando dados no DataSet
-  // TODO
-  FDataSet.Load(FProducts, TProduct);
+  FDataSet.Load(FProducts as IObjectList, TProduct);
 end;
 
 { TProduct }
