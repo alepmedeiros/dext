@@ -97,6 +97,9 @@
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <Manifest_File>(None)</Manifest_File>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
+        <DCC_DebugDCUs>true</DCC_DebugDCUs>
+        <DCC_MapFile>3</DCC_MapFile>
+        <DCC_IntegerOverflowCheck>false</DCC_IntegerOverflowCheck>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -108,7 +111,7 @@
         <DCCReference Include="Dext.Entity.Async.Tests.pas"/>
         <DCCReference Include="Dext.Entity.SqlGenerator.Tests.pas"/>
         <DCCReference Include="Dext.Entity.FluentMapping.Tests.pas"/>
-        <DCCReference Include="Dext.Entity.DataSet.NewFeatures.Tests.pas"/>
+        <DCCReference Include="Dext.Entity.IdReturn.Tests.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

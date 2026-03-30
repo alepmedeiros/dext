@@ -100,6 +100,27 @@ type
     function Callback(const Action: TProc<TArray<TValue>>): IWhen<T>;
   end;
 
+  MockSetup<T> = record
+  private
+    FSetup: ISetup<T>;
+  public
+    constructor Create(const ASetup: ISetup<T>);
+    function Returns(const Value: TValue): IWhen<T>; overload; inline;
+    function Returns<TRet>(const Value: TRet): IWhen<T>; overload; inline;
+    function ReturnsInSequence(const Values: TArray<TValue>): IWhen<T>; overload; inline;
+    function ReturnsInSequence(const Values: TArray<Integer>): IWhen<T>; overload; inline;
+    function ReturnsInSequence(const Values: TArray<string>): IWhen<T>; overload; inline;
+    function ReturnsInSequence(const Values: TArray<Boolean>): IWhen<T>; overload; inline;
+    function Returns(Value: Integer): IWhen<T>; overload; inline;
+    function Returns(const Value: string): IWhen<T>; overload; inline;
+    function Returns(Value: Boolean): IWhen<T>; overload; inline;
+    function Returns(Value: Double): IWhen<T>; overload; inline;
+    function Returns(Value: Int64): IWhen<T>; overload; inline;
+    function Throws(ExceptionClass: ExceptClass; const Msg: string = ''): IWhen<T>; inline;
+    function Executes(const Action: TProc<IInvocation>): IWhen<T>; inline;
+    function Callback(const Action: TProc<TArray<TValue>>): IWhen<T>; inline;
+  end;
+
   IWhen<T> = interface
     ['{F9A0B1C2-3D4E-5F6A-7B8C-9D0E1F2A3B4C}']
     function When: T;
@@ -116,7 +137,7 @@ type
     class function FromInterface(const Intf: IMock<T>): Mock<T>; static;
 
     property Instance: T read GetInstance;
-    function Setup: ISetup<T>;
+    function Setup: MockSetup<T>;
     function Received: T; overload;
     function Received(const ATimes: Times): T; overload;
     function DidNotReceive: T;
@@ -212,11 +233,33 @@ begin
   Result := FMock.Instance;
 end;
 
-function Mock<T>.Setup: ISetup<T>;
+function Mock<T>.Setup: MockSetup<T>;
 begin
   EnsureCreated;
-  Result := FMock.Setup;
+  Result := MockSetup<T>.Create(FMock.Setup);
 end;
+
+{ MockSetup<T> }
+
+constructor MockSetup<T>.Create(const ASetup: ISetup<T>);
+begin
+  FSetup := ASetup;
+end;
+
+function MockSetup<T>.Returns(const Value: TValue): IWhen<T>; begin Result := FSetup.Returns(Value); end;
+function MockSetup<T>.Returns<TRet>(const Value: TRet): IWhen<T>; begin Result := FSetup.Returns(TValue.From<TRet>(Value)); end;
+function MockSetup<T>.ReturnsInSequence(const Values: TArray<TValue>): IWhen<T>; begin Result := FSetup.ReturnsInSequence(Values); end;
+function MockSetup<T>.ReturnsInSequence(const Values: TArray<Integer>): IWhen<T>; begin Result := FSetup.ReturnsInSequence(Values); end;
+function MockSetup<T>.ReturnsInSequence(const Values: TArray<string>): IWhen<T>; begin Result := FSetup.ReturnsInSequence(Values); end;
+function MockSetup<T>.ReturnsInSequence(const Values: TArray<Boolean>): IWhen<T>; begin Result := FSetup.ReturnsInSequence(Values); end;
+function MockSetup<T>.Returns(Value: Integer): IWhen<T>; begin Result := FSetup.Returns(Value); end;
+function MockSetup<T>.Returns(const Value: string): IWhen<T>; begin Result := FSetup.Returns(Value); end;
+function MockSetup<T>.Returns(Value: Boolean): IWhen<T>; begin Result := FSetup.Returns(Value); end;
+function MockSetup<T>.Returns(Value: Double): IWhen<T>; begin Result := FSetup.Returns(Value); end;
+function MockSetup<T>.Returns(Value: Int64): IWhen<T>; begin Result := FSetup.Returns(Value); end;
+function MockSetup<T>.Throws(ExceptionClass: ExceptClass; const Msg: string): IWhen<T>; begin Result := FSetup.Throws(ExceptionClass, Msg); end;
+function MockSetup<T>.Executes(const Action: TProc<IInvocation>): IWhen<T>; begin Result := FSetup.Executes(Action); end;
+function MockSetup<T>.Callback(const Action: TProc<TArray<TValue>>): IWhen<T>; begin Result := FSetup.Callback(Action); end;
 
 function Mock<T>.Received: T;
 begin

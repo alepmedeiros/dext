@@ -46,22 +46,21 @@ begin
     WriteLn('  Dext ORM Features Integration Tests');
     WriteLn('===========================================');
     WriteLn;
-    
+
     // Register test fixtures
     TTestRunner.RegisterFixture([
-      TOptimisticConcurrencyTests, 
-      TSoftDeleteTests, 
+      TOptimisticConcurrencyTests,
+      TSoftDeleteTests,
       TAuditFieldsTests,
       TJsonQueryTests,
       TRelationshipTests
     ]);
-    
+
     // Enable verbose output to see failure details
-    TTestRunner.SetVerbose(True);
+    TTestRunner.SetVerbosity(ToutputVerbosity.ovVerbose);
     
     // Run all registered tests
     TTestRunner.RunAll;
-    
   except
     on E: Exception do
     begin

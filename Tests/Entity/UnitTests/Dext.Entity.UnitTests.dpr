@@ -15,7 +15,7 @@ uses
   Dext.Entity.Async.Tests in 'Dext.Entity.Async.Tests.pas',
   Dext.Entity.SqlGenerator.Tests in 'Dext.Entity.SqlGenerator.Tests.pas',
   Dext.Entity.FluentMapping.Tests in 'Dext.Entity.FluentMapping.Tests.pas',
-  Dext.Entity.DataSet.NewFeatures.Tests in 'Dext.Entity.DataSet.NewFeatures.Tests.pas';
+  Dext.Entity.IdReturn.Tests in 'Dext.Entity.IdReturn.Tests.pas';
 
 begin
   SetConsoleCharSet();
@@ -27,7 +27,7 @@ begin
 
     var TestResult := TTest
       .Configure
-      .Verbose
+      .VeryVerbose
       .RegisterFixtures([
         TEntityDataSetCRUDTests,
         TEntityDataSetTests,
@@ -39,9 +39,14 @@ begin
         TCalculatedFieldsTests,
         TSmartTypesTests,
         TSmartTypesMatrixTests,
+        TEntityDataSetTests,
+        TProductDataSetTests,
+        TMasterDetailDataSetTests,
+        TEntityDataSetCRUDTests,
+        TEntityDataSetStressTests,
         TSmartPropertyDataSetTests,
         TFloatingPointDataSetTests,
-        TEntityDataSetFeaturesTests
+        TEntityIdReturnTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);

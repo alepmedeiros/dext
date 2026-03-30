@@ -48,7 +48,7 @@ uses
 type
   TTestConfigurator = record
   private
-    FVerbose: Boolean;
+    FVerbosity: TOutputVerbosity;
     FDebugDiscovery: Boolean;
     FUseDashboard: Boolean;
     FDashboardPort: Integer;
@@ -69,6 +69,11 @@ type
     ///   Enables verbose output with detailed test information.
     /// </summary>
     function Verbose: TTestConfigurator;
+    
+    /// <summary>
+    ///   Enables very verbose output with full stack traces on error.
+    /// </summary>
+    function VeryVerbose: TTestConfigurator;
 
     /// <summary>
     ///   Disables verbose output (compact dot notation).
@@ -223,13 +228,19 @@ uses
 
 function TTestConfigurator.Verbose: TTestConfigurator;
 begin
-  FVerbose := True;
+  FVerbosity := ovDefault;
+  Result := Self;
+end;
+
+function TTestConfigurator.VeryVerbose: TTestConfigurator;
+begin
+  FVerbosity := ovVerbose;
   Result := Self;
 end;
 
 function TTestConfigurator.Compact: TTestConfigurator;
 begin
-  FVerbose := False;
+  FVerbosity := ovSilent;
   Result := Self;
 end;
 
@@ -343,7 +354,7 @@ var
   Cls: TClass;
 begin
   // Apply configuration
-  TTestRunner.SetVerbose(FVerbose);
+  TTestRunner.SetVerbosity(FVerbosity);
   TTestRunner.SetDebugDiscovery(FDebugDiscovery);
 
   // Check for CI/Headless override
@@ -449,7 +460,7 @@ end;
 class function TTest.Configure: TTestConfigurator;
 begin
   Result := Default(TTestConfigurator);
-  Result.FVerbose := False;  // Default to compact mode
+  Result.FVerbosity := ovSilent;  // Default to compact (dot) mode
 end;
 
 class function TTest.RunAll: Boolean;

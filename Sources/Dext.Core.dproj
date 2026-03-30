@@ -194,6 +194,7 @@ $(PreBuildEvent)]]></PreBuildEvent>
         <DCCReference Include="Core\Dext.Collections.Stack.pas"/>
         <DCCReference Include="Core\Dext.Logging.Extensions.pas"/>
         <DCCReference Include="Core\Dext.Core.Enums.pas"/>
+        <DCCReference Include="Debug\Dext.Core.Debug.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

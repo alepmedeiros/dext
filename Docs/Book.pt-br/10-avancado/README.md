@@ -8,6 +8,7 @@ Mergulhos profundos em infraestrutura e padrões avançados.
 2. [Background Services](background-services.md) - Serviços hospedados
 3. [Configuração](configuracao.md) - Padrão `IOptions<T>`
 4. [API Assíncrona](async-api.md) - `TAsyncTask` e concorrência
+5. [Diagnósticos e Debugging](diagnosticos-debugging.md) - Stack traces com alocação zero e símbolos assíncronos
 
 ## Exemplos Rápidos
 

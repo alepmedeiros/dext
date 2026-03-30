@@ -34,13 +34,14 @@ unit Dext.Testing.Runner;
 interface
 
 uses
-  System.SysUtils,
+  System.Classes,
+  System.Diagnostics,
   System.Rtti,
+  System.SysUtils,
   System.TimeSpan,
   System.TypInfo,
-  System.Diagnostics,
   Dext.Collections,
-  System.Classes,
+  Dext.Core.Debug,
   Dext.Testing.Attributes;
 
 type
@@ -48,6 +49,11 @@ type
   ///   Result of a single test execution.
   /// </summary>
   TTestResult = (trPassed, trFailed, trSkipped, trTimeout, trError);
+
+  /// <summary>
+  ///   Output verbosity levels for test execution.
+  /// </summary>
+  TOutputVerbosity = (ovSilent, ovDefault, ovVerbose);
 
   /// <summary>
   ///   Detailed information about a test execution.
@@ -59,6 +65,7 @@ type
     Result: TTestResult;
     Duration: TTimeSpan;
     ErrorMessage: string;
+    ExceptionName: string;
     StackTrace: string;
     Categories: TArray<string>;
   end;
@@ -200,7 +207,7 @@ type
     class var FFixtures: IList<TTestFixtureInfo>;
     class var FSummary: TTestSummary;
     class var FFilter: TTestFilter;
-    class var FVerbose: Boolean;
+    class var FVerbosity: TOutputVerbosity;
     class var FDebugDiscovery: Boolean;
     class var FOutputFormat: TOutputFormat;
     class var FReportFileName: string;
@@ -306,7 +313,7 @@ type
     /// <summary>
     ///   Sets verbose output mode.
     /// </summary>
-    class procedure SetVerbose(AValue: Boolean);
+    class procedure SetVerbosity(AValue: TOutputVerbosity);
 
     /// <summary>
     ///   Sets the output format.
@@ -733,7 +740,7 @@ begin
   if FAssemblyInitMethod = nil then
     Exit;
     
-  if FVerbose then
+  if FVerbosity > ovSilent then
   begin
     SafeWriteLn;
     TTestConsole.WriteInfo('🌐 [AssemblyInitialize] Running global setup...');
@@ -755,7 +762,7 @@ begin
       end;
     end;
     
-    if FVerbose then
+    if FVerbosity > ovSilent then
       SafeWriteLn('    ✅ Global setup complete.');
   except
     on E: Exception do
@@ -773,7 +780,7 @@ begin
   if FAssemblyCleanupMethod = nil then
     Exit;
     
-  if FVerbose then
+  if FVerbosity > ovSilent then
   begin
     SafeWriteLn;
     TTestConsole.WriteInfo('🌐 [AssemblyCleanup] Running global cleanup...');
@@ -794,7 +801,7 @@ begin
       end;
     end;
     
-    if FVerbose then
+    if FVerbosity > ovSilent then
       SafeWriteLn('    ✅ Global cleanup complete.');
   except
     on E: Exception do
@@ -1111,9 +1118,12 @@ begin
   NotifyRunStart(TestCount);
   // Log.Info('Run Started: %d tests', [TestCount]);
 
-  TTestConsole.WriteHeader('Dext Test Runner');
-  SafeWriteLn(Format('Discovered %d fixtures with %d tests', [FixtureCount, TestCount]));
-  SafeWriteLn;
+  if FVerbosity > ovSilent then
+  begin
+    TTestConsole.WriteHeader('Dext Test Runner');
+    SafeWriteLn(Format('Discovered %d fixtures with %d tests', [FixtureCount, TestCount]));
+    SafeWriteLn;
+  end;
 
   // Execute global setup (if defined)
   ExecuteAssemblyInit;
@@ -1155,8 +1165,11 @@ begin
 
   NotifyRunStart(0);
   Log.Info('Run Started (Filtered)');
-  TTestConsole.WriteHeader('Dext Test Runner (Filtered)');
-  SafeWriteLn;
+  if FVerbosity > ovSilent then
+  begin
+    TTestConsole.WriteHeader('Dext Test Runner (Filtered)');
+    SafeWriteLn;
+  end;
 
   // Execute global setup (if defined)
   ExecuteAssemblyInit;
@@ -1239,7 +1252,7 @@ begin
     if Assigned(FOnFixtureStart) then
       FOnFixtureStart(Fixture.Name, Fixture.TestMethods.Count);
   
-    if FVerbose then
+    if FVerbosity > ovSilent then
     begin
       SafeWriteLn;
       TTestConsole.WriteInfo('Fixture: ' + Fixture.Name);
@@ -1444,10 +1457,10 @@ begin
       on E: Exception do
       begin
         Info.Result := trFailed;
+        Info.ExceptionName := E.ClassName;
         Info.ErrorMessage := E.Message;
         // Try to get stack trace if available
         Info.StackTrace := E.StackTrace;
-
         Inc(FSummary.Failed);
         // Log.Error('Failed Test: %s. Error: %s', [Info.DisplayName, E.Message]);
       end;
@@ -1475,7 +1488,7 @@ end;
 
 class procedure TTestRunner.PrintResultChar(Result: TTestResult);
 begin
-  if FVerbose then
+  if FVerbosity > ovSilent then
     Exit;
 
   case Result of
@@ -1489,7 +1502,7 @@ end;
 
 class procedure TTestRunner.PrintTestResult(const Info: TTestInfo);
 begin
-  if not FVerbose then
+  if FVerbosity <= ovSilent then
     Exit;
 
   case Info.Result of
@@ -1508,8 +1521,18 @@ begin
         Write('  ❌  ');
         SafeWriteLn(Info.DisplayName);
         Write('      ');
-        TTestConsole.WriteFail('>> ' + Info.ErrorMessage);
+        if Info.ExceptionName <> '' then
+          TTestConsole.WriteFail(Info.ExceptionName + ': ');
+        TTestConsole.WriteFail(Info.ErrorMessage);
         SafeWriteLn;
+
+        if (FVerbosity = ovVerbose) and (Info.StackTrace <> '') then
+        begin
+          TTestConsole.WriteInfo('      Stack Trace:');
+          SafeWriteLn;
+          SafeWriteLn(Info.StackTrace);
+          SafeWriteLn;
+        end;
       end;
     trSkipped:
       begin
@@ -1529,8 +1552,18 @@ begin
         Write('  ⛔  ');
         SafeWriteLn(Info.DisplayName);
         Write('      ');
-        TTestConsole.WriteFail('>> ' + Info.ErrorMessage);
+        if Info.ExceptionName <> '' then
+          TTestConsole.WriteFail(Info.ExceptionName + ': ');
+        TTestConsole.WriteFail(Info.ErrorMessage);
         SafeWriteLn;
+
+        if (FVerbosity = ovVerbose) and (Info.StackTrace <> '') then
+        begin
+          TTestConsole.WriteInfo('      Stack Trace:');
+          SafeWriteLn;
+          SafeWriteLn(Info.StackTrace);
+          SafeWriteLn;
+        end;
       end;
   end;
 end;
@@ -1600,9 +1633,9 @@ begin
   Result := FSummary;
 end;
 
-class procedure TTestRunner.SetVerbose(AValue: Boolean);
+class procedure TTestRunner.SetVerbosity(AValue: TOutputVerbosity);
 begin
-  FVerbose := AValue;
+  FVerbosity := AValue;
 end;
 
 class procedure TTestRunner.SetOutputFormat(AFormat: TOutputFormat);
@@ -1730,7 +1763,7 @@ begin
     
     Reporter.SaveToFile(FileName);
     
-    if FVerbose then
+    if FVerbosity > ovSilent then
       SafeWriteLn('📄 JUnit report saved: ' + FileName);
   finally
     Reporter.Free;
@@ -1765,7 +1798,7 @@ begin
     
     Reporter.SaveToFile(FileName);
     
-    if FVerbose then
+    if FVerbosity > ovSilent then
       SafeWriteLn('📄 JSON report saved: ' + FileName);
   finally
     Reporter.Free;
@@ -1799,7 +1832,7 @@ begin
     
     Reporter.SaveToFile(FileName);
     
-    if FVerbose then
+    if FVerbosity > ovSilent then
       SafeWriteLn('📄 xUnit report saved: ' + FileName);
   finally
     Reporter.Free;
@@ -1835,7 +1868,7 @@ begin
     
     Reporter.SaveToFile(FileName);
     
-    if FVerbose then
+    if FVerbosity > ovSilent then
       SafeWriteLn('📄 TRX report saved: ' + FileName);
   finally
     Reporter.Free;
@@ -1868,7 +1901,7 @@ begin
     
     Reporter.SaveToFile(FileName);
     
-    if FVerbose then
+    if FVerbosity > ovSilent then
       SafeWriteLn('📄 SonarQube report saved: ' + FileName);
   finally
     Reporter.Free;
@@ -1904,7 +1937,7 @@ begin
     
     Reporter.SaveToFile(FileName);
     
-    if FVerbose then
+    if FVerbosity > ovSilent then
       SafeWriteLn('📄  HTML report saved: ' + FileName);
   finally
     Reporter.Free;
@@ -2026,6 +2059,7 @@ begin
 end;
 
 initialization
+  TTestRunner.FVerbosity := ovDefault;
 
 finalization
   TTestRunner.FListeners := nil;

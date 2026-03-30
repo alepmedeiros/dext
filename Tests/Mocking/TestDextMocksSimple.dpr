@@ -27,7 +27,7 @@ type
 var
   Calculator: Mock<ICalculator>;
   Instance: ICalculator;
-  SetupResult: ISetup<ICalculator>;
+  SetupResult: MockSetup<ICalculator>;
   WhenResult: IWhen<ICalculator>;
   CalcForSetup: ICalculator;
 begin
