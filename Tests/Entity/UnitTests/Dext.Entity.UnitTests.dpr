@@ -16,7 +16,8 @@ uses
   Dext.Entity.SqlGenerator.Tests in 'Dext.Entity.SqlGenerator.Tests.pas',
   Dext.Entity.FluentMapping.Tests in 'Dext.Entity.FluentMapping.Tests.pas',
   Dext.Entity.DataSet.NewFeatures.Tests in 'Dext.Entity.DataSet.NewFeatures.Tests.pas',
-  Dext.Entity.IdReturn.Tests in 'Dext.Entity.IdReturn.Tests.pas';
+  Dext.Entity.IdReturn.Tests in 'Dext.Entity.IdReturn.Tests.pas',
+  Dext.Entity.NullableHydration.Tests in 'Dext.Entity.NullableHydration.Tests.pas';
 
 begin
   SetConsoleCharSet();
@@ -44,7 +45,8 @@ begin
         TFloatingPointDataSetTests,
         TEntityIdReturnTests,
         TFloatingPointDataSetTests,
-        TEntityDataSetFeaturesTests
+        TEntityDataSetFeaturesTests,
+        TEntityNullableHydrationTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);

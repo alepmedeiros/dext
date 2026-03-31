@@ -254,6 +254,9 @@ var
   Field: TField;
 begin
   Field := FQuery.Fields[AColumnIndex];
+  if Field.IsNull then
+    Exit(TValue.Empty);
+
   case Field.DataType of
     ftDate: Result := TValue.From<TDate>(DateOf(Field.AsDateTime));
     ftTime: Result := TValue.From<TTime>(TimeOf(Field.AsDateTime));
@@ -273,6 +276,9 @@ var
   Field: TField;
 begin
   Field := FQuery.FieldByName(AColumnName);
+  if Field.IsNull then
+    Exit(TValue.Empty);
+
   case Field.DataType of
     ftDate: Result := TValue.From<TDate>(DateOf(Field.AsDateTime));
     ftTime: Result := TValue.From<TTime>(TimeOf(Field.AsDateTime));
