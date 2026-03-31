@@ -166,7 +166,7 @@ type
   private
     FData: TDictionary<string, string>;
   public
-    constructor Create;
+    constructor Create(AIgnoreCase: Boolean = False);
     destructor Destroy; override;
     
     function GetItem(const AKey: string): string;
@@ -186,10 +186,10 @@ implementation
 
 { TDextStringDictionary }
 
-constructor TDextStringDictionary.Create;
+constructor TDextStringDictionary.Create(AIgnoreCase: Boolean);
 begin
   inherited Create;
-  FData := TDictionary<string, string>.Create(False, 0); 
+  FData := TDictionary<string, string>.Create(AIgnoreCase, False, 0); 
 end;
 
 destructor TDextStringDictionary.Destroy;

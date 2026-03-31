@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -169,7 +169,7 @@ var
   I: Integer;
   Name, Value: string;
 begin
-  Result := TDextStringDictionary.Create as IStringDictionary;
+  Result := TCollections.CreateStringDictionary(True);
 
   for I := 0 to AHeaderList.Count - 1 do
   begin
@@ -206,7 +206,7 @@ var
   Key, Value: string;
   Len: Integer;
 begin
-  Result := TDextStringDictionary.Create as IStringDictionary;
+  Result := TCollections.CreateStringDictionary(True);
   if AQuery = '' then Exit;
   
   P := PChar(AQuery);

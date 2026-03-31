@@ -235,7 +235,7 @@ constructor TDextWebBrokerRequest.Create(AWebRequest: TWebRequest);
 begin
   inherited Create;
   FWebRequest := AWebRequest;
-  FRouteParams := TCollections.CreateDictionary<string, string>;
+  FRouteParams := TCollections.CreateDictionaryIgnoreCase<string, string>;
   FFiles := TFormFileCollection.Create(TCollections.CreateList<IFormFile>);
 end;
 
@@ -274,7 +274,7 @@ var
   HeaderName: string;
   HeaderValue: string;
 begin
-  Result := TCollections.CreateDictionary<string, string>;
+  Result := TCollections.CreateDictionaryIgnoreCase<string, string>;
   for HeaderName in KnownHeaders do
   begin
     HeaderValue := FWebRequest.GetFieldByName(HeaderName);
@@ -290,7 +290,7 @@ var
   Pair: string;
   Parts: TArray<string>;
 begin
-  Result := TCollections.CreateDictionary<string, string>;
+  Result := TCollections.CreateDictionaryIgnoreCase<string, string>;
   CookieStr := FWebRequest.GetFieldByName('Cookie');
   if CookieStr = '' then Exit;
   Pairs := CookieStr.Split([';']);

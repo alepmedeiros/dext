@@ -272,7 +272,7 @@ type
     class function CreateStack<T>: IStack<T>; static;
     class function CreateQueue<T>: IQueue<T>; static;
     class function CreateHashSet<T>: IHashSet<T>; static;
-    class function CreateStringDictionary: IStringDictionary; static;
+    class function CreateStringDictionary(AIgnoreCase: Boolean = False): IStringDictionary; static;
   end;
   {$M-}
 
@@ -911,9 +911,9 @@ begin
   Result := THashSet<T>.Create;
 end;
 
-class function TCollections.CreateStringDictionary: IStringDictionary;
+class function TCollections.CreateStringDictionary(AIgnoreCase: Boolean): IStringDictionary;
 begin
-  Result := TDextStringDictionary.Create;
+  Result := TDextStringDictionary.Create(AIgnoreCase);
 end;
 
 { TList<T> IObjectList Implementation }

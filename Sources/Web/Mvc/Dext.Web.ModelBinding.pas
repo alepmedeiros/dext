@@ -471,25 +471,25 @@ begin
     // 2. Bind Fields (Records)
     if AType.Kind = tkRecord then
     begin
-      for Field in RttiType.GetFields do
-      begin
-        var SourceProvider := TBindingSourceProvider.Create;
-        try
-          FieldName := SourceProvider.GetBindingName(Field);
-        finally
-          SourceProvider.Free;
-        end;
-
-        if QueryParams.TryGetValue(FieldName, FieldValue) then
+      var SourceProvider := TBindingSourceProvider.Create;
+      try
+        for Field in RttiType.GetFields do
         begin
-          try
-            var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
-            Field.SetValue(Result.GetReferenceToRawData, Val);
-          except
-             on E: Exception do
-               SafeWriteln(Format('BindQuery warning: Error converting field "%s": %s', [FieldName, E.Message]));
+          FieldName := SourceProvider.GetBindingName(Field);
+
+          if QueryParams.TryGetValue(FieldName, FieldValue) then
+          begin
+            try
+              var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
+              Field.SetValue(Result.GetReferenceToRawData, Val);
+            except
+               on E: Exception do
+                 SafeWriteln(Format('BindQuery warning: Error converting field "%s": %s', [FieldName, E.Message]));
+            end;
           end;
         end;
+      finally
+        SourceProvider.Free;
       end;
     end
     // 3. Bind Properties (Classes)
@@ -525,20 +525,7 @@ begin
   end;
 end;
 
-function TryGetCaseInsensitive(const ADict: IStringDictionary; const AKey: string; out AValue: string): Boolean;
-begin
-  Result := False;
-  if ADict = nil then Exit;
 
-  if ADict.TryGetValue(AKey, AValue) then
-    Exit(True);
-
-  // Note: IStringDictionary no longer exposes Keys enumerable to avoid allocation.
-  // The consumer should handle case sensitive appropriately or store lowercase.
-  // Actually, TDextStringDictionary should handle OrdinalIgnoreCase inside itself.
-  // For now we just return standard dictionary resolution
-  Result := ADict.TryGetValue(AKey.ToLower, AValue);
-end;
 
 function TModelBinder.BindQuery<T>(Context: IHttpContext): T;
 begin
@@ -588,34 +575,32 @@ begin
     RttiType := ContextRtti.GetType(AType);
     RouteParams := Context.Request.RouteParams;
 
-    for Field in RttiType.GetFields do
-    begin
-      // Obter nome do campo (com suporte a atributos [FromRoute])
-      var SourceProvider := TBindingSourceProvider.Create;
-      try
-        FieldName := SourceProvider.GetBindingName(Field);
-      finally
-        SourceProvider.Free;
-      end;
-
-      // Buscar valor do route parameter
-      if RouteParams.TryGetValue(FieldName, FieldValue) then
+    var SourceProvider := TBindingSourceProvider.Create;
+    try
+      for Field in RttiType.GetFields do
       begin
-        // FieldValue já foi preenchido pelo TryGetCaseInsensitive
+        // Obter nome do campo (com suporte a atributos [FromRoute])
+        FieldName := SourceProvider.GetBindingName(Field);
 
-        // ✅ MESMA CONVERSÃO ROBUSTA DO BINDQUERY
-        try
-          var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
-          Field.SetValue(Result.GetReferenceToRawData, Val);
-        except
-          on E: Exception do
-          begin
-            SafeWriteln(Format('⚠️ BindRoute warning: Error converting field "%s" value "%s": %s',
-              [FieldName, FieldValue, E.Message]));
-          end;
-        end; // try
-      end; // if parameter exists
-    end; // for each field
+        // Buscar valor do route parameter
+        if RouteParams.TryGetValue(FieldName, FieldValue) then
+        begin
+          // ✅ MESMA CONVERSÃO ROBUSTA DO BINDQUERY
+          try
+            var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
+            Field.SetValue(Result.GetReferenceToRawData, Val);
+          except
+            on E: Exception do
+            begin
+              SafeWriteln(Format('⚠️ BindRoute warning: Error converting field "%s" value "%s": %s',
+                [FieldName, FieldValue, E.Message]));
+            end;
+          end; // try
+        end; // if parameter exists
+      end; // for each field
+    finally
+      SourceProvider.Free;
+    end;
 
   finally
     ContextRtti.Free;
@@ -647,33 +632,33 @@ begin
     RttiType := ContextRtti.GetType(AType);
     Headers := Context.Request.Headers;
 
-    for Field in RttiType.GetFields do
-    begin
-      // Obter nome do campo (com suporte a atributos [FromHeader])
-      var SourceProvider := TBindingSourceProvider.Create;
-      try
-        FieldName := SourceProvider.GetBindingName(Field);
-      finally
-        SourceProvider.Free;
-      end;
-
-      // Buscar valor do header (case-insensitive via GetHeader)
-      FieldValue := Context.Request.GetHeader(FieldName);
-      if FieldValue <> '' then
+    var SourceProvider := TBindingSourceProvider.Create;
+    try
+      for Field in RttiType.GetFields do
       begin
-        // ✅ USAR CONVERSÃO ROBUSTA
-        try
-          var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
-          Field.SetValue(Result.GetReferenceToRawData, Val);
-        except
-          on E: Exception do
-          begin
-            SafeWriteln(Format('⚠️ BindHeader warning: Error converting field "%s" value "%s": %s',
-              [FieldName, FieldValue, E.Message]));
-          end;
-        end; // try
-      end; // if header exists
-    end; // for each field
+        // Obter nome do campo (com suporte a atributos [FromHeader])
+        FieldName := SourceProvider.GetBindingName(Field);
+
+        // Buscar valor do header (case-insensitive via GetHeader)
+        FieldValue := Context.Request.GetHeader(FieldName);
+        if FieldValue <> '' then
+        begin
+          // ✅ USAR CONVERSÃO ROBUSTA
+          try
+            var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
+            Field.SetValue(Result.GetReferenceToRawData, Val);
+          except
+            on E: Exception do
+            begin
+              SafeWriteln(Format('⚠️ BindHeader warning: Error converting field "%s" value "%s": %s',
+                [FieldName, FieldValue, E.Message]));
+            end;
+          end; // try
+        end; // if header exists
+      end; // for each field
+    finally
+      SourceProvider.Free;
+    end;
 
   finally
     ContextRtti.Free;
