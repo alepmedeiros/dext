@@ -272,6 +272,8 @@ type
     [Test]
     procedure Test_Field_DataTypes;
     [Test]
+    procedure Test_DateTime_Persistence;
+    [Test]
     procedure Test_Blob_FieldType;
     [Test]
     procedure Test_Blob_IsNull_When_Empty;
@@ -312,6 +314,9 @@ type
 
     [Test]
     procedure Test_Detail_FilterByMaster;
+
+    [Test]
+    procedure Test_Real_MasterDetail_Link;
   end;
 
   [TestFixture('TEntityDataSet Native Master-Detail')]
@@ -559,6 +564,7 @@ begin
 
   var P3 := TProductTest.Create;
   P3.Id := 3; P3.Name := 'Tool Gamma'; P3.Price := 9.50; P3.Active := False;
+  P3.CreatedAt := Now;
   FProducts[2] := P3;
 
   FDataSet := TEntityDataSet.Create(nil);
@@ -594,6 +600,19 @@ begin
   Should(FDataSet.FieldByName('Price').DataType).Be(ftCurrency);
   Should(FDataSet.FieldByName('StockQty').DataType).Be(ftLargeint);
   Should(FDataSet.FieldByName('Photo').DataType).Be(ftBlob);
+  Should(FDataSet.FieldByName('CreatedAt').DataType).Be(ftDateTime);
+end;
+
+procedure TProductDataSetTests.Test_DateTime_Persistence;
+begin
+  FDataSet.Last; // Go to P3
+  var OriginalDate := TProductTest(FProducts[2]).CreatedAt;
+  var DataSetDate := FDataSet.FieldByName('CreatedAt').AsDateTime;
+  
+  // We compare formatted strings down to seconds cross-checked with raw double 
+  // to ensure our MSecs conversion doesn't lose data.
+  Should(FormatDateTime('yyyy-mm-dd hh:nn:ss', DataSetDate)).Be(FormatDateTime('yyyy-mm-dd hh:nn:ss', OriginalDate));
+  Should(Abs(DataSetDate - OriginalDate) < 0.00000001).BeTrue;
 end;
 
 procedure TProductDataSetTests.Test_Blob_FieldType;
@@ -798,6 +817,36 @@ end;
 procedure TMasterDetailDataSetTests.Test_Detail_FieldValues;
 begin
   Should(FDetailDS.FieldByName('OrderId').Required).BeTrue;
+end;
+
+procedure TMasterDetailDataSetTests.Test_Real_MasterDetail_Link;
+var
+  MasterDataSource: TDataSource;
+begin
+  MasterDataSource := TDataSource.Create(nil);
+  try
+    MasterDataSource.DataSet := FMasterDS;
+
+    // Configurar o vínculo clássico
+    FDetailDS.MasterSource := MasterDataSource;
+    FDetailDS.MasterFields := 'Id';
+    FDetailDS.IndexFieldNames := 'OrderId';
+    FDetailDS.Open;
+
+    // Master está no registro 100 (Setup posiciona First)
+    Should(FMasterDS.FieldByName('Id').AsInteger).Be(100);
+    Should(FDetailDS.RecordCount).Be(2);
+
+    // Mudar master para o registro 200
+    FMasterDS.Next;
+    Should(FMasterDS.FieldByName('Id').AsInteger).Be(200);
+
+    // O detalhe deve ter filtrado automaticamente
+    Should(FDetailDS.RecordCount).Be(1);
+    Should(FDetailDS.FieldByName('OrderId').AsInteger).Be(200);
+  finally
+    MasterDataSource.Free;
+  end;
 end;
 
 { TEntityDataSetCRUDTests }
@@ -1111,6 +1160,10 @@ begin
   // if not handled as ftCurrency.
   FDataSet.Open;
   Should(FDataSet.FieldByName('CurrencyVal').DataType).Be(ftCurrency);
+  
+  // Verify DisplayFormat to avoid 1E2 scientific notation regression
+  Should(TFloatField(FDataSet.FieldByName('DoubleVal')).DisplayFormat).Be('#,##0.00');
+  Should(TCurrencyField(FDataSet.FieldByName('CurrencyVal')).DisplayFormat).Be('#,##0.00');
 end;
 
 { TOrderTest }

@@ -110,7 +110,7 @@ Para trafegar dados entre camadas (API -> Client) com máxima eficiência.
 - [x] **Master-Detail:** Implementar e testar cenários de Mestre-Detalhe vinculados.
 - [x] **Performance & RTTI Fix:** Otimização do pipeline de RTTI (Context global) e correção de memory leaks.
 - [x] **Locate em Calculados:** Corrigir `Locate` para suportar campos `fkCalculated` e `fkLookup` via fallback para `GetFieldData`.
-- [ ] **Master-Detail:** Implementar suporte nativo a coleções detalhe (`GetDetailDataSet`) para propriedades `IList<T>`.
+- [x] **Master-Detail:** Implementar suporte nativo a coleções detalhe (`GetDetailDataSet`) para propriedades `IList<T>`.
 - [x] **Eventos de Modificação:** Garantir disparo de eventos (BeforePost, AfterPost, etc).
 - [x] **Tratamento de Exceções:** Lidar com comportamentos anômalos no ciclo de vida do DataSet e reportar adequadamente para a UI (DBGrid).
 - [x] **Calculated Fields:** Suporte nativo a campos calculados via evento `OnCalcFields` do `TDataSet`.

@@ -1,4 +1,4 @@
-unit Dext.Entity.DataSet;
+﻿unit Dext.Entity.DataSet;
 
 interface
 
@@ -41,6 +41,8 @@ type
 
   TPrepareFieldEvent = procedure(Sender: TObject; AField: TField) of object;
 
+  TEntityMasterDataLink = class;
+
   /// <summary>
   ///   Custom TDataSet for high-performance reading and writing to direct objects/lists.
   /// </summary>
@@ -59,6 +61,10 @@ type
     
     FRecordSize: Integer;
     FHeaderSize: Integer;
+    
+    // Master-Detail Link
+    FMasterLink: TEntityMasterDataLink;
+    FMasterFields: string;
     
     // Internal Settings
     FReadOnly: Boolean;
@@ -83,6 +89,10 @@ type
     procedure ApplyFilterAndSort; overload;
     procedure ApplyFilterAndSort(AFiltered: Boolean); overload;
     procedure ApplyFilterAndSort(AFiltered: Boolean; ATrackObj: TObject); overload;
+    procedure SyncMasterDetail;
+    function GetMasterSource: TDataSource;
+    procedure SetMasterSource(Value: TDataSource);
+    procedure SetMasterFields(const Value: string);
     function CompareObjectsInternal(A, B: TObject; const APropNames: TArray<string>; RttiType: TRttiType): Integer;
     procedure ApplyAttributesToField(AField: TField; AContainer: TRttiObject);
     procedure BuildFieldDefs;
@@ -195,6 +205,8 @@ type
     property FilterOptions;
     property IncludeShadowProperties: Boolean read FIncludeShadowProperties write FIncludeShadowProperties default False;
     property IndexFieldNames: string read FIndexFieldNames write SetIndexFieldNames;
+    property MasterSource: TDataSource read GetMasterSource write SetMasterSource;
+    property MasterFields: string read FMasterFields write SetMasterFields;
     property ReadOnly: Boolean read FReadOnly write FReadOnly default False;
 
     property AfterCancel;
@@ -222,6 +234,19 @@ type
     property OnFilterRecord;
     property OnNewRecord;
     property OnPostError;
+  end;
+
+  /// <summary>
+  ///   Internal DataLink to handle Master-Detail synchronization.
+  /// </summary>
+  TEntityMasterDataLink = class(TMasterDataLink)
+  private
+    FEntityDataSet: TEntityDataSet;
+  protected
+    procedure ActiveChanged; override;
+    procedure RecordChanged(Field: TField); override;
+  public
+    constructor Create(ADataSet: TEntityDataSet);
   end;
 
 implementation
@@ -335,6 +360,9 @@ begin
   
   if Assigned(FEntityMap) and FOwnsEntityMap then
     FEntityMap.Free;
+
+  if Assigned(FMasterLink) then
+    FMasterLink.Free;
     
   inherited Destroy;
 end;
@@ -679,6 +707,7 @@ begin
   if FIndexFieldNames <> Value then
   begin
     FIndexFieldNames := Value;
+    SyncMasterDetail;
     if Active then
     begin
       ApplyFilterAndSort;
@@ -1082,6 +1111,112 @@ begin
   end;
 end;
 
+function TEntityDataSet.GetMasterSource: TDataSource;
+begin
+  if FMasterLink <> nil then
+    Result := FMasterLink.DataSource
+  else
+    Result := nil;
+end;
+
+procedure TEntityDataSet.SetMasterSource(Value: TDataSource);
+begin
+  if GetMasterSource <> Value then
+  begin
+    if Value = nil then
+    begin
+      if FMasterLink <> nil then
+        FMasterLink.DataSource := nil;
+    end
+    else
+    begin
+      if FMasterLink = nil then
+        FMasterLink := TEntityMasterDataLink.Create(Self);
+      FMasterLink.DataSource := Value;
+      FMasterLink.FieldNames := FMasterFields;
+    end;
+    SyncMasterDetail;
+  end;
+end;
+
+procedure TEntityDataSet.SetMasterFields(const Value: string);
+begin
+  if FMasterFields <> Value then
+  begin
+    FMasterFields := Value;
+    if FMasterLink <> nil then
+      FMasterLink.FieldNames := Value;
+    SyncMasterDetail;
+  end;
+end;
+
+procedure TEntityDataSet.SyncMasterDetail;
+begin
+  if not Active or (FMasterLink = nil) or (FMasterLink.DataSource = nil) or
+     (FMasterLink.DataSource.DataSet = nil) or (FMasterFields = '') or (FIndexFieldNames = '') then
+    Exit;
+
+  if not FMasterLink.DataSource.DataSet.Active or FMasterLink.DataSource.DataSet.IsEmpty then
+  begin
+    Filter := '1=0';
+    Filtered := True;
+    Exit;
+  end;
+
+  var MasterFieldsList := FMasterFields.Split([';']);
+  var DetailFieldsList := FIndexFieldNames.Split([';']);
+  var FilterStr := '';
+  
+  for var i := 0 to High(MasterFieldsList) do
+  begin
+    if i > High(DetailFieldsList) then Break;
+    
+    var MasterField := FMasterLink.DataSource.DataSet.FindField(MasterFieldsList[i].Trim);
+    if MasterField = nil then Continue;
+    
+    if FilterStr <> '' then FilterStr := FilterStr + ' AND ';
+    
+    var Val := MasterField.Value;
+    var ValStr: string;
+    
+    if VarIsNull(Val) then
+      ValStr := 'NULL'
+    // PROTEÇÃO MÁXIMA: Força ISO se campo é data, se valor é varDate ou se o nome do campo sugere data
+    else if (MasterField.DataType in [ftDate, ftTime, ftDateTime]) or 
+            (VarType(Val) = varDate) or 
+            (SameText(MasterFieldsList[i].Trim, 'Date') or SameText(MasterFieldsList[i].Trim, 'DateTime')) then
+    begin
+      ValStr := '''' + FormatDateTime('yyyy-mm-dd hh:nn:ss', Val) + '''';
+    end
+    else if (VarType(Val) = varString) or (VarType(Val) = varUString) or (VarType(Val) = varOleStr) then
+    begin
+      var S := VarToStr(Val);
+      S := S.Replace('''', '''''');
+      ValStr := '''' + S + '''';
+    end
+    else if (VarType(Val) = varBoolean) then
+      ValStr := BoolToStr(Val, True)
+    else
+      // Usa o separador decimal do sistema para garantir que o filtro 
+      // use sempre o ponto como separador universal de máquina
+      ValStr := VarToStr(Val).Replace(FormatSettings.DecimalSeparator, '.');
+      
+    FilterStr := FilterStr + DetailFieldsList[i].Trim + ' = ' + ValStr;
+  end;
+  
+  if FilterStr <> '' then
+  begin
+    Filter := FilterStr;
+    Filtered := True;
+  end
+  else
+  begin
+    Filter := '';
+    Filtered := False;
+  end;
+end;
+
+
 { TEntityDataSet }
 
 procedure TEntityDataSet.InternalOpen;
@@ -1118,6 +1253,7 @@ begin
       CreateFields;
   end;
 
+  SyncMasterDetail;
   ApplyFilterAndSort;
   BookmarkSize := SizeOf(Integer);
 
@@ -1404,12 +1540,15 @@ procedure TEntityDataSet.InternalInitFieldDefs;
       end;
       tkFloat:
       begin
-        if ATypeInfo = TypeInfo(TDateTime) then
+        TypeName := string(ATypeInfo.Name);
+        if (ATypeInfo = TypeInfo(TDateTime)) or SameText(TypeName, 'TDateTime') or SameText(TypeName, 'TDate') or SameText(TypeName, 'TTime') then
           Exit(ftDateTime)
-        else if ATypeInfo = TypeInfo(Currency) then
+        else if (ATypeInfo = TypeInfo(Currency)) or SameText(TypeName, 'Currency') then
           Exit(ftCurrency)
         else
+        begin
           Exit(ftFloat);
+        end;
       end;
       tkString, tkLString, tkWString, tkUString, tkChar, tkWChar:
         Exit(ftWideString);
@@ -1556,13 +1695,12 @@ begin
           ftFloat:
           begin
             NewField := TFloatField.Create(Self);
-            TFloatField(NewField).DisplayFormat := '#,##0.00';
             TFloatField(NewField).Precision := 2;
           end;
           ftCurrency:
           begin
             NewField := TCurrencyField.Create(Self);
-            TCurrencyField(NewField).DisplayFormat := '#,##0.00';
+            TCurrencyField(NewField).Currency := True; // Habilita formatação automática do SO
           end;
           ftBoolean: NewField := TBooleanField.Create(Self);
           ftDateTime: NewField := TDateTimeField.Create(Self);
@@ -1578,11 +1716,16 @@ begin
           NewField.FieldName := PropMap.PropertyName;
           
           if (NewField is TFloatField) and (not (NewField is TCurrencyField)) then
+          begin
             TFloatField(NewField).Precision := PropMap.Precision;
+            TFloatField(NewField).DisplayFormat := '#,##0.00';
+          end;
+          
           if NewField is TCurrencyField then
           begin
             TCurrencyField(NewField).Precision := 4;
-            TCurrencyField(NewField).currency := True; // Explicitly enable currency mode
+            TCurrencyField(NewField).currency := True; 
+            TCurrencyField(NewField).DisplayFormat := '#,##0.00';
           end;
 
           if NewField is TStringField then
@@ -1988,7 +2131,7 @@ begin
         if not LUnwrapped.IsEmpty then
         begin
           if (Field.DataType in [ftDate, ftTime, ftDateTime]) then
-             Value := LUnwrapped.AsType<TDateTime>
+             Value := VarAsType(LUnwrapped.AsType<TDateTime>, varDate)
           else if (Field.DataType = ftCurrency) then
              Value := LUnwrapped.AsCurrency
           else
@@ -1998,7 +2141,7 @@ begin
       else
       begin
         if (Field.DataType in [ftDate, ftTime, ftDateTime]) then
-           Value := LTempValue.AsType<TDateTime>
+           Value := VarAsType(LTempValue.AsType<TDateTime>, varDate)
         else if (Field.DataType = ftCurrency) then
            Value := LTempValue.AsCurrency
         else
@@ -2023,7 +2166,7 @@ begin
           if not LUnwrappedField.IsEmpty then
           begin
             if (Field.DataType in [ftDate, ftTime, ftDateTime]) then
-               Value := LUnwrappedField.AsType<TDateTime>
+               Value := VarAsType(LUnwrappedField.AsType<TDateTime>, varDate)
             else if (Field.DataType = ftCurrency) then
                Value := LUnwrappedField.AsCurrency
             else
@@ -2033,7 +2176,7 @@ begin
         else
         begin
           if (Field.DataType in [ftDate, ftTime, ftDateTime]) then
-             Value := LFieldVal.AsType<TDateTime>
+             Value := VarAsType(LFieldVal.AsType<TDateTime>, varDate)
           else if (Field.DataType = ftCurrency) then
              Value := LFieldVal.AsCurrency
           else
@@ -2046,7 +2189,6 @@ begin
   end;
 
   // 5. Direct value extraction (Fast Path)
-  // Checar flag de nulo se definido (SmartProp, Nullable, Lazy)
   if (PropMap.FieldOffset > 0) then
   begin
     LP := PByte(CurrentObj);
@@ -2112,7 +2254,10 @@ begin
     ftBoolean:
       Value := PBoolean(PValue)^;
     ftDateTime, ftDate, ftTime:
-      Value := PDateTime(PValue)^;
+    begin
+      if (VarType(PDateTime(PValue)^) = varString) or (VarType(PDateTime(PValue)^) = varUString) then
+      Value := VarAsType(PDateTime(PValue)^, varDate);
+    end;
     ftBlob:
     begin
       try
@@ -2133,7 +2278,7 @@ begin
   else
     Exit; // Tipo não mapeado diretamente
   end;
-  
+
   Result := not VarIsEmpty(Value);
 end;
 
@@ -2193,7 +2338,7 @@ begin
        Result := False;
        Exit;
     end;
-    
+
     // If Buffer is nil, just check for data existence (IsNull test)
     if Buffer = nil then
     begin
@@ -2219,7 +2364,10 @@ begin
       ftDateTime, ftDate, ftTime:
       begin
         var LDT: TDateTime := V;
-        PDouble(Buffer)^ := LDT;
+        // Delphi's Data.DB expects ftDateTime/ftDate/ftTime fields to be stored as 
+        // a 8-byte COMP (Int64 with floating point behavior) representing MILLISECONDS since year 0001.
+        // We MUST convert our TDateTime (days) using the RTL's expected conversion.
+        PDouble(Buffer)^ := TimeStampToMSecs(DateTimeToTimeStamp(LDT));
       end;
       ftLargeint:
       begin
@@ -2407,6 +2555,27 @@ end;
 function TEntityDataSet.IsCursorOpen: Boolean;
 begin
   Result := FIsCursorOpen;
+end;
+
+{ TEntityMasterDataLink }
+
+constructor TEntityMasterDataLink.Create(ADataSet: TEntityDataSet);
+begin
+  inherited Create(ADataSet);
+  FEntityDataSet := ADataSet;
+end;
+
+procedure TEntityMasterDataLink.ActiveChanged;
+begin
+  if FEntityDataSet <> nil then
+    FEntityDataSet.SyncMasterDetail;
+end;
+
+procedure TEntityMasterDataLink.RecordChanged(Field: TField);
+begin
+  // Field = nil significa que o cursor mudou de posição no mestre
+  if (FEntityDataSet <> nil) and (Field = nil) then
+    FEntityDataSet.SyncMasterDetail;
 end;
 
 end.

@@ -6,9 +6,9 @@ echo Building and Running Dext Tests
 echo ==========================================
 echo.
 
-set SKIP_BUILD=0
-if "%~1"=="--no-build" set SKIP_BUILD=1
-if "%~1"=="-nb" set SKIP_BUILD=1
+@REM set SKIP_BUILD=0
+@REM if "%~1"=="--no-build" set SKIP_BUILD=1
+@REM if "%~1"=="-nb" set SKIP_BUILD=1
 
 REM Setup Delphi environment
 call "C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat"
@@ -20,12 +20,12 @@ set BUILD_FAIL_COUNT=0
 set BUILD_SUCCESS_COUNT=0
 set "OUTPUT_DIR=%~dp0..\Tests\Output"
 
-REM Skip build step if specified
-if %SKIP_BUILD% EQU 1 (
-    echo [SKIP] Building All Tests (parameter --no-build detected)
-    echo.
-    goto :run_step
-)
+@REM REM Skip build step if specified
+@REM if %SKIP_BUILD% EQU 1 (
+@REM     echo [SKIP] Building All Tests (parameter --no-build detected)
+@REM     echo.
+@REM     goto :run_step
+@REM )
 
 echo ==========================================
 echo Step 1: Building All Tests

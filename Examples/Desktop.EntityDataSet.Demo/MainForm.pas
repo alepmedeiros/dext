@@ -54,7 +54,9 @@ type
     DataSourceDetail: TDataSource;
     EntityDataSet1: TEntityDataSet;
     ClientDataSet1: TClientDataSet;
+    RealMasterDetailButton: TSpeedButton;
     procedure FormCreate(Sender: TObject);
+    procedure RealMasterDetailButtonClick(Sender: TObject);
   private
     FDataSet: TEntityDataSet;
     FProducts: IList<TProduct>;
@@ -64,6 +66,9 @@ var
   FormMain: TFormMain;
 
 implementation
+
+uses
+  MasterDetailForm;
 
 {$R *.dfm}
 
@@ -128,6 +133,16 @@ destructor TProduct.Destroy;
 begin
   FStock := nil;
   inherited;
+end;
+
+procedure TFormMain.RealMasterDetailButtonClick(Sender: TObject);
+begin
+  with TFormMasterDetailReal.Create(Self) do
+  try
+    ShowModal;
+  finally
+    Free;
+  end;
 end;
 
 end.

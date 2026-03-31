@@ -2,7 +2,8 @@ program Desktop.EntityDataSet.Demo;
 
 uses
   Vcl.Forms,
-  MainForm in 'MainForm.pas' {FormMain};
+  MainForm in 'MainForm.pas' {FormMain},
+  MasterDetailForm in 'MasterDetailForm.pas' {FormMasterDetailReal};
 
 {$R *.res}
 

@@ -38,8 +38,15 @@ type
   PDbgInfoStack = ^TDbgInfoStack;
   PExceptionRecord = System.PExceptionRecord;
 
+  TDbgOptions = record
+    WaitOnResolve: Boolean;      // Se True, aguarda o .map ser processado para mostrar o stacktrace.
+    ResolveOnlyIfLoaded: Boolean; // Se True, se o .map não estiver carregado, não tenta resolver (mostra hex).
+    procedure InitDefaults;
+  end;
+
   TStackTrace = record
   public
+    class var Options: TDbgOptions;
     class procedure EnsureInitialized; static;
     class function Capture(FramesToSkip: Integer = 2): string; static;
     class function ResolveAddress(Address: Pointer): string; static;
@@ -90,6 +97,7 @@ var
   
   MapLoadTask: IAsyncTask = nil;
   MapLoadTokenSource: TCancellationTokenSource = nil;
+  MapReadyEvent: TEvent = nil;
 
 { PE Header Helpers }
 
@@ -259,11 +267,12 @@ var
 var
   S: string;
 begin
-  if MapLoadAttempted then Exit;
-  MapLoadAttempted := True;
-
   try
-    MapPath := ChangeFileExt(ParamStr(0), '.map');
+    if MapLoadAttempted then Exit;
+    MapLoadAttempted := True;
+    
+    try
+      MapPath := ChangeFileExt(ParamStr(0), '.map');
     if not FileExists(MapPath) then
     begin
       // Check Output directory (common in Dext build layout)
@@ -343,17 +352,21 @@ begin
     SetLength(MapSymbols, MapSymbolCount);
     SetLength(MapLines, MapLineCount);
     MapLoaded := (MapSymbolCount > 0);
-  except
-    on E: Exception do
-    begin
-      var L: TStringList := TStringList.Create;
-      try
-        L.Add('Dext MAP Error: ' + E.ClassName + ' - ' + E.Message);
-        L.SaveToFile('C:\dev\MapException.txt');
-      finally
-        L.Free;
+    except
+      on E: Exception do
+      begin
+        var L: TStringList := TStringList.Create;
+        try
+          L.Add('Dext MAP Error: ' + E.ClassName + ' - ' + E.Message);
+          L.SaveToFile('C:\dev\MapException.txt');
+        finally
+          L.Free;
+        end;
       end;
     end;
+  finally
+    if Assigned(MapReadyEvent) then
+      MapReadyEvent.SetEvent;
   end;
 end;
 
@@ -361,6 +374,9 @@ procedure EnsureMapLoaded; inline;
 begin
   if not MapLoadAttempted then
     LoadMapFile;
+    
+  if Assigned(MapReadyEvent) and TStackTrace.Options.WaitOnResolve then
+    MapReadyEvent.WaitFor(60000); // Aguarda até 60s o processamento do .map para não mostrar hex "inútil"
 end;
 
 { Binary Search }
@@ -441,20 +457,16 @@ end;
 { Address Resolution }
 
 function ResolveAddr(Address: Pointer): string;
+label
+  Fallback;
 var
   Offset: NativeUInt;
   SymName, SourceFile: string;
   SymDelta: NativeUInt;
   LineNum: Integer;
 begin
-  if (MapLoadTask <> nil) and (MapLoadTask.Status <> TTaskStatus.Completed) then
-  begin
-    // Safely wait a few ms to ensure stack traces don't lose context
-    // if called exactly while the map is parsing.
-    MapLoadTask.Wait(3000); 
-  end;
-  
-  EnsureMapLoaded;
+  if TStackTrace.Options.ResolveOnlyIfLoaded and not MapLoaded then
+    goto Fallback;
 
   if MapLoaded and (MapModuleBase <> 0) and
      (NativeUInt(Address) >= MapModuleBase) and
@@ -480,6 +492,7 @@ begin
     end;
   end;
 
+Fallback:
   // Fallback: module + offset
   var Module := GetModuleFromAddress(Address);
   if Module <> 0 then
@@ -506,6 +519,7 @@ var
   SB: TStringBuilder;
   I: Integer;
 begin
+  EnsureMapLoaded;
   SB := TStringBuilder.Create(DBG_STACK_LENGTH * 80);
   try
     for I := 0 to DBG_STACK_LENGTH - 1 do
@@ -520,6 +534,14 @@ begin
   end;
 end;
 
+{ TDbgOptions }
+
+procedure TDbgOptions.InitDefaults;
+begin
+  WaitOnResolve := True;        // Por padrão espera para garantir stacktrace útil
+  ResolveOnlyIfLoaded := False; 
+end;
+
 { TStackTrace }
 
 class procedure TStackTrace.EnsureInitialized;
@@ -531,21 +553,12 @@ begin
   MapLoadAttempted := True;
   MapLoadTokenSource := TCancellationTokenSource.Create;
   
-  MapLoadTask := TAsyncTask.Run<Boolean>(
-    function: Boolean
+  MapLoadTask := TAsyncTask.Run(
+    procedure
     begin
       // Let LoadMapFile handle the parsing.
       LoadMapFile;
-      Result := True;
-    end)
-    .WithCancellation(MapLoadTokenSource.Token)
-    .OnExceptionAsync(
-      procedure(E: Exception)
-      begin
-        // If it fails, map load won't crash the pool,
-        // it just won't be MapLoaded = True.
-      end)
-    .Start;
+    end).Start;
 end;
 
 class function TStackTrace.ResolveAddress(Address: Pointer): string;
@@ -632,11 +645,14 @@ begin
 end;
 
 initialization
+  TStackTrace.Options.InitDefaults;
+  MapReadyEvent := TEvent.Create(nil, True, False, '');
   InstallExceptionCallStack;
   {$IFDEF DEBUG}TStackTrace.EnsureInitialized;{$ENDIF}
 
 finalization
   UninstallExceptionCallStack;
   MapLoadTokenSource.Free;
+  MapReadyEvent.Free;
 
 end.

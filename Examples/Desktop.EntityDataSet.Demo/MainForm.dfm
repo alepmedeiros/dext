@@ -60,6 +60,14 @@ object FormMain: TFormMain
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
+    object RealMasterDetailButton: TSpeedButton
+      Left = 256
+      Top = 8
+      Width = 150
+      Height = 25
+      Caption = 'Real Master-Detail'
+      OnClick = RealMasterDetailButtonClick
+    end
     object DBNavigator: TDBNavigator
       Left = 8
       Top = 8

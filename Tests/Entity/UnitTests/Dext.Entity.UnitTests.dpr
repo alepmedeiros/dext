@@ -1,9 +1,10 @@
-﻿program Dext.Entity.UnitTests;
+program Dext.Entity.UnitTests;
 
 {$APPTYPE CONSOLE}
 
 uses
   Dext.MM,
+  Dext.Core.Debug,
   System.SysUtils,
   Dext.Testing.Runner,
   Dext.Testing.Attributes,
@@ -44,7 +45,6 @@ begin
         TSmartPropertyDataSetTests,
         TFloatingPointDataSetTests,
         TEntityIdReturnTests,
-        TFloatingPointDataSetTests,
         TEntityDataSetFeaturesTests
       ]).Run;
 
