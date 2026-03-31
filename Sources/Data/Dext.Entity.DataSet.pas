@@ -1,4 +1,4 @@
-﻿unit Dext.Entity.DataSet;
+unit Dext.Entity.DataSet;
 
 interface
 
@@ -21,6 +21,8 @@ uses
   Dext.Core.Span,
   Dext.Entity.Mapping,
   Dext.Entity.Context,
+  Dext.Core.Reflection,
+  Dext.Core.Activator,
   Dext.Json.Utf8;
 
 type
@@ -42,6 +44,8 @@ type
   TPrepareFieldEvent = procedure(Sender: TObject; AField: TField) of object;
 
   TEntityMasterDataLink = class;
+
+  EEntityDataSetException = class(Exception);
 
   /// <summary>
   ///   Custom TDataSet for high-performance reading and writing to direct objects/lists.
@@ -65,6 +69,7 @@ type
     // Master-Detail Link
     FMasterLink: TEntityMasterDataLink;
     FMasterFields: string;
+    FMasterDataSet: TDataSet;
     
     // Internal Settings
     FReadOnly: Boolean;
@@ -96,6 +101,7 @@ type
     function CompareObjectsInternal(A, B: TObject; const APropNames: TArray<string>; RttiType: TRttiType): Integer;
     procedure ApplyAttributesToField(AField: TField; AContainer: TRttiObject);
     procedure BuildFieldDefs;
+    procedure SetMasterInheritance(AEntity: TObject);
     
     function ReadFieldValue(Field: TField; out Value: Variant): Boolean; overload;
     function ReadFieldValue(Field: TField; ABuffer: TRecBuf; out Value: Variant): Boolean; overload;
@@ -257,11 +263,10 @@ uses
   Dext.Specifications.Evaluator,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Parser,
-  Dext.Core.Reflection,
-  Dext.Core.Activator,
   Dext.Core.ValueConverters,
   Dext.Entity,
   Dext.Entity.Attributes,
+  Dext.DI.Attributes,
   Dext.Json;
 
 type
@@ -347,22 +352,20 @@ end;
 
 destructor TEntityDataSet.Destroy;
 begin
-  FPropertyCache.Free;
-  FCalcOffsets.Free;
-  FDetailDataSets.Free;
-  
-  if Assigned(FInsertObj) then
-    FInsertObj.Free;
+  Close; // Garante que InternalClose rode enquanto as estruturas estao vivas
+  FreeAndNil(FPropertyCache);
+  FreeAndNil(FCalcOffsets);
+  FreeAndNil(FDetailDataSets);
+  FreeAndNil(FInsertObj);
     
   if FOwnsItems then
     FItems := nil; // IList cuidará da liberação se for o caso
   FItems := nil;
   
   if Assigned(FEntityMap) and FOwnsEntityMap then
-    FEntityMap.Free;
+    FreeAndNil(FEntityMap);
 
-  if Assigned(FMasterLink) then
-    FMasterLink.Free;
+  FreeAndNil(FMasterLink);
     
   inherited Destroy;
 end;
@@ -1476,23 +1479,101 @@ begin
 end;
 
 procedure TEntityDataSet.InternalInsert;
+var
+  LNewObj: TObject;
 begin
-  FIsAppending := (PEntityRecordHeader(Pointer(ActiveBuffer)).BookmarkFlag = bfEOF);
+  inherited InternalInsert;
   if FInsertObj <> nil then
   begin
     FInsertObj.Free;
     FInsertObj := nil;
   end;
-  FInsertObj := CreateNewEntity;
   
-  if FInsertObj = nil then
+  LNewObj := CreateNewEntity;
+  if LNewObj = nil then
     raise Exception.Create('Auto-append needs a parameterless constructor for ' + FEntityClass.ClassName);
+
+  try
+    // 1. Tenta herdar o ID do mestre se houver MasterLink
+    if FMasterDataSet <> nil then
+      SetMasterInheritance(LNewObj);
+
+    // 2. Garantir que listas internas estejam inicializadas para não quebrar o Nested DataSet
+    var LContext := TReflection.Context;
+    var LType := LContext.GetType(FEntityClass);
+    if LType <> nil then
+    begin
+      for var LProp in LType.GetProperties do
+      begin
+        if TActivator.IsListType(LProp.PropertyType.Handle) then
+        begin
+          var LVal := LProp.GetValue(LNewObj);
+          if LVal.IsEmpty or (LVal.Kind = tkUnknown) then
+          begin
+            var LTargetType := LProp.PropertyType.Handle;
+            for var LAttr in LProp.GetAttributes do
+              if LAttr is InjectAttribute then
+              begin
+                if InjectAttribute(LAttr).TargetTypeInfo <> nil then
+                  LTargetType := PTypeInfo(InjectAttribute(LAttr).TargetTypeInfo);
+                Break;
+              end;
+            
+            try
+              var LNewList := TActivator.CreateInstance(nil, LTargetType);
+              if not LNewList.IsEmpty then
+                LProp.SetValue(LNewObj, LNewList);
+            except
+              on E: Exception do
+              begin
+                raise EEntityDataSetException.Create(E.Message + sLineBreak +
+                  'Tip: Register the implementation for this interface using TActivator.RegisterDefault ' +
+                  'or in your Application Service Provider (DI Container) for property ' + 
+                  FEntityClass.ClassName + '.' + LProp.Name);
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+    
+    // Sucesso
+    FInsertObj := LNewObj;
+  except
+    on E: Exception do
+    begin
+      LNewObj.Free;
+      raise;
+    end;
+  end;
 
   if (Pointer(ActiveBuffer) <> nil) then
   begin
     // Set virtual control flags for the new insertion buffer
     PEntityRecordHeader(Pointer(ActiveBuffer)).BookmarkIndex := -2; 
     PEntityRecordHeader(Pointer(ActiveBuffer)).BookmarkFlag := bfInserted;
+
+    // NOVO: No mestre-detalhe (CLÁSSICO ou ANINHADO), herdar valores do mestre agora mesmo
+    var LMasterDataSet: TDataSet := nil;
+    if (FMasterLink <> nil) and (FMasterLink.DataSource <> nil) then
+      LMasterDataSet := FMasterLink.DataSource.DataSet
+    else if FMasterDataSet <> nil then
+      LMasterDataSet := FMasterDataSet;
+
+    if (LMasterDataSet <> nil) and (LMasterDataSet.Active) and 
+       (FMasterFields <> '') and (FIndexFieldNames <> '') then
+    begin
+      var MasterFieldsList := FMasterFields.Split([';']);
+      var DetailFieldsList := FIndexFieldNames.Split([';']);
+      for var i := 0 to High(MasterFieldsList) do
+      begin
+        if i > High(DetailFieldsList) then Break;
+        var MasterField := LMasterDataSet.FindField(MasterFieldsList[i].Trim);
+        var DetailField := FindField(DetailFieldsList[i].Trim);
+        if (MasterField <> nil) and (DetailField <> nil) then
+          DetailField.Value := MasterField.Value;
+      end;
+    end;
   end;
 end;
 
@@ -1781,13 +1862,44 @@ begin
   end;
 
   // Now populate it with data from the current record
+  LList := nil;
   LObj := GetCurrentObject;
   if LObj <> nil then
   begin
     LVal := TReflection.GetValue(LObj, AFieldName);
+    if LVal.IsEmpty or (LVal.Kind = tkUnknown) then
+    begin
+       // Se a lista no mestre está nula (mestre novo), vamos instanciá-la agora!
+       var LProp := GetProperty(AFieldName);
+       if (LProp <> nil) and TActivator.IsListType(LProp.PropertyType.Handle) then
+       begin
+         try
+           var LTargetType := LProp.PropertyType.Handle;
+           for var LAttr in LProp.GetAttributes do
+             if LAttr is InjectAttribute then
+             begin
+               if InjectAttribute(LAttr).TargetTypeInfo <> nil then
+                 LTargetType := PTypeInfo(InjectAttribute(LAttr).TargetTypeInfo);
+               Break;
+             end;
+
+           var LNewListVal := TActivator.CreateInstance(nil, LTargetType);
+           if not LNewListVal.IsEmpty then
+           begin
+             LProp.SetValue(LObj, LNewListVal);
+             LVal := LNewListVal;
+           end;
+         except
+           on E: Exception do
+             raise Exception.Create(E.Message + sLineBreak + sLineBreak +
+               'Tip: Register the implementation for this interface using TActivator.RegisterDefault ' +
+               'or in your Application Service Provider (DI Container).');
+         end;
+       end;
+    end;
+
     if not LVal.IsEmpty then
     begin
-      LList := nil;
       if LVal.IsType<IObjectList> then
         LList := LVal.AsType<IObjectList>
       else if LVal.Kind = tkInterface then
@@ -1797,19 +1909,19 @@ begin
         if LIntf <> nil then
            LIntf.QueryInterface(IObjectList, LList);
       end;
+    end;
+  end;
 
-      if LList <> nil then
-      begin
-        LItemClass := TReflection.GetCollectionItemType(LVal.TypeInfo);
-        if LItemClass <> nil then
-          TEntityDataSet(ADetailDataSet).Load(LList, LItemClass, False);
-      end;
-    end
-    else
-      TEntityDataSet(ADetailDataSet).Load(nil, TEntityDataSet(ADetailDataSet).FEntityClass, False);
-  end
-  else
-    TEntityDataSet(ADetailDataSet).Load(nil, TEntityDataSet(ADetailDataSet).FEntityClass, False);
+  // Sempre carrega a lista (mesmo que nil ou vazia, mas agora instanciada se mestre presente)
+  LItemClass := TEntityDataSet(ADetailDataSet).FEntityClass;
+  if LItemClass = nil then
+  begin
+    var LProp := GetProperty(AFieldName);
+    if LProp <> nil then
+      LItemClass := TReflection.GetCollectionItemType(LProp.PropertyType.Handle);
+  end;
+
+  TEntityDataSet(ADetailDataSet).Load(LList, LItemClass, False);
 end;
 
 function TEntityDataSet.CreateNestedDataSet(DataSetField: TDataSetField): TDataSet;
@@ -1824,6 +1936,10 @@ begin
     Result := TEntityDataSet.Create(Self);
     TEntityDataSet(Result).DbContext := FDbContext;
     TEntityDataSet(Result).IncludeShadowProperties := FIncludeShadowProperties;
+    TEntityDataSet(Result).FMasterDataSet := Self;
+    // Herdando mapeamentos de campos mestre se possível
+    TEntityDataSet(Result).FIndexFieldNames := Self.FIndexFieldNames;
+    TEntityDataSet(Result).FMasterFields := Self.FMasterFields;
     
     FDetailDataSets.Add(DataSetField.FieldName, Result);
   end;
@@ -2498,6 +2614,7 @@ begin
        case Field.DataType of
          ftString, ftWideString: PString(P)^ := string(PWideChar(Buffer));
          ftBoolean: PBoolean(P)^ := PBoolean(Buffer)^;
+         ftDateTime, ftDate, ftTime: PDateTime(P)^ := TimeStampToDateTime(MSecsToTimeStamp(Trunc(PDouble(Buffer)^)));
        else
          Move(Buffer^, P^, Field.DataSize);
        end;
@@ -2526,7 +2643,7 @@ begin
          ftFloat: V := PDouble(Buffer)^;
         ftCurrency: V := PCurrency(Buffer)^;
         ftBoolean: V := PBoolean(Buffer)^;
-        ftDateTime, ftDate, ftTime: V := TDateTime(PDouble(Buffer)^);
+        ftDateTime, ftDate, ftTime: V := TimeStampToDateTime(MSecsToTimeStamp(Trunc(PDouble(Buffer)^)));
       end;
     end;
 
@@ -2576,6 +2693,42 @@ begin
   // Field = nil significa que o cursor mudou de posição no mestre
   if (FEntityDataSet <> nil) and (Field = nil) then
     FEntityDataSet.SyncMasterDetail;
+end;
+procedure TEntityDataSet.SetMasterInheritance(AEntity: TObject);
+begin
+  if (FMasterDataSet = nil) or (FMasterFields = '') or (AEntity = nil) then Exit;
+  
+  var LMasterLinkFields := TArray<string>.Create();
+  var LDetailLinkFields := TArray<string>.Create();
+  
+  // Parse linkage
+  // New format: MasterField=DetailField
+  // Legacy format: MasterField (DetailField comes from IndexFieldNames)
+  var LParts := FMasterFields.Split(['=']);
+  LMasterLinkFields := LParts[0].Split([';', ',']);
+  
+  if Length(LParts) > 1 then
+    LDetailLinkFields := LParts[1].Split([';', ','])
+  else
+    LDetailLinkFields := FIndexFieldNames.Split([';', ',']); // TDataSet standard
+
+  if Length(LDetailLinkFields) = 0 then
+    LDetailLinkFields := LMasterLinkFields; // Fallback to same names
+
+  for var I := 0 to High(LMasterLinkFields) do
+  begin
+    if I > High(LDetailLinkFields) then Break;
+    
+    var LMasterField := FMasterDataSet.FindField(LMasterLinkFields[I].Trim);
+    if LMasterField <> nil then
+    begin
+      var LMasterVal := LMasterField.Value;
+      var LDetailProp := GetProperty(LDetailLinkFields[I].Trim);
+      
+      if (LDetailProp <> nil) and (not VarIsNull(LMasterVal)) then
+        LDetailProp.SetValue(AEntity, TValue.FromVariant(LMasterVal));
+    end;
+  end;
 end;
 
 end.

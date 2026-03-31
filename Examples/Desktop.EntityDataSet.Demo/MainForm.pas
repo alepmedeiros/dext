@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.DBCtrls, Vcl.Grids,
   Vcl.DBGrids, Data.DB, Dext.Entity.DataSet, Dext.Entity.Attributes, Vcl.Buttons,
-  Dext.Collections, Datasnap.DBClient;
+  Dext.Collections, Dext.Core.Activator;
 
 type
 //  Money = Currency;
@@ -53,7 +53,6 @@ type
     Splitter: TSplitter;
     DataSourceDetail: TDataSource;
     EntityDataSet1: TEntityDataSet;
-    ClientDataSet1: TClientDataSet;
     RealMasterDetailButton: TSpeedButton;
     procedure FormCreate(Sender: TObject);
     procedure RealMasterDetailButtonClick(Sender: TObject);
@@ -144,5 +143,8 @@ begin
     Free;
   end;
 end;
+
+initialization
+  TActivator.RegisterDefault<IList<TStockItem>, TList<TStockItem>>;
 
 end.

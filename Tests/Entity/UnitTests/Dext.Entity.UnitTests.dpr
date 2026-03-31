@@ -45,7 +45,8 @@ begin
         TSmartPropertyDataSetTests,
         TFloatingPointDataSetTests,
         TEntityIdReturnTests,
-        TEntityDataSetFeaturesTests
+        TEntityDataSetFeaturesTests,
+        TEntityDataSetAutomationTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);

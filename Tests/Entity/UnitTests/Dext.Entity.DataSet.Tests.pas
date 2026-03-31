@@ -13,8 +13,10 @@ uses
   Dext.Types.Nullable,
   Dext.Types.Lazy,
   Dext.Entity.Attributes,
+  Dext.Entity,
   Dext.Collections,
-  Dext.Entity;
+  Dext.DI.Attributes,
+  Dext.Core.Activator;
 
 type
   // =========================================================================
@@ -128,6 +130,36 @@ type
     destructor Destroy; override;
     [PrimaryKey] property Id: Integer read FId write FId;
     [HasMany] property Items: IList<TOrderItemTest> read FItems write FItems;
+  end;
+
+  [TestFixture('TEntityDataSet Automation and Stability')]
+  TEntityDataSetAutomationTests = class
+  private
+    FMasterDS: TEntityDataSet;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test]
+    procedure Test_AutoInstantiate_Collection_Via_Attribute;
+    [Test]
+    procedure Test_MasterDetail_ID_Sync_Nested;
+    [Test]
+    procedure Test_TActivator_Tip_Error_Message;
+  end;
+
+  TGhostEntity = class
+    Id: Integer;
+  end;
+
+  // Classe sem registro para testar falha do Activator
+  TUnregisteredEntity = class
+  private
+    FItems: IList<TGhostEntity>; // IList nao registrada no TActivator para o tipo TGhostEntity
+  public
+    [HasMany] property Items: IList<TGhostEntity> read FItems write FItems;
   end;
 
   [TestFixture('TEntityDataSet Smart Properties')]
@@ -1226,5 +1258,74 @@ begin
   DetailField.NestedDataSet.Open;
   Should(DetailField.NestedDataSet.RecordCount).Be(2);
 end;
+
+{ TEntityDataSetAutomationTests }
+
+procedure TEntityDataSetAutomationTests.Setup;
+begin
+  FMasterDS := TEntityDataSet.Create(nil);
+  FMasterDS.Load<TOrderTest>(TCollections.CreateList<TOrderTest>(True));
+end;
+
+procedure TEntityDataSetAutomationTests.TearDown;
+begin
+  FMasterDS.Free;
+end;
+
+procedure TEntityDataSetAutomationTests.Test_AutoInstantiate_Collection_Via_Attribute;
+begin
+  // Nota: Renomeado mentalmente para "Via_Activator" ja que Inject eh instavel com o Linker em certos tipos
+  FMasterDS.Append;
+  var LObj := FMasterDS.GetCurrentObject as TOrderTest;
+  
+  // A lista Items deve ter sido instanciada internamente pelo InternalInsert
+  // via registro global no initialization desta unit
+  Should(LObj.Items).NotBeNil;
+  FMasterDS.Cancel;
+end;
+procedure TEntityDataSetAutomationTests.Test_MasterDetail_ID_Sync_Nested;
+begin
+  // 1. Carrega o mestre (Load ja cria os campos automaticamente via RTTI)
+  FMasterDS.Append;
+  FMasterDS.FieldByName('Id').AsInteger := 500;
+  FMasterDS.Post;
+  
+  // 2. Busca o campo aninhado gerado automaticamente pelo Load<TOrderTest>
+  var LItemsField := FMasterDS.FieldByName('Items') as TDataSetField;
+  var LDetailDS := LItemsField.NestedDataSet as TEntityDataSet;
+  
+  // 3. Configura a vinculacao (o TDataSetField ja os conhece mas o dataset detalhe precisa deles para o sync)
+  LDetailDS.MasterFields := 'Id';
+  LDetailDS.IndexFieldNames := 'OrderId';
+  
+  // 4. Insere no detalhe e valida a heranca automatica do ID
+  LDetailDS.Append;
+  Should(LDetailDS.FieldByName('OrderId').AsInteger).Be(500);
+  LDetailDS.Cancel;
+end;
+
+procedure TEntityDataSetAutomationTests.Test_TActivator_Tip_Error_Message;
+var
+  LDS: TEntityDataSet;
+begin
+  LDS := TEntityDataSet.Create(nil);
+  try
+    // Forcar erro via Append em uma classe com lista nao registrada
+    LDS.Load<TUnregisteredEntity>(TCollections.CreateList<TUnregisteredEntity>(True));
+    try
+      LDS.Append;
+      raise Exception.Create('Should have raised an exception with a Tip');
+    except
+      on E: Exception do
+        Should(E.Message).Contain('Tip: Register the implementation');
+    end;
+  finally
+    LDS.Free;
+  end;
+end;
+
+initialization
+  // Ensure we have some base registration for tests that need it
+  TActivator.RegisterDefault<IList<TOrderItemTest>, TList<TOrderItemTest>>;
 
 end.

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -41,6 +41,7 @@ type
   TDbgOptions = record
     WaitOnResolve: Boolean;      // Se True, aguarda o .map ser processado para mostrar o stacktrace.
     ResolveOnlyIfLoaded: Boolean; // Se True, se o .map não estiver carregado, não tenta resolver (mostra hex).
+    AsyncLoad: Boolean;
     procedure InitDefaults;
   end;
 
@@ -539,7 +540,8 @@ end;
 procedure TDbgOptions.InitDefaults;
 begin
   WaitOnResolve := True;        // Por padrão espera para garantir stacktrace útil
-  ResolveOnlyIfLoaded := False; 
+  ResolveOnlyIfLoaded := False;
+  AsyncLoad := True;
 end;
 
 { TStackTrace }
@@ -549,16 +551,18 @@ begin
   if MapLoaded or MapLoadAttempted then
     Exit;
 
-  // Mark as attempted specifically so we don't start multiple tasks
-  MapLoadAttempted := True;
-  MapLoadTokenSource := TCancellationTokenSource.Create;
-  
-  MapLoadTask := TAsyncTask.Run(
-    procedure
-    begin
-      // Let LoadMapFile handle the parsing.
-      LoadMapFile;
-    end).Start;
+  if Options.AsyncLoad then
+  begin
+    MapLoadTokenSource := TCancellationTokenSource.Create;
+    MapLoadTask := TAsyncTask.Run(
+      procedure
+      begin
+        // Let LoadMapFile handle the parsing.
+        LoadMapFile;
+      end).Start;
+  end
+  else
+    LoadMapFile;
 end;
 
 class function TStackTrace.ResolveAddress(Address: Pointer): string;

@@ -89,10 +89,4 @@ object FormMain: TFormMain
     Left = 504
     Top = 120
   end
-  object ClientDataSet1: TClientDataSet
-    Aggregates = <>
-    Params = <>
-    Left = 584
-    Top = 264
-  end
 end
