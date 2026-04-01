@@ -115,6 +115,7 @@
         <DCCReference Include="Dext.Entity.IdReturn.Tests.pas"/>
         <DCCReference Include="Dext.Entity.NullableHydration.Tests.pas"/>
         <DCCReference Include="Dext.Entity.DataSet.Export.Tests.pas"/>
+        <DCCReference Include="Dext.Entity.DefaultValue.Tests.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

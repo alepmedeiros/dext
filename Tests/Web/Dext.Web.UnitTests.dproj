@@ -187,6 +187,7 @@
         </DelphiCompile>
         <DCCReference Include="Dext.Web.DataApi.Resolver.Tests.pas"/>
         <DCCReference Include="Dext.Web.Json.Tests.pas"/>
+        <DCCReference Include="Dext.Web.Binding.Tests.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

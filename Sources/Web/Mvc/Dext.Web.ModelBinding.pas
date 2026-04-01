@@ -175,6 +175,7 @@ type
   TModelBinder = class(TInterfacedObject, IModelBinder)
   private
     function ConvertStringToType(const AValue: string; AType: PTypeInfo): TValue;
+    function GetValueOrDefault(AObj: TRttiObject; const AValue: string; AType: PTypeInfo): TValue;
   public
     constructor Create;
     destructor Destroy; override;
@@ -230,8 +231,10 @@ implementation
 
 uses
   System.NetEncoding,
+  System.Variants,
   Dext.Core.DateUtils,
   Dext.Core.Span,
+  Dext.Entity.Attributes,
   Dext.Json.Utf8.Serializer;
 
 { BindingAttribute }
@@ -478,15 +481,9 @@ begin
           FieldName := SourceProvider.GetBindingName(Field);
 
           if QueryParams.TryGetValue(FieldName, FieldValue) then
-          begin
-            try
-              var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
-              Field.SetValue(Result.GetReferenceToRawData, Val);
-            except
-               on E: Exception do
-                 SafeWriteln(Format('BindQuery warning: Error converting field "%s": %s', [FieldName, E.Message]));
-            end;
-          end;
+            Field.SetValue(Result.GetReferenceToRawData, ConvertStringToType(FieldValue, Field.FieldType.Handle))
+          else
+            Field.SetValue(Result.GetReferenceToRawData, GetValueOrDefault(Field, '', Field.FieldType.Handle));
         end;
       finally
         SourceProvider.Free;
@@ -508,15 +505,9 @@ begin
              end;
 
            if QueryParams.TryGetValue(FieldName, FieldValue) then
-           begin
-              try
-                var Val := ConvertStringToType(FieldValue, Prop.PropertyType.Handle);
-                Prop.SetValue(Result.AsObject, Val);
-              except
-                 on E: Exception do
-                   SafeWriteln(Format('BindQuery warning: Error converting property "%s": %s', [FieldName, E.Message]));
-              end;
-           end;
+             Prop.SetValue(Result.AsObject, ConvertStringToType(FieldValue, Prop.PropertyType.Handle))
+           else
+             Prop.SetValue(Result.AsObject, GetValueOrDefault(Prop, '', Prop.PropertyType.Handle));
        end;
     end;
 
@@ -584,19 +575,9 @@ begin
 
         // Buscar valor do route parameter
         if RouteParams.TryGetValue(FieldName, FieldValue) then
-        begin
-          // ✅ MESMA CONVERSÃO ROBUSTA DO BINDQUERY
-          try
-            var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
-            Field.SetValue(Result.GetReferenceToRawData, Val);
-          except
-            on E: Exception do
-            begin
-              SafeWriteln(Format('⚠️ BindRoute warning: Error converting field "%s" value "%s": %s',
-                [FieldName, FieldValue, E.Message]));
-            end;
-          end; // try
-        end; // if parameter exists
+          Field.SetValue(Result.GetReferenceToRawData, ConvertStringToType(FieldValue, Field.FieldType.Handle))
+        else
+          Field.SetValue(Result.GetReferenceToRawData, GetValueOrDefault(Field, '', Field.FieldType.Handle));
       end; // for each field
     finally
       SourceProvider.Free;
@@ -704,7 +685,21 @@ begin
       if QueryParams.TryGetValue(ParamName, QueryValue) then
         Result := ConvertStringToType(QueryValue, AParam.ParamType.Handle)
       else
-        Result := ConvertStringToType('', AParam.ParamType.Handle); // Default
+      begin
+        // 1. Try DefaultValueAttribute
+        var FoundDefault := False;
+        for var A in AParam.GetAttributes do
+          if A is DefaultValueAttribute then
+          begin
+             Result := TValue.FromVariant(DefaultValueAttribute(A).Value);
+             FoundDefault := True;
+             Break;
+          end;
+        
+        // 2. Fallback to standard conversion
+        if not FoundDefault then
+          Result := ConvertStringToType('', AParam.ParamType.Handle);
+      end;
       Exit;
     end
     else if Attr is FromRouteAttribute then
@@ -739,7 +734,18 @@ begin
       if HeaderValue <> '' then
         Result := ConvertStringToType(HeaderValue, AParam.ParamType.Handle)
       else
-        Result := ConvertStringToType('', AParam.ParamType.Handle); // Default
+      begin
+        var FoundDefault := False;
+        for var A in AParam.GetAttributes do
+          if A is DefaultValueAttribute then
+          begin
+             Result := TValue.FromVariant(DefaultValueAttribute(A).Value);
+             FoundDefault := True;
+             Break;
+          end;
+        if not FoundDefault then
+          Result := ConvertStringToType('', AParam.ParamType.Handle);
+      end;
       Exit;
     end;
   end;
@@ -792,7 +798,18 @@ begin
       if QueryParams.TryGetValue(ParamName, QueryValue) then
         Result := ConvertStringToType(QueryValue, AParam.ParamType.Handle)
       else
-        Result := ConvertStringToType('', AParam.ParamType.Handle); // Default
+      begin
+        var FoundDefault := False;
+        for var A in AParam.GetAttributes do
+          if A is DefaultValueAttribute then
+          begin
+             Result := TValue.FromVariant(DefaultValueAttribute(A).Value);
+             FoundDefault := True;
+             Break;
+          end;
+        if not FoundDefault then
+          Result := ConvertStringToType('', AParam.ParamType.Handle);
+      end;
     end;
   end;
 end;
@@ -1001,16 +1018,15 @@ begin
                 if HeaderVal <> '' then
                   FieldValue := ConvertStringToType(HeaderVal, Field.FieldType.Handle)
                 else
-                  FieldValue := ConvertStringToType('', Field.FieldType.Handle);
+                  FieldValue := GetValueOrDefault(Field, '', Field.FieldType.Handle);
               end;
 
             bsQuery:
               begin
                 if QueryParams.TryGetValue(FieldName, QueryVal) then
-                  // Already URI Decoded internally by IndyHttpRequest Parser
+                   FieldValue := ConvertStringToType(QueryVal, Field.FieldType.Handle)
                 else
-                  QueryVal := '';
-                FieldValue := ConvertStringToType(QueryVal, Field.FieldType.Handle);
+                   FieldValue := GetValueOrDefault(Field, '', Field.FieldType.Handle);
               end;
 
             bsRoute:
@@ -1018,7 +1034,7 @@ begin
                 if RouteParams.TryGetValue(FieldName, RouteVal) then
                   FieldValue := ConvertStringToType(RouteVal, Field.FieldType.Handle)
                 else
-                  FieldValue := ConvertStringToType('', Field.FieldType.Handle);
+                  FieldValue := GetValueOrDefault(Field, '', Field.FieldType.Handle);
               end;
 
             bsServices:
@@ -1129,7 +1145,7 @@ begin
                     FieldValue := ConvertStringToType(QueryVal, Field.FieldType.Handle);
                   end
                   else
-                    FieldValue := ConvertStringToType('', Field.FieldType.Handle);
+                    FieldValue := GetValueOrDefault(Field, '', Field.FieldType.Handle);
                 end;
               end;
 
@@ -1163,6 +1179,28 @@ end;
 function TModelBinder.BindValue(const AValue: string; AType: PTypeInfo): TValue;
 begin
   Result := ConvertStringToType(AValue, AType);
+end;
+
+function TModelBinder.GetValueOrDefault(AObj: TRttiObject; const AValue: string; AType: PTypeInfo): TValue;
+var
+  Attr: TCustomAttribute;
+begin
+  if AValue <> '' then
+  begin
+    Result := ConvertStringToType(AValue, AType);
+    Exit;
+  end;
+
+  // Try DefaultValueAttribute
+  for Attr in AObj.GetAttributes do
+    if Attr is DefaultValueAttribute then
+    begin
+      Result := ConvertStringToType(VarToStr(DefaultValueAttribute(Attr).Value), AType);
+      Exit;
+    end;
+
+  // Final fallback
+  Result := ConvertStringToType('', AType);
 end;
 
 function TModelBinder.ConvertStringToType(const AValue: string; AType: PTypeInfo): TValue;

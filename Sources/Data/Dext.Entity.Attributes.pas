@@ -452,6 +452,20 @@ type
   end;
 
   /// <summary>
+  ///   Specifies a default value for the property when the database returns NULL.
+  /// </summary>
+  DefaultValueAttribute = class(TCustomAttribute)
+  private
+    FValue: Variant;
+  public
+    constructor Create(const AValue: string); overload;
+    constructor Create(AValue: Integer); overload;
+    constructor Create(AValue: Double); overload;
+    constructor Create(AValue: Boolean); overload;
+    property Value: Variant read FValue;
+  end;
+
+  /// <summary>
   ///   Specifies a custom type converter for the property.
   ///   The converter class must implement ITypeConverter.
   /// </summary>
@@ -700,6 +714,28 @@ end;
 constructor VisibleAttribute.Create(AVisible: Boolean);
 begin
   FVisible := AVisible;
+end;
+
+{ DefaultValueAttribute }
+
+constructor DefaultValueAttribute.Create(const AValue: string);
+begin
+  FValue := AValue;
+end;
+
+constructor DefaultValueAttribute.Create(AValue: Integer);
+begin
+  FValue := AValue;
+end;
+
+constructor DefaultValueAttribute.Create(AValue: Double);
+begin
+  FValue := AValue;
+end;
+
+constructor DefaultValueAttribute.Create(AValue: Boolean);
+begin
+  FValue := AValue;
 end;
 
 end.

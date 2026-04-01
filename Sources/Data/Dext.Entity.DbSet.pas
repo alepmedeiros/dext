@@ -827,6 +827,10 @@ begin
         var PropMap: TPropertyMap := nil;
         
         if FMap <> nil then FMap.Properties.TryGetValue(Prop.Name, PropMap);
+
+        if Val.IsEmpty and (PropMap <> nil) and not VarIsNull(PropMap.DefaultValue) then
+          Val := TValue.FromVariant(PropMap.DefaultValue);
+
         if PropMap <> nil then Converter := PropMap.Converter;
         if Converter = nil then Converter := TTypeConverterRegistry.Instance.GetConverter(Prop.PropertyType.Handle);
         if (Converter = nil) and (PropMap <> nil) and PropMap.IsJsonColumn then

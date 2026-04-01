@@ -186,6 +186,7 @@ type
     DisplayWidth: Integer;
     EditMask: string;
     Alignment: TAlignment;
+    DefaultValue: Variant;
     constructor Create(const APropName: string);
   end;
 
@@ -466,7 +467,7 @@ begin
       (AAttr is ManyToManyAttribute) or (AAttr is VersionAttribute) or (AAttr is CreatedAtAttribute) or
       (AAttr is UpdatedAtAttribute) or (AAttr is JsonColumnAttribute) or (AAttr is DbTypeAttribute) or
       (AAttr is CaptionAttribute) or (AAttr is DisplayFormatAttribute) or (AAttr is DisplayWidthAttribute) or
-      (AAttr is EditMaskAttribute) or (AAttr is AlignmentAttribute) then
+      (AAttr is EditMaskAttribute) or (AAttr is AlignmentAttribute) or (AAttr is DefaultValueAttribute) then
   begin
     if AAttr is ColumnAttribute then APropMap.ColumnName := ColumnAttribute(AAttr).Name;
     if AAttr is FieldAttribute then 
@@ -547,6 +548,7 @@ begin
     if AAttr is DisplayWidthAttribute then APropMap.DisplayWidth := DisplayWidthAttribute(AAttr).Value;
     if AAttr is EditMaskAttribute then APropMap.EditMask := EditMaskAttribute(AAttr).Value;
     if AAttr is AlignmentAttribute then APropMap.Alignment := AlignmentAttribute(AAttr).Alignment;
+    if AAttr is DefaultValueAttribute then APropMap.DefaultValue := DefaultValueAttribute(AAttr).Value;
   end;
 end;
 
@@ -798,6 +800,7 @@ begin
   PropertyName := APropName;
   ColumnName := APropName; // Default
   ForeignKeyColumn := '';
+  DefaultValue := Null;
   IsPK := False;
   IsAutoInc := False;
   IsRequired := False;

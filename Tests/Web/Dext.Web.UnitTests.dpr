@@ -12,7 +12,8 @@ uses
   Dext.Testing.Fluent,
   Dext.Utils,
   Dext.Web.DataApi.Resolver.Tests in 'Dext.Web.DataApi.Resolver.Tests.pas',
-  Dext.Web.Json.Tests in 'Dext.Web.Json.Tests.pas';
+  Dext.Web.Json.Tests in 'Dext.Web.Json.Tests.pas',
+  Dext.Web.Binding.Tests in 'Dext.Web.Binding.Tests.pas';
 
 begin
   SetConsoleCharSet();
@@ -26,6 +27,7 @@ begin
       .Configure
       .Verbose
       .RegisterFixtures([
+        TWebBindingTests,
         TEntityIdResolverTests,
         TJsonNullableTests
       ]).Run;

@@ -19,7 +19,8 @@ uses
   Dext.Entity.DataSet.NewFeatures.Tests in 'Dext.Entity.DataSet.NewFeatures.Tests.pas',
   Dext.Entity.IdReturn.Tests in 'Dext.Entity.IdReturn.Tests.pas',
   Dext.Entity.NullableHydration.Tests in 'Dext.Entity.NullableHydration.Tests.pas',
-  Dext.Entity.DataSet.Export.Tests in 'Dext.Entity.DataSet.Export.Tests.pas';
+  Dext.Entity.DataSet.Export.Tests in 'Dext.Entity.DataSet.Export.Tests.pas',
+  Dext.Entity.DefaultValue.Tests in 'Dext.Entity.DefaultValue.Tests.pas';
 
 begin
   SetConsoleCharSet();
@@ -43,6 +44,7 @@ begin
         TEntityDataSetTests,
         TEntityIdReturnTests,
         TEntityNullableHydrationTests,
+        TEntityDefaultValueTests,
         TFloatingPointDataSetTests,
         TMasterDetailDataSetTests,
         TNativeMasterDetailTests,
