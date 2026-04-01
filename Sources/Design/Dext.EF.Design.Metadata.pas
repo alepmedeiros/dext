@@ -6,16 +6,20 @@ uses
   System.SysUtils,
   System.Classes,
   Dext.Collections,
+  Dext.Collections.Base,
   DelphiAST,
   DelphiAST.Classes,
   DelphiAST.Consts,
   SimpleParser.Lexer.Types,
-  Dext.Entity.Core;
+  Dext.Entity.Core,
+  Dext.Entity.DataProvider;
 
 type
   TEntityMetadataParser = class
   private
     function GetNodeText(Node: TSyntaxNode): string;
+    function GetAttributeContainer(Node: TSyntaxNode): TSyntaxNode;
+    function GetAttributeName(Node: TSyntaxNode): string;
     function HasAttribute(Node: TSyntaxNode; const AttrName: string): Boolean;
     function GetAttributeValue(Node: TSyntaxNode; const AttrName: string): string;
     procedure ExtractMembers(AMetadata: TEntityClassMetadata; AClassNode: TSyntaxNode);
@@ -23,67 +27,137 @@ type
     function ParseUnit(const AFileName: string): IList<TEntityClassMetadata>;
   end;
 
+procedure RefreshProviderMetadata(AProvider: TEntityDataProvider);
+
 implementation
 
 uses
   System.IOUtils,
   System.Types;
 
-{ TEntityMetadataParser }
-
 function TEntityMetadataParser.GetNodeText(Node: TSyntaxNode): string;
 begin
+  if Node = nil then Exit('');
+  
   Result := Node.GetAttribute(anName);
-  if Result = '' then Result := Node.GetAttribute(anType);
+    
+  if (Result = '') and (Node is TValuedSyntaxNode) then
+    Result := TValuedSyntaxNode(Node).Value;
+
   if Result = '' then
   begin
-    if Node is TValuedSyntaxNode then
-      Result := TValuedSyntaxNode(Node).Value;
+    // Search recursively in relevant container nodes
+    if Node.Typ in [ntName, ntIdentifier, ntExpression, ntArguments, ntPositionalArgument, 
+                   ntNamedArgument, ntConstant, ntLiteral, ntValue] then
+    begin
+      for var Child in Node.ChildNodes do
+      begin
+        Result := GetNodeText(Child);
+        if Result <> '' then
+          Break;
+      end;
+    end;
   end;
+
   if Result.StartsWith('&') then
     Result := Result.Substring(1);
 end;
 
-function TEntityMetadataParser.HasAttribute(Node: TSyntaxNode; const AttrName: string): Boolean;
+function TEntityMetadataParser.GetAttributeContainer(Node: TSyntaxNode): TSyntaxNode;
 var
-  Child, Attr: TSyntaxNode;
+  Child: TSyntaxNode;
 begin
-  Result := False;
+  Result := nil;
+  if Node = nil then
+    Exit;
+
+  if Node.Typ = ntAttributes then
+    Exit(Node);
+
+  for Child in Node.ChildNodes do
+    if Child.Typ = ntAttributes then
+      Exit(Child);
+end;
+
+function TEntityMetadataParser.GetAttributeName(Node: TSyntaxNode): string;
+var
+  Child: TSyntaxNode;
+begin
+  Result := '';
+  if Node = nil then
+    Exit;
+
+  if Node.Typ = ntAttribute then
+  begin
+    Result := GetNodeText(Node);
+    if Result <> '' then
+      Exit;
+  end;
+
   for Child in Node.ChildNodes do
   begin
-    if Child.Typ = ntAttributes then
+    if Child.Typ = ntName then
     begin
-      for Attr in Child.ChildNodes do
-      begin
-        if SameText(GetNodeText(Attr), AttrName) then
-          Exit(True);
-      end;
+      Result := GetNodeText(Child);
+      Exit;
+    end;
+  end;
+
+  Result := GetNodeText(Node);
+end;
+
+function TEntityMetadataParser.HasAttribute(Node: TSyntaxNode; const AttrName: string): Boolean;
+var
+  AttrsNode: TSyntaxNode;
+  Attr: TSyntaxNode;
+  AName: string;
+begin
+  Result := False;
+  if Node = nil then
+    Exit;
+
+  AttrsNode := GetAttributeContainer(Node);
+  if AttrsNode = nil then
+    Exit;
+
+  for Attr in AttrsNode.ChildNodes do
+  begin
+    if Attr.Typ = ntAttribute then
+    begin
+      AName := GetAttributeName(Attr);
+      if SameText(AName, AttrName) or SameText(AName, AttrName + 'Attribute') then
+        Exit(True);
     end;
   end;
 end;
 
 function TEntityMetadataParser.GetAttributeValue(Node: TSyntaxNode; const AttrName: string): string;
 var
-  Child, Attr, Arg: TSyntaxNode;
+  AttrsNode: TSyntaxNode;
+  Attr: TSyntaxNode;
+  Arg: TSyntaxNode;
+  AName: string;
 begin
   Result := '';
-  for Child in Node.ChildNodes do
+  AttrsNode := GetAttributeContainer(Node);
+  if AttrsNode = nil then
+    Exit;
+
+  for Attr in AttrsNode.ChildNodes do
   begin
-    if Child.Typ = ntAttributes then
+    AName := GetAttributeName(Attr);
+    if SameText(AName, AttrName) or SameText(AName, AttrName + 'Attribute') then
     begin
-      for Attr in Child.ChildNodes do
+      for Arg in Attr.ChildNodes do
       begin
-        if SameText(GetNodeText(Attr), AttrName) then
-        begin
-          // Try to get first argument value
-          for Arg in Attr.ChildNodes do
-          begin
-            if Arg.Typ = ntPositionalArgument then
-              Exit(GetNodeText(Arg).DeQuotedString(''''));
-          end;
-          Exit('');
-        end;
+        if Arg.Typ in [ntName, ntAttributes] then
+          Continue;
+
+        Result := GetNodeText(Arg);
+        if Result <> '' then
+          Exit(Result.DeQuotedString(''''));
       end;
+      Exit('');
     end;
   end;
 end;
@@ -91,76 +165,106 @@ end;
 procedure TEntityMetadataParser.ExtractMembers(AMetadata: TEntityClassMetadata; AClassNode: TSyntaxNode);
   procedure Scan(ContextNode: TSyntaxNode);
   var
-    CChild, Sub: TSyntaxNode;
-    MName, MType: string;
+    CChild: TSyntaxNode;
+    MName: string;
+    MType: string;
     Member: TEntityMemberMetadata;
+    VisAttr: string;
+    LenAttr: string;
+    WidthAttr: string;
+    PrecisionAttr: string;
+    DefAttr: string;
+    AlignAttr: string;
+    LastMemberAttributes: TSyntaxNode;
+    ActualNode: TSyntaxNode;
+    
+    function MemberHasAttr(const AName: string): Boolean;
+    begin
+      Result := HasAttribute(LastMemberAttributes, AName) or HasAttribute(CChild, AName);
+    end;
+    
+    function MemberGetAttr(const AName: string): string;
+    begin
+      Result := GetAttributeValue(LastMemberAttributes, AName);
+      if Result = '' then
+        Result := GetAttributeValue(CChild, AName);
+    end;
   begin
+    LastMemberAttributes := nil;
     for CChild in ContextNode.ChildNodes do
     begin
+      if CChild.Typ = ntAttributes then
+      begin
+        LastMemberAttributes := CChild;
+        Continue;
+      end;
+
       if CChild.Typ in [ntProperty, ntField] then
       begin
         MName := GetNodeText(CChild);
-        if MName = '' then Continue;
+        if MName = '' then
+          Continue;
 
-        // In Dext, we mostly use properties for entities
-        MType := CChild.GetAttribute(anType);
-        if MType = '' then
-        begin
-             for Sub in CChild.ChildNodes do
-               if Sub.Typ = ntType then MType := GetNodeText(Sub);
-        end;
+        ActualNode := CChild.FindNode(ntType);
+        if ActualNode <> nil then
+          MType := GetNodeText(ActualNode)
+        else
+          MType := CChild.GetAttribute(anType);
 
         Member := TEntityMemberMetadata.Create;
         Member.Name := MName;
         Member.MemberType := MType;
         Member.Visible := True;
-        
-        // Attributes
-        Member.IsPrimaryKey := HasAttribute(CChild, 'PrimaryKey') or HasAttribute(CChild, 'PK');
-        Member.IsRequired := HasAttribute(CChild, 'Required');
-        Member.IsAutoInc := HasAttribute(CChild, 'AutoInc');
-        Member.IsReadOnly := HasAttribute(CChild, 'NotMapped');
-        
-        Member.DisplayLabel := GetAttributeValue(CChild, 'Caption');
-        if Member.DisplayLabel = '' then Member.DisplayLabel := GetAttributeValue(CChild, 'DisplayLabel');
-        
-        Member.DisplayFormat := GetAttributeValue(CChild, 'DisplayFormat');
-        Member.EditMask := GetAttributeValue(CChild, 'EditMask');
-        
-        var VisAttr := GetAttributeValue(CChild, 'Visible');
+        Member.IsPrimaryKey := MemberHasAttr('PrimaryKey') or MemberHasAttr('PK');
+        Member.IsRequired := MemberHasAttr('Required');
+        Member.IsAutoInc := MemberHasAttr('AutoInc');
+        Member.IsReadOnly := MemberHasAttr('NotMapped');
+        Member.DisplayLabel := MemberGetAttr('Caption');
+        if Member.DisplayLabel = '' then
+          Member.DisplayLabel := MemberGetAttr('DisplayLabel');
+        Member.DisplayFormat := MemberGetAttr('DisplayFormat');
+        Member.EditMask := MemberGetAttr('EditMask');
+
+        VisAttr := MemberGetAttr('Visible');
         if VisAttr <> '' then
           Member.Visible := SameText(VisAttr, 'True')
         else
           Member.Visible := True;
 
-        var LenAttr := GetAttributeValue(CChild, 'MaxLength');
-        if LenAttr <> '' then Member.MaxLength := StrToIntDef(LenAttr, 0);
+        LenAttr := MemberGetAttr('MaxLength');
+        if LenAttr <> '' then
+          Member.MaxLength := StrToIntDef(LenAttr, 0);
 
-        var WidthAttr := GetAttributeValue(CChild, 'DisplayWidth');
-        if WidthAttr <> '' then Member.DisplayWidth := StrToIntDef(WidthAttr, 0);
+        WidthAttr := MemberGetAttr('DisplayWidth');
+        if WidthAttr <> '' then
+          Member.DisplayWidth := StrToIntDef(WidthAttr, 0);
 
-        var PrecisionAttr := GetAttributeValue(CChild, 'Precision');
-        if PrecisionAttr <> '' then Member.Precision := StrToIntDef(PrecisionAttr, 0);
+        PrecisionAttr := MemberGetAttr('Precision');
+        if PrecisionAttr <> '' then
+          Member.Precision := StrToIntDef(PrecisionAttr, 0);
 
-        var DefAttr := GetAttributeValue(CChild, 'DefaultValue');
-        if DefAttr <> '' then Member.DefaultValue := DefAttr;
+        DefAttr := MemberGetAttr('DefaultValue');
+        if DefAttr <> '' then
+          Member.DefaultValue := DefAttr;
 
-        // Alignment (Map Enum string to Delphi TAlignment)
-        var AlignAttr := GetAttributeValue(CChild, 'Alignment');
+        AlignAttr := MemberGetAttr('Alignment');
         if AlignAttr <> '' then
         begin
-          if SameText(AlignAttr, 'taLeftJustify') then Member.Alignment := taLeftJustify
-          else if SameText(AlignAttr, 'taRightJustify') then Member.Alignment := taRightJustify
-          else if SameText(AlignAttr, 'taCenter') then Member.Alignment := taCenter;
+          if SameText(AlignAttr, 'taLeftJustify') then
+            Member.Alignment := taLeftJustify
+          else if SameText(AlignAttr, 'taRightJustify') then
+            Member.Alignment := taRightJustify
+          else if SameText(AlignAttr, 'taCenter') then
+            Member.Alignment := taCenter;
         end;
 
         AMetadata.Members.Add(Member);
+        LastMemberAttributes := nil;
       end
       else if CChild.Typ in [ntPublic, ntPublished, ntProtected] then
         Scan(CChild);
     end;
   end;
-
 begin
   Scan(AClassNode);
 end;
@@ -168,19 +272,27 @@ end;
 function TEntityMetadataParser.ParseUnit(const AFileName: string): IList<TEntityClassMetadata>;
 var
   Builder: TPasSyntaxTreeBuilder;
-  SyntaxTree, InterfaceNode, TypeSection, TypeNode, ClassNode, Candidate: TSyntaxNode;
+  SyntaxTree: TSyntaxNode;
+  InterfaceNode: TSyntaxNode;
+  SearchRoot: TSyntaxNode;
+  TypeSection: TSyntaxNode;
+  TypeNode: TSyntaxNode;
+  ClassNode: TSyntaxNode;
   Content: string;
   Stream: TStringStream;
   Metadata: TEntityClassMetadata;
-  ClassName, TableName: string;
+  ClassName: string;
+  TableName: string;
+  LastTypeAttributes: TSyntaxNode;
 begin
   Result := TCollections.CreateObjectList<TEntityClassMetadata>(True);
-  if not FileExists(AFileName) then Exit;
+  if not FileExists(AFileName) then
+    Exit;
 
   Builder := TPasSyntaxTreeBuilder.Create;
   try
     Builder.InitDefinesDefinedByCompiler;
-    Builder.AddDefine('MSWINDOWS'); // Crucial for Dext
+    Builder.AddDefine('MSWINDOWS');
     Builder.UseDefines := True;
 
     Content := TFile.ReadAllText(AFileName);
@@ -190,56 +302,64 @@ begin
         SyntaxTree := Builder.Run(Stream);
         try
           InterfaceNode := SyntaxTree.FindNode(ntInterface);
-          if InterfaceNode = nil then Exit;
+          if InterfaceNode <> nil then
+            SearchRoot := InterfaceNode
+          else
+            SearchRoot := SyntaxTree;
 
-          for TypeSection in InterfaceNode.ChildNodes do
+          for TypeSection in SearchRoot.ChildNodes do
           begin
-            if TypeSection.Typ = ntTypeSection then
+            if TypeSection.Typ <> ntTypeSection then
+              Continue;
+
+            LastTypeAttributes := nil;
+            for TypeNode in TypeSection.ChildNodes do
             begin
-              for TypeNode in TypeSection.ChildNodes do
+              if TypeNode.Typ = ntAttributes then
               begin
-                if TypeNode.Typ = ntTypeDecl then
-                begin
-                  ClassName := GetNodeText(TypeNode);
-                  ClassNode := nil;
-                  
-                  // Find the class/record/interface definition
-                  for Candidate in TypeNode.ChildNodes do
-                  begin
-                    if SameText(Candidate.GetAttribute(anType), 'class') or 
-                       SameText(Candidate.GetAttribute(anKind), 'class') then
-                    begin
-                      ClassNode := Candidate;
-                      Break;
-                    end;
-                  end;
-
-                  if ClassNode <> nil then
-                  begin
-                    // Check if it has [Table] or [Entity] attribute (Dext uses Table mostly)
-                    if HasAttribute(TypeNode, 'Table') or HasAttribute(TypeNode, 'Entity') then
-                    begin
-                      TableName := GetAttributeValue(TypeNode, 'Table');
-                      if TableName = '' then TableName := GetAttributeValue(TypeNode, 'Entity');
-                      if TableName = '' then TableName := ClassName;
-
-                      Metadata := TEntityClassMetadata.Create;
-                      Metadata.ClassName := ClassName;
-                      Metadata.TableName := TableName;
-                      Metadata.UnitName := ChangeFileExt(ExtractFileName(AFileName), '');
-                      ExtractMembers(Metadata, ClassNode);
-                      Result.Add(Metadata);
-                    end;
-                  end;
-                end;
+                LastTypeAttributes := TypeNode;
+                Continue;
               end;
+
+              if TypeNode.Typ = ntTypeDecl then
+              begin
+                ClassName := TypeNode.GetAttribute(anName);
+                ClassNode := TypeNode.FindNode(ntType);
+
+                if (ClassNode <> nil) and SameText(ClassNode.GetAttribute(anType), 'class') then
+                begin
+                  if HasAttribute(LastTypeAttributes, 'Table') or HasAttribute(LastTypeAttributes, 'Entity') or
+                     HasAttribute(TypeNode, 'Table') or HasAttribute(TypeNode, 'Entity') then
+                  begin
+                    TableName := GetAttributeValue(LastTypeAttributes, 'Table');
+                    if TableName = '' then
+                      TableName := GetAttributeValue(TypeNode, 'Table');
+                    if TableName = '' then
+                      TableName := GetAttributeValue(LastTypeAttributes, 'Entity');
+                    if TableName = '' then
+                      TableName := GetAttributeValue(TypeNode, 'Entity');
+                    if TableName = '' then
+                      TableName := ClassName;
+
+                    Metadata := TEntityClassMetadata.Create;
+                    Metadata.ClassName := ClassName;
+                    Metadata.TableName := TableName;
+                    Metadata.UnitName := ChangeFileExt(ExtractFileName(AFileName), '');
+                    ExtractMembers(Metadata, ClassNode);
+                    Result.Add(Metadata);
+                  end;
+                  LastTypeAttributes := nil;
+                end;
+              end
+              else if not (TypeNode.Typ in [ntAnsiComment, ntBorComment, ntSlashesComment]) then
+                LastTypeAttributes := nil;
             end;
           end;
         finally
           SyntaxTree.Free;
         end;
       except
-        // Silent fail on parse error during design time to avoid IDE popups
+        // Ignore parse errors in design-time metadata extraction
       end;
     finally
       Stream.Free;
@@ -247,6 +367,49 @@ begin
   finally
     Builder.Free;
   end;
+end;
+
+procedure RefreshProviderMetadata(AProvider: TEntityDataProvider);
+var
+  Parser: TEntityMetadataParser;
+  ParsedList: IList<TEntityClassMetadata>;
+  ParsedCollection: ICollection;
+  FileName: string;
+  MD: TEntityClassMetadata;
+begin
+  if AProvider = nil then
+    Exit;
+
+  AProvider.ClearMetadata;
+  AProvider.LogDebug(Format('RefreshProviderMetadata start. ModelUnits=%d', [AProvider.ModelUnits.Count]));
+  Parser := TEntityMetadataParser.Create;
+  try
+    for FileName in AProvider.ModelUnits do
+    begin
+      AProvider.LogDebug('Parsing unit: ' + FileName);
+      ParsedList := Parser.ParseUnit(FileName);
+      try
+        AProvider.LogDebug(Format('Metadata candidates found in %s: %d', [ExtractFileName(FileName), ParsedList.Count]));
+        for MD in ParsedList do
+        begin
+          AProvider.AddOrSetMetadata(MD);
+          AProvider.LogDebug(Format('Entity cached: %s (%s) Table=%s Members=%d',
+            [MD.ClassName, MD.UnitName, MD.TableName, MD.Members.Count]));
+          for var Member in MD.Members do
+            AProvider.LogDebug(Format('  Member: %s Type=%s PK=%s Visible=%s',
+              [Member.Name, Member.MemberType, BoolToStr(Member.IsPrimaryKey, True), BoolToStr(Member.Visible, True)]));
+        end;
+        if Supports(ParsedList, ICollection, ParsedCollection) then
+          ParsedCollection.OwnsObjects := False;
+      finally
+        ParsedList := nil;
+      end;
+    end;
+  finally
+    Parser.Free;
+  end;
+
+  AProvider.UpdateRefreshSummary;
 end;
 
 end.

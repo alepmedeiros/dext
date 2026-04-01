@@ -20,7 +20,8 @@ uses
   Dext.Entity.IdReturn.Tests in 'Dext.Entity.IdReturn.Tests.pas',
   Dext.Entity.NullableHydration.Tests in 'Dext.Entity.NullableHydration.Tests.pas',
   Dext.Entity.DataSet.Export.Tests in 'Dext.Entity.DataSet.Export.Tests.pas',
-  Dext.Entity.DefaultValue.Tests in 'Dext.Entity.DefaultValue.Tests.pas';
+  Dext.Entity.DefaultValue.Tests in 'Dext.Entity.DefaultValue.Tests.pas',
+  Dext.Entity.Design.Metadata.Tests in 'Dext.Entity.Design.Metadata.Tests.pas';
 
 begin
   SetConsoleCharSet();
@@ -42,6 +43,7 @@ begin
         TEntityDataSetFeaturesTests,
         TEntityDataSetStressTests,
         TEntityDataSetTests,
+        TEntityDesignMetadataTests,
         TEntityIdReturnTests,
         TEntityNullableHydrationTests,
         TEntityDefaultValueTests,

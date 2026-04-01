@@ -1,4 +1,4 @@
-package Dext.EF.Design;
+package Dext.EF.Components;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -25,28 +25,20 @@ package Dext.EF.Design;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'Dext Framework - Entity IDE Integration'}
-{$DESIGNONLY}
+{$DESCRIPTION 'Dext Framework - Entity Components'}
 {$IMPLICITBUILD OFF}
 
 requires
   rtl,
   dbrtl,
-  designide,
-  vcl,
-  vcldb,
   FireDAC,
   FireDACCommon,
   FireDACCommonDriver,
   Dext.Core,
-  Dext.EF.Core,
-  Dext.EF.Components;
+  Dext.EF.Core;
 
 contains
-  Dext.EF.Design.Metadata in 'Design\Dext.EF.Design.Metadata.pas',
-  Dext.EF.Design.Editors in 'Design\Dext.EF.Design.Editors.pas',
-  Dext.EF.Design.Expert in 'Design\Dext.EF.Design.Expert.pas',
-  Dext.EF.Design.Preview in 'Design\Dext.EF.Design.Preview.pas',
-  Dext.EF.Design.Registration in 'Design\Dext.EF.Design.Registration.pas';
+  Dext.Entity.DataSet in 'Data\Dext.Entity.DataSet.pas',
+  Dext.Entity.DataProvider in 'Data\Dext.Entity.DataProvider.pas';
 
 end.

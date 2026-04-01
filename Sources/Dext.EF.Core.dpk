@@ -78,7 +78,6 @@ contains
   Dext.Entity.Collections in 'Data\Dext.Entity.Collections.pas',
   Dext.Entity.ProxyFactory in 'Data\Dext.Entity.ProxyFactory.pas',
   Dext.Entity.Scaffolding in 'Data\Dext.Entity.Scaffolding.pas',
-  Dext.Entity.DataSet in 'Data\Dext.Entity.DataSet.pas',
   Dext.Specifications.Parser in 'Data\Dext.Specifications.Parser.pas';
 
 end.

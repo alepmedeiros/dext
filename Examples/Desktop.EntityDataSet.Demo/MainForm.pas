@@ -5,12 +5,17 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.DBCtrls, Vcl.Grids,
-  Vcl.DBGrids, Data.DB, Dext.Entity.DataSet, Dext.Entity.Attributes, Vcl.Buttons,
-  Dext.Collections, Dext.Core.Activator;
+  Vcl.DBGrids, Data.DB,Dext.Entity.Attributes, Vcl.Buttons,
+  Dext.Collections, Dext.Core.Activator,  Dext.Entity.DataSet,  Dext.Entity.DataProvider,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf,
+  FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.VCLUI.Wait,
+  FireDAC.Comp.Client, Dext.Entity.DiagTest, FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef,
+  FireDAC.Stan.ExprFuncs, FireDAC.Phys.SQLiteWrapper.Stat;
 
 type
 //  Money = Currency;
   Money = Double;
+  [Table('stock')]
   TStockItem = class
   private
     FId: Integer;
@@ -45,15 +50,23 @@ type
   end;
 
   TFormMain = class(TForm)
-    PanelTop: TPanel;
+    DataSource: TDataSource;
+    DataSourceDetail: TDataSource;
+    DBGridDetail: TDBGrid;
     DBGridProducts: TDBGrid;
     DBNavigator: TDBNavigator;
-    DataSource: TDataSource;
-    DBGridDetail: TDBGrid;
-    Splitter: TSplitter;
-    DataSourceDetail: TDataSource;
-    EntityDataSet1: TEntityDataSet;
+    EntityDataProvider: TEntityDataProvider;
+    EntityDataSet: TEntityDataSet;
+    FDConnection: TFDConnection;
+    PanelTop: TPanel;
     RealMasterDetailButton: TSpeedButton;
+    Splitter: TSplitter;
+    EntityDataSetId: TIntegerField;
+    EntityDataSetDate: TDateTimeField;
+    EntityDataSetCustomer: TWideStringField;
+    EntityDataSetDescription: TWideStringField;
+    EntityDataSetPrice: TFloatField;
+    EntityDataSetStock: TStringField;
     procedure FormCreate(Sender: TObject);
     procedure RealMasterDetailButtonClick(Sender: TObject);
   private

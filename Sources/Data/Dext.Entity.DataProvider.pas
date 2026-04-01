@@ -1,15 +1,13 @@
-unit Dext.EF.Design.DataProvider;
+unit Dext.Entity.DataProvider;
 
 interface
 
 uses
-  Winapi.Windows,
   System.SysUtils,
   System.Classes,
   System.Rtti,
   System.TypInfo,
   Data.DB,
-  ToolsAPI,
   Dext.Collections,
   Dext.Collections.Dict,
   FireDAC.Comp.Client,
@@ -17,14 +15,14 @@ uses
   Dext.Entity.Dialects,
   Dext.Entity.Mapping,
   Dext.Core.Reflection,
-  Dext.EF.Design.Metadata;
+  Dext.Utils;
 
 type
-  TDesignEntityDataProvider = class(TComponent, IEntityDataProvider)
+  TEntityDataProvider = class(TComponent, IEntityDataProvider)
   private
     FModelUnits: TStrings;
     FMetadataCache: IDictionary<string, TEntityClassMetadata>;
-    FConnection: TFDConnection;
+    FDatabaseConnection: TFDCustomConnection;
     FPreviewMaxRows: Integer;
     FDialect: TDatabaseDialect;
     FDebugMode: Boolean;
@@ -34,19 +32,19 @@ type
     function GetEntityCount: Integer;
     function GetResolvedDialect: TDatabaseDialect;
     function GetDialectName: string;
-    procedure LogDebug(const AMsg: string);
     procedure SetDialect(const Value: TDatabaseDialect);
     procedure SetModelUnits(const Value: TStrings);
     procedure OnModelUnitsChange(Sender: TObject);
-    procedure SetConnection(const Value: TFDConnection);
-    function TryGetActiveProject(out AProject: IOTAProject): Boolean;
-    function DiscoverModelUnitsFromProject: Integer;
+    procedure SetDatabaseConnection(const Value: TFDCustomConnection);
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function AutoDiscoverModelUnits: Integer;
+    procedure ClearMetadata;
+    procedure AddOrSetMetadata(const AMetadata: TEntityClassMetadata);
+    procedure UpdateRefreshSummary;
+    procedure LogDebug(const AMsg: string);
     procedure RefreshMetadata;
     procedure RefreshUnit(const AFileName: string);
     function GetEntities: TArray<string>;
@@ -56,9 +54,8 @@ type
     function BuildPreviewSql(const AClassName: string; AMaxRows: Integer = 50): string;
     function CreatePreviewItems(const AClassName: string; AMaxRows: Integer = 50): IObjectList;
   published
+    property DatabaseConnection: TFDCustomConnection read FDatabaseConnection write SetDatabaseConnection;
     property ModelUnits: TStrings read FModelUnits write SetModelUnits;
-    property Connection: TFDConnection read FConnection write SetConnection;
-    property FDConnection: TFDConnection read FConnection write SetConnection;
     property Dialect: TDatabaseDialect read FDialect write SetDialect default ddUnknown;
     property DialectName: string read GetDialectName;
     property PreviewMaxRows: Integer read FPreviewMaxRows write FPreviewMaxRows default 50;
@@ -69,9 +66,7 @@ type
 
 implementation
 
-{ TDesignEntityDataProvider }
-
-constructor TDesignEntityDataProvider.Create(AOwner: TComponent);
+constructor TEntityDataProvider.Create(AOwner: TComponent);
 begin
   inherited;
   FModelUnits := TStringList.Create;
@@ -81,41 +76,20 @@ begin
   FDialect := ddUnknown;
 end;
 
-destructor TDesignEntityDataProvider.Destroy;
+destructor TEntityDataProvider.Destroy;
 begin
-  FMetadataCache := nil; { Interface ARC }
+  FMetadataCache := nil;
   FModelUnits.Free;
   inherited;
 end;
 
-function TDesignEntityDataProvider.BuildEntityMap(AClass: TClass): TEntityMap;
+function TEntityDataProvider.BuildEntityMap(AClass: TClass): TEntityMap;
 begin
   Result := TEntityMap.Create(AClass.ClassInfo);
   Result.DiscoverAttributes;
 end;
 
-function TDesignEntityDataProvider.GetResolvedDialect: TDatabaseDialect;
-begin
-  if FDialect <> ddUnknown then
-    Exit(FDialect);
-
-  if FConnection <> nil then
-    Exit(TDialectFactory.DetectDialect(FConnection.DriverName));
-
-  Result := ddUnknown;
-end;
-
-function TDesignEntityDataProvider.GetDialectName: string;
-begin
-  Result := GetEnumName(TypeInfo(TDatabaseDialect), Ord(GetResolvedDialect));
-end;
-
-procedure TDesignEntityDataProvider.SetDialect(const Value: TDatabaseDialect);
-begin
-  FDialect := Value;
-end;
-
-function TDesignEntityDataProvider.BuildColumnList(AClass: TClass; const AClassName: string): string;
+function TEntityDataProvider.BuildColumnList(AClass: TClass; const AClassName: string): string;
 var
   EntityMap: TEntityMap;
   Metadata: TEntityClassMetadata;
@@ -145,10 +119,8 @@ begin
   begin
     Metadata := GetEntityMetadata(AClassName);
     if Metadata <> nil then
-    begin
       for var Member in Metadata.Members do
         Columns.Add(Member.Name);
-    end;
   end;
 
   if Columns.Count = 0 then
@@ -157,12 +129,41 @@ begin
   Result := string.Join(', ', Columns.ToArray);
 end;
 
-function TDesignEntityDataProvider.GetEntityCount: Integer;
+function TEntityDataProvider.GetEntityCount: Integer;
 begin
   Result := FMetadataCache.Count;
 end;
 
-function TDesignEntityDataProvider.GetEntities: TArray<string>;
+function TEntityDataProvider.GetResolvedDialect: TDatabaseDialect;
+begin
+  if FDialect <> ddUnknown then
+    Exit(FDialect);
+
+  if FDatabaseConnection <> nil then
+    Exit(TDialectFactory.DetectDialect(FDatabaseConnection.DriverName));
+
+  Result := ddUnknown;
+end;
+
+function TEntityDataProvider.GetDialectName: string;
+begin
+  Result := GetEnumName(TypeInfo(TDatabaseDialect), Ord(GetResolvedDialect));
+end;
+
+procedure TEntityDataProvider.LogDebug(const AMsg: string);
+begin
+  if not FDebugMode then
+    Exit;
+
+  DebugLog('[Dext.EntityDataProvider] ' + AMsg);
+end;
+
+procedure TEntityDataProvider.SetDialect(const Value: TDatabaseDialect);
+begin
+  FDialect := Value;
+end;
+
+function TEntityDataProvider.GetEntities: TArray<string>;
 var
   List: IList<string>;
   MD: TEntityClassMetadata;
@@ -173,21 +174,13 @@ begin
   Result := List.ToArray;
 end;
 
-procedure TDesignEntityDataProvider.LogDebug(const AMsg: string);
-begin
-  if not FDebugMode then
-    Exit;
-
-  OutputDebugString(PChar('[Dext.EntityDataProvider] ' + AMsg));
-end;
-
-function TDesignEntityDataProvider.GetEntityMetadata(const AClassName: string): TEntityClassMetadata;
+function TEntityDataProvider.GetEntityMetadata(const AClassName: string): TEntityClassMetadata;
 begin
   if not FMetadataCache.TryGetValue(AClassName, Result) then
     Result := nil;
 end;
 
-function TDesignEntityDataProvider.GetEntityUnitName(const AClassName: string): string;
+function TEntityDataProvider.GetEntityUnitName(const AClassName: string): string;
 var
   Metadata: TEntityClassMetadata;
 begin
@@ -198,7 +191,7 @@ begin
     Result := '';
 end;
 
-function TDesignEntityDataProvider.ResolveEntityClass(const AClassName: string): TClass;
+function TEntityDataProvider.ResolveEntityClass(const AClassName: string): TClass;
 var
   Metadata: TEntityClassMetadata;
   RttiType: TRttiType;
@@ -225,7 +218,7 @@ begin
   Result := GetClass(AClassName);
 end;
 
-function TDesignEntityDataProvider.BuildPreviewSql(const AClassName: string; AMaxRows: Integer): string;
+function TEntityDataProvider.BuildPreviewSql(const AClassName: string; AMaxRows: Integer): string;
 var
   Metadata: TEntityClassMetadata;
   EntityClass: TClass;
@@ -256,7 +249,7 @@ begin
     Result := BaseSql;
 end;
 
-function TDesignEntityDataProvider.CreatePreviewItems(const AClassName: string; AMaxRows: Integer): IObjectList;
+function TEntityDataProvider.CreatePreviewItems(const AClassName: string; AMaxRows: Integer): IObjectList;
 var
   EntityClass: TClass;
   EntityMap: TEntityMap;
@@ -269,7 +262,7 @@ var
 begin
   Result := nil;
 
-  if FConnection = nil then
+  if FDatabaseConnection = nil then
     Exit;
 
   EntityClass := ResolveEntityClass(AClassName);
@@ -301,7 +294,7 @@ begin
 
     Query := TFDQuery.Create(nil);
     try
-      Query.Connection := FConnection;
+      Query.Connection := FDatabaseConnection;
       Query.SQL.Text := SqlText;
       Query.Open;
 
@@ -348,157 +341,63 @@ begin
   end;
 end;
 
-procedure TDesignEntityDataProvider.Notification(AComponent: TComponent; Operation: TOperation);
+procedure TEntityDataProvider.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   inherited;
-  if (Operation = opRemove) and (AComponent = FConnection) then
-    FConnection := nil;
+  if (Operation = opRemove) and (AComponent = FDatabaseConnection) then
+    FDatabaseConnection := nil;
 end;
 
-procedure TDesignEntityDataProvider.OnModelUnitsChange(Sender: TObject);
+procedure TEntityDataProvider.OnModelUnitsChange(Sender: TObject);
 begin
-  if csDesigning in ComponentState then
-    RefreshMetadata;
 end;
 
-function TDesignEntityDataProvider.TryGetActiveProject(out AProject: IOTAProject): Boolean;
-var
-  ModuleServices: IOTAModuleServices;
-  Module: IOTAModule;
-  ProjectGroup: IOTAProjectGroup;
-  I: Integer;
+procedure TEntityDataProvider.ClearMetadata;
 begin
-  AProject := nil;
-
-  ModuleServices := BorlandIDEServices as IOTAModuleServices;
-  if ModuleServices = nil then
-    Exit(False);
-
-  Module := ModuleServices.CurrentModule;
-  if (Module <> nil) and Supports(Module, IOTAProject, AProject) then
-    Exit(True);
-
-  for I := 0 to ModuleServices.ModuleCount - 1 do
-  begin
-    Module := ModuleServices.Modules[I];
-    if (Module <> nil) and Supports(Module, IOTAProjectGroup, ProjectGroup) then
-    begin
-      AProject := ProjectGroup.ActiveProject;
-      Exit(AProject <> nil);
-    end;
-  end;
-
-  Result := False;
-end;
-
-function TDesignEntityDataProvider.DiscoverModelUnitsFromProject: Integer;
-var
-  Project: IOTAProject;
-  ModuleInfo: IOTAModuleInfo;
-  FileName: string;
-  I: Integer;
-begin
-  Result := 0;
-
-  if not TryGetActiveProject(Project) then
-  begin
-    LogDebug('No active project found for auto-discovery.');
-    Exit;
-  end;
-
-  LogDebug('Discovering model units from active project: ' + Project.FileName);
-
-  for I := 0 to Project.GetModuleCount - 1 do
-  begin
-    ModuleInfo := Project.GetModule(I);
-    if ModuleInfo = nil then
-      Continue;
-
-    FileName := ModuleInfo.FileName;
-    if not SameText(ExtractFileExt(FileName), '.pas') then
-      Continue;
-
-    if not FileExists(FileName) then
-      Continue;
-
-    if FModelUnits.IndexOf(FileName) >= 0 then
-      Continue;
-
-    FModelUnits.Add(FileName);
-    Inc(Result);
-    LogDebug('Added unit to ModelUnits: ' + FileName);
-  end;
-end;
-
-function TDesignEntityDataProvider.AutoDiscoverModelUnits: Integer;
-begin
-  Result := DiscoverModelUnitsFromProject;
-  if Result > 0 then
-    LogDebug(Format('Auto-discovery added %d unit(s).', [Result]))
-  else
-    LogDebug('Auto-discovery added no new units.');
-end;
-
-procedure TDesignEntityDataProvider.RefreshMetadata;
-var
-  FileName: string;
-  AddedUnits: Integer;
-begin
-  if FModelUnits.Count = 0 then
-  begin
-    AddedUnits := AutoDiscoverModelUnits;
-    LogDebug(Format('Refresh requested with empty ModelUnits. Auto-discovery result: %d unit(s).', [AddedUnits]));
-  end;
-
   FMetadataCache.Clear;
-  LogDebug(Format('Refreshing metadata from %d configured unit(s).', [FModelUnits.Count]));
+end;
 
-  for FileName in FModelUnits do
-    RefreshUnit(FileName);
+procedure TEntityDataProvider.AddOrSetMetadata(const AMetadata: TEntityClassMetadata);
+begin
+  if AMetadata = nil then
+    Exit;
 
+  FMetadataCache.AddOrSetValue(AMetadata.ClassName, AMetadata);
+end;
+
+procedure TEntityDataProvider.UpdateRefreshSummary;
+begin
   FLastRefreshSummary := Format('%d entidade(s) encontradas em %d unit(s).',
     [FMetadataCache.Count, FModelUnits.Count]);
   LogDebug(FLastRefreshSummary);
 end;
 
-procedure TDesignEntityDataProvider.RefreshUnit(const AFileName: string);
-var
-  Parser: TEntityMetadataParser;
-  List: TList<TEntityClassMetadata>;
-  MD: TEntityClassMetadata;
+procedure TEntityDataProvider.RefreshMetadata;
 begin
-  LogDebug('Parsing unit: ' + AFileName);
-  Parser := TEntityMetadataParser.Create;
-  try
-    List := TList<TEntityClassMetadata>(Parser.ParseUnit(AFileName));
-    try
-      for MD in List do
-      begin
-        // Add or Overwrite in cache
-        FMetadataCache.AddOrSetValue(MD.ClassName, MD);
-        LogDebug(Format('Entity cached: %s (%s)', [MD.ClassName, MD.UnitName]));
-      end;
-      // Clear list to stop it from owning the items we just put in cache
-      List.OwnsObjects := False; 
-    finally
-      List.Free;
-    end;
-  finally
-    Parser.Free;
-  end;
+  ClearMetadata;
+  UpdateRefreshSummary;
 end;
 
-procedure TDesignEntityDataProvider.SetConnection(const Value: TFDConnection);
+procedure TEntityDataProvider.RefreshUnit(const AFileName: string);
 begin
-  if FConnection <> Value then
+  LogDebug('RefreshUnit requested for ' + AFileName + ', aguardando servico de design time.');
+end;
+
+procedure TEntityDataProvider.SetDatabaseConnection(const Value: TFDCustomConnection);
+begin
+  if FDatabaseConnection <> Value then
   begin
-    FConnection := Value;
-    if FConnection <> nil then
-      FConnection.FreeNotification(Self);
+    if FDatabaseConnection <> nil then
+      FDatabaseConnection.RemoveFreeNotification(Self);
+
+    FDatabaseConnection := Value;
+
+    if FDatabaseConnection <> nil then
+      FDatabaseConnection.FreeNotification(Self);
   end;
 end;
 
-procedure TDesignEntityDataProvider.SetModelUnits(const Value: TStrings);
+procedure TEntityDataProvider.SetModelUnits(const Value: TStrings);
 begin
   FModelUnits.Assign(Value);
 end;

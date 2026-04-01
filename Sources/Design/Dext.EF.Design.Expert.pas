@@ -6,7 +6,8 @@ uses
   System.SysUtils,
   System.Classes,
   ToolsAPI,
-  Dext.EF.Design.DataProvider;
+  Dext.Entity.DataProvider,
+  Dext.EF.Design.Metadata;
 
 type
   TDextModuleNotifier = class(TNotifierObject, IOTAModuleNotifier)
@@ -81,7 +82,7 @@ begin
               Comp := (Component as INTAComponent).GetComponent;
               if Comp is TEntityDataProvider then
               begin
-                 TEntityDataProvider(Comp).RefreshMetadata;
+                 RefreshProviderMetadata(TEntityDataProvider(Comp));
               end;
             end;
           end;

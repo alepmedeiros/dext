@@ -149,7 +149,6 @@
         <DCCReference Include="Data\Dext.Entity.Collections.pas"/>
         <DCCReference Include="Data\Dext.Entity.ProxyFactory.pas"/>
         <DCCReference Include="Data\Dext.Entity.Scaffolding.pas"/>
-        <DCCReference Include="Data\Dext.Entity.DataSet.pas"/>
         <DCCReference Include="Data\Dext.Specifications.Parser.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

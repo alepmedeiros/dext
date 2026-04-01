@@ -9,6 +9,7 @@ uses
   Vcl.Buttons;
 
 type
+  [Table('order')]
   TOrder = class
   private
     FId: Integer;
@@ -22,6 +23,7 @@ type
     constructor Create(AId: Integer; ACustomer: string);
   end;
 
+  [Table('order_item')]
   TOrderItem = class
   private
     FId: Integer;

@@ -1,3 +1,4 @@
+﻿
 unit Dext.Entity.DataSet;
 
 interface
@@ -22,7 +23,8 @@ uses
   Dext.Entity.Context,
   Dext.Core.Reflection,
   Dext.Core.Activator,
-  Dext.Json.Utf8;
+  Dext.Json.Utf8,
+  Dext.Entity.DataProvider;
 
 type
   PBytes = ^TBytes;
@@ -49,6 +51,7 @@ type
   /// <summary>
   ///   Custom TDataSet for high-performance reading and writing to direct objects/lists.
   /// </summary>
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or pidWin64x)]
   TEntityDataSet = class(TDataSet)
   private
     FEntityMap: TEntityMap;
@@ -85,12 +88,19 @@ type
     FCalcAreaSize: Integer;
     FInternalCalcStorage: TArray<TBytes>;
     FPropertyCache: TDictionary<string, TRttiProperty>;
-    FOnPrepareField: TPrepareFieldEvent;
-    FDataProvider: TComponent;
+    FDataProvider: TEntityDataProvider;
+    FTableName: string;
     FEntityClassName: string;
+    FOnPrepareField: TPrepareFieldEvent;
 
+    procedure ClearResolvedEntityMetadata;
+    procedure EnsureEntityMapResolved;
     function GetProperty(const APropName: string): TRttiProperty;
+    procedure ResolveEntityClassFromProvider;
     procedure SetItems(const Value: IObjectList);
+    procedure SetDataProvider(const Value: TEntityDataProvider);
+    function StringToFieldType(const ATypeName: string): TFieldType;
+    procedure SetEntityClassName(const Value: string);
     procedure SetIndexFieldNames(const Value: string);
     procedure ApplyFilterAndSort; overload;
     procedure ApplyFilterAndSort(AFiltered: Boolean); overload;
@@ -101,12 +111,12 @@ type
     procedure SetMasterFields(const Value: string);
     function CompareObjectsInternal(A, B: TObject; const APropNames: TArray<string>; RttiType: TRttiType): Integer;
     procedure ApplyAttributesToField(AField: TField; AContainer: TRttiObject);
-    procedure BuildFieldDefs;
     procedure SetMasterInheritance(AEntity: TObject);
     
     function ReadFieldValue(Field: TField; out Value: Variant): Boolean; overload;
     function ReadFieldValue(Field: TField; ABuffer: TRecBuf; out Value: Variant): Boolean; overload;
   protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     // TDataSet overrides for filtering and sorting
     procedure InternalHandleException; override;
     function IsCursorOpen: Boolean; override;
@@ -199,15 +209,17 @@ type
     procedure LoadFromUtf8Json(const ASpan: TByteSpan; AClass: TClass); overload;
     procedure LoadFromUtf8Json<T: class>(const ASpan: TByteSpan); overload;
     procedure Refresh;
+    procedure BuildFieldDefs;
     procedure GenerateFields;
     function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream; override;
     function GetCurrentObject: TObject;
     property Items: IObjectList read FItems write SetItems;
     property DbContext: TDbContext read FDbContext write FDbContext;
   published
+    property TableName: string read FTableName write FTableName;
     property OnPrepareField: TPrepareFieldEvent read FOnPrepareField write FOnPrepareField;
-    property DataProvider: TComponent read FDataProvider write FDataProvider;
-    property EntityClassName: string read FEntityClassName write FEntityClassName;
+    property DataProvider: TEntityDataProvider read FDataProvider write SetDataProvider;
+    property EntityClassName: string read FEntityClassName write SetEntityClassName;
     property Active;
     property Filter;
     property Filtered;
@@ -341,6 +353,139 @@ begin
   end;
 end;
 
+procedure TEntityDataSet.ClearResolvedEntityMetadata;
+begin
+  FEntityClass := nil;
+  FPropertyCache.Clear;
+
+  if Assigned(FEntityMap) and FOwnsEntityMap then
+    FreeAndNil(FEntityMap)
+  else
+    FEntityMap := nil;
+
+  FOwnsEntityMap := False;
+end;
+
+procedure TEntityDataSet.ResolveEntityClassFromProvider;
+var
+  DP: IEntityDataProvider;
+  ResolvedClass: TClass;
+begin
+  // Em runtime, o design-time não deve interferir se a classe já foi definida (ex: via Load)
+  if (FEntityClass <> nil) and not (csDesigning in ComponentState) then
+    Exit;
+
+  if (FEntityClassName = '') or (not Assigned(FDataProvider)) then
+  begin
+    // Só limpamos em design-time para manter o Object Inspector sincronizado
+    if csDesigning in ComponentState then
+      ClearResolvedEntityMetadata;
+    Exit;
+  end;
+
+  if not FDataProvider.GetInterface(IEntityDataProvider, DP) then
+  begin
+    if csDesigning in ComponentState then
+      ClearResolvedEntityMetadata;
+    Exit;
+  end;
+
+  ResolvedClass := DP.ResolveEntityClass(FEntityClassName);
+  if ResolvedClass = nil then
+  begin
+    if csDesigning in ComponentState then
+      ClearResolvedEntityMetadata;
+    Exit;
+  end;
+
+  if FEntityClass <> ResolvedClass then
+  begin
+    ClearResolvedEntityMetadata;
+    FEntityClass := ResolvedClass;
+  end;
+end;
+
+function TEntityDataSet.StringToFieldType(const ATypeName: string): TFieldType;
+begin
+  if SameText(ATypeName, 'string') then Result := ftWideString
+  else if SameText(ATypeName, 'Integer') or SameText(ATypeName, 'Int32') then Result := ftInteger
+  else if SameText(ATypeName, 'LargeInt') or SameText(ATypeName, 'Int64') then Result := ftLargeint
+  else if SameText(ATypeName, 'Double') or SameText(ATypeName, 'Currency') or SameText(ATypeName, 'Money') or SameText(ATypeName, 'Float') then Result := ftFloat
+  else if SameText(ATypeName, 'TDateTime') or SameText(ATypeName, 'DateTime') then Result := ftDateTime
+  else if SameText(ATypeName, 'TDate') or SameText(ATypeName, 'Date') then Result := ftDate
+  else if SameText(ATypeName, 'TTime') or SameText(ATypeName, 'Time') then Result := ftTime
+  else if SameText(ATypeName, 'Boolean') then Result := ftBoolean
+  else if SameText(ATypeName, 'TBytes') or SameText(ATypeName, 'Blob') then Result := ftBlob
+  else if SameText(ATypeName, 'TGUID') then Result := ftGuid
+  else Result := ftString;
+end;
+
+procedure TEntityDataSet.EnsureEntityMapResolved;
+var
+  PropMap: TPropertyMap;
+begin
+  if FEntityMap <> nil then
+    Exit;
+
+  // Se não estamos em design, precisamos da classe
+  if (FEntityClass = nil) and (not (csDesigning in ComponentState)) then
+    Exit;
+
+  // Try to resolve from DBContext first
+  if Assigned(FDbContext) and (FEntityClass <> nil) then
+  begin
+    FEntityMap := FDbContext.ModelBuilder.GetMap(FEntityClass.ClassInfo);
+    FOwnsEntityMap := FEntityMap = nil;
+  end;
+
+  // DESIGN-TIME RECOVERY: If RTTI is missing (FEntityClass = nil), try to build EntityMap from DataProvider (Parser)
+  if (FEntityMap = nil) and (csDesigning in ComponentState) and Assigned(FDataProvider) then
+  begin
+    var DP: IEntityDataProvider;
+    if FDataProvider.GetInterface(IEntityDataProvider, DP) then
+    begin
+      var MD := DP.GetEntityMetadata(FEntityClassName);
+      if MD <> nil then
+      begin
+        FEntityMap := TEntityMap.Create(nil);
+        FEntityMap.TableName := MD.TableName;
+        FOwnsEntityMap := True;
+
+        for var Member in MD.Members do
+        begin
+          PropMap := TPropertyMap.Create(Member.Name);
+          PropMap.ColumnName := Member.Name;
+          PropMap.DataType := StringToFieldType(Member.MemberType);
+          PropMap.IsPK := Member.IsPrimaryKey;
+          PropMap.IsRequired := Member.IsRequired;
+          PropMap.IsAutoInc := Member.IsAutoInc;
+          PropMap.Visible := Member.Visible;
+
+          FEntityMap.Properties.Add(PropMap.PropertyName, PropMap);
+        end;
+      end;
+    end;
+  end;
+
+  if FEntityMap = nil then
+  begin
+    if FEntityClass <> nil then
+      FEntityMap := TEntityMap.Create(FEntityClass.ClassInfo)
+    else
+      FEntityMap := TEntityMap.Create(nil);
+
+    FEntityMap.DiscoverAttributes;
+    FOwnsEntityMap := True;
+  end;
+
+  // Sync TableName with Mapped TableName
+  if (FEntityMap <> nil) then
+  begin
+    if (csDesigning in ComponentState) or (FTableName = '') then
+      FTableName := FEntityMap.TableName;
+  end;
+end;
+
 constructor TEntityDataSet.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -390,6 +535,17 @@ begin
 
   if (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) then
     Result := FItems[FVirtualIndex[FCurrentRec]];
+end;
+
+procedure TEntityDataSet.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited;
+
+  if (Operation = opRemove) and (AComponent = FDataProvider) then
+  begin
+    FDataProvider := nil;
+    ResolveEntityClassFromProvider;
+  end;
 end;
 
 function TEntityDataSet.CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream;
@@ -476,25 +632,13 @@ begin
   if FOwnsItems and Assigned(FItems) and (FItems <> AItems) then
     FItems := nil;
 
+  if FEntityClass <> AClass then
+    ClearResolvedEntityMetadata;
+
   FItems := AItems;
   FEntityClass := AClass;
   FOwnsItems := AOwns;
-
-  if FEntityMap = nil then
-  begin
-    if Assigned(FDbContext) then
-    begin
-      FEntityMap := FDbContext.ModelBuilder.GetMap(AClass.ClassInfo);
-      FOwnsEntityMap := False;
-    end;
-
-    if FEntityMap = nil then
-    begin
-      FEntityMap := TEntityMap.Create(AClass.ClassInfo);
-      FEntityMap.DiscoverAttributes;
-      FOwnsEntityMap := True;
-    end;
-  end;
+  EnsureEntityMapResolved;
   
   if Active then
     Refresh
@@ -602,13 +746,11 @@ var
   RttiProp: TRttiProperty;
   RttiType: TRttiType;
 begin
+  if FEntityClass <> AClass then
+    ClearResolvedEntityMetadata;
+
   FEntityClass := AClass;
-  if FEntityMap = nil then
-  begin
-    FEntityMap := TEntityMap.Create(AClass.ClassInfo);
-    FEntityMap.DiscoverAttributes;
-    FOwnsEntityMap := True;
-  end;
+  EnsureEntityMapResolved;
 
   Reader := TUtf8JsonReader.Create(ASpan);
 
@@ -1125,6 +1267,48 @@ begin
   end;
 end;
 
+procedure TEntityDataSet.SetDataProvider(const Value: TEntityDataProvider);
+begin
+  if FDataProvider <> Value then
+  begin
+    if FDataProvider <> nil then
+      FDataProvider.RemoveFreeNotification(Self);
+
+    FDataProvider := (Value);
+
+    if FDataProvider <> nil then
+      FDataProvider.FreeNotification(Self);
+
+    ResolveEntityClassFromProvider;
+  end;
+end;
+
+procedure TEntityDataSet.SetEntityClassName(const Value: string);
+begin
+  if FEntityClassName <> Value then
+  begin
+    FEntityClassName := Value;
+    
+    if csDesigning in ComponentState then
+    begin
+      ClearResolvedEntityMetadata;
+      FTableName := ''; // Força o preenchimento do TableName da nova classe
+      FItems := nil;    // Explode o cache de preview antigo
+      Active := False;  // Fecha o dataset para resetar buffers
+      FieldDefs.Clear;  
+      FEntityClass := nil;
+    end;
+      
+    ResolveEntityClassFromProvider;
+
+    if csDesigning in ComponentState then
+    begin
+      EnsureEntityMapResolved;
+      GenerateFields;
+    end;
+  end;
+end;
+
 function TEntityDataSet.GetMasterSource: TDataSource;
 begin
   if FMasterLink <> nil then
@@ -1235,21 +1419,55 @@ end;
 
 procedure TEntityDataSet.InternalOpen;
 var
-  LCalcSize: Integer;
+  CalcSize: Integer;
   i: Integer;
   Offset: Integer;
   LDef: TFieldDef;
 begin
   FIsCursorOpen := True;
-  
-  if FEntityClass = nil then
+
+  if (FEntityClass = nil) or (csDesigning in ComponentState) then
+    ResolveEntityClassFromProvider;
+
+  if (FEntityClassName <> '') and (csDesigning in ComponentState) then
+    EnsureEntityMapResolved;
+
+  if (csDesigning in ComponentState) and
+     ((FItems = nil) or (FItems.Count = 0)) and
+     Assigned(FDataProvider) then
+  begin
+    var DP: IEntityDataProvider;
+    if FDataProvider.GetInterface(IEntityDataProvider, DP) then
+    begin
+       // Limpar se for ownership
+       if FOwnsItems and (FItems <> nil) then
+         FItems := nil;
+         
+       FItems := DP.CreatePreviewItems(FEntityClassName, 50);
+       FOwnsItems := True;
+    end;
+  end;
+
+  if (FEntityClass = nil) and (not (csDesigning in ComponentState)) then
     raise Exception.Create('EntityClass must be defined before opening TEntityDataSet.');
 
   if Active or (State = dsInactive) then
   begin
+    // SEMPRE reconstruímos FieldDefs para garantir que o MetaData interno case com a Entidade atual
     if FieldDefs.Count = 0 then
       BuildFieldDefs;
-      
+
+    // Mas só CRIAMOS campos automáticos se o usuário não tiver campos persistentes configurados
+    if FieldCount = 0 then
+      CreateFields;
+  end;
+
+  if Active or (State = dsInactive) then
+  begin
+    // Recriamos o resto do bloco original aqui
+    if FieldDefs.Count = 0 then
+      BuildFieldDefs;
+
     // CRITICAL: Synchronize FieldDefs with existing persistent Fields
     // (e.g. manual InternalCalc added while closed)
     for i := 0 to Fields.Count - 1 do
@@ -1272,24 +1490,28 @@ begin
   BookmarkSize := SizeOf(Integer);
 
   // Calcular tamanho necessário para campos calculados
-  LCalcSize := 0;
+  CalcSize := 0;
   FCalcOffsets.Clear;
   for i := 0 to Fields.Count - 1 do
   begin
     if Fields[i].FieldKind in [fkCalculated, fkLookup, fkInternalCalc] then
     begin
        // Spacing for Null Flag (1 byte) + Data
-       Offset := SizeOf(TEntityRecordHeader) + LCalcSize + 1;
+       Offset := SizeOf(TEntityRecordHeader) + CalcSize + 1;
        FCalcOffsets.Add(Fields[i].FieldName, Offset);
-       Inc(LCalcSize, Fields[i].DataSize + 1); 
+       Inc(CalcSize, Fields[i].DataSize + 1);
     end;
   end;
 
   // Importante para o VCL alocar buffers com espaço para o Header + campos calculados
-  FCalcAreaSize := LCalcSize;
+  FCalcAreaSize := CalcSize;
   FRecordSize := SizeOf(TEntityRecordHeader) + FCalcAreaSize;
   
-  SetLength(FInternalCalcStorage, Max(0, FItems.Count));
+  var LItemCount: Integer := 0;
+  if Assigned(FItems) then
+    LItemCount := FItems.Count;
+
+  SetLength(FInternalCalcStorage, Max(0, LItemCount));
   for i := 0 to High(FInternalCalcStorage) do FInternalCalcStorage[i] := nil;
   
   // Native cursor reset
@@ -1552,7 +1774,7 @@ begin
               begin
                 raise EEntityDataSetException.Create(E.Message + sLineBreak +
                   'Tip: Register the implementation for this interface using TActivator.RegisterDefault ' +
-                  'or in your Application Service Provider (DI Container) for property ' + 
+                  'or in your Application Service DataProvider (DI Container) for property ' +
                   FEntityClass.ClassName + '.' + LProp.Name);
               end;
             end;
@@ -1646,31 +1868,28 @@ begin
     
     for Member in ClassMD.Members do
     begin
-      if FindField(Member.Name) <> nil then Continue;
-
-      // Simple mapping for design-time field creation
-      LType := ftWideString;
       LSize := Member.MaxLength;
       if LSize = 0 then LSize := 255;
 
-      LT := Member.MemberType.ToLower;
-      if (LT = 'integer') or (LT = 'int32') then LType := ftInteger
-      else if (LT = 'int64') then LType := ftLargeint
-      else if (LT = 'double') or (LT = 'extended') or (LT = 'single') then LType := ftFloat
-      else if (LT = 'tdatetime') or (LT = 'tdate') or (LT = 'ttime') then LType := ftDateTime
-      else if (LT = 'boolean') then LType := ftBoolean
-      else if (LT = 'currency') then LType := ftCurrency
-      else if (LT = 'tbytes') or (LT = 'blob') then LType := ftBlob;
+      LT := Member.MemberType;
+      LType := StringToFieldType(LT);
 
-      Field := DefaultFieldClasses[LType].Create(Owner);
-      Field.FieldName := Member.Name;
-      Field.DataSet := Self;
-      Field.Name := Self.Name + Member.Name;
+      Field := FindField(Member.Name);
+      if Field = nil then
+      begin
+        Field := DefaultFieldClasses[LType].Create(Owner);
+        Field.FieldName := Member.Name;
+        Field.DataSet := Self;
+
+        if Self.Name <> '' then
+          Field.Name := Self.Name + Member.Name;
+      end;
       
       Field.Visible := Member.Visible;
       Field.ReadOnly := Member.IsReadOnly;
       Field.Required := Member.IsRequired;
-      Field.Size := LSize;
+      if (Field is TStringField) or (Field is TWideStringField) then
+        Field.Size := LSize;
       
       if Member.DisplayLabel <> '' then Field.DisplayLabel := Member.DisplayLabel;
       if Member.DisplayWidth > 0 then Field.DisplayWidth := Member.DisplayWidth;
@@ -1771,7 +1990,10 @@ var
   RttiField: TRttiField;
   RttiType: TRttiType;
 begin
-  if (FEntityMap = nil) or (FEntityClass = nil) then Exit;
+  if (FEntityMap = nil) then Exit;
+
+  // Em runtime precisamos da classe, em design o EntityMap (do Parser) basta
+  if (FEntityClass = nil) and (not (csDesigning in ComponentState)) then Exit;
 
   FieldDefs.Clear;
 
@@ -1948,17 +2170,11 @@ var
   LObj: TObject;
   LVal: TValue;
   LList: IObjectList;
-  LItemClass: TClass;
 begin
   if not (ADetailDataSet is TEntityDataSet) then Exit;
 
-  // Ensure EntityClass is set (might be first call)
-  if TEntityDataSet(ADetailDataSet).FEntityClass = nil then
-  begin
-    var LProp := GetProperty(AFieldName);
-    if LProp <> nil then
-      TEntityDataSet(ADetailDataSet).FEntityClass := TReflection.GetCollectionItemType(LProp.PropertyType.Handle);
-  end;
+  // DESIGN-TIME SAFETY: Em design não tentamos sincronizar RTTI/Instâncias se não houver classe compilada
+  if (csDesigning in ComponentState) and (FEntityClass = nil) then Exit;
 
   // Now populate it with data from the current record
   LList := nil;
@@ -1992,7 +2208,7 @@ begin
            on E: Exception do
              raise Exception.Create(E.Message + sLineBreak + sLineBreak +
                'Tip: Register the implementation for this interface using TActivator.RegisterDefault ' +
-               'or in your Application Service Provider (DI Container).');
+               'or in your Application Service DataProvider (DI Container).');
          end;
        end;
     end;
@@ -2012,7 +2228,7 @@ begin
   end;
 
   // Sempre carrega a lista (mesmo que nil ou vazia, mas agora instanciada se mestre presente)
-  LItemClass := TEntityDataSet(ADetailDataSet).FEntityClass;
+  var LItemClass := TEntityDataSet(ADetailDataSet).FEntityClass;
   if LItemClass = nil then
   begin
     var LProp := GetProperty(AFieldName);

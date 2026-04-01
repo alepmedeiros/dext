@@ -24,8 +24,8 @@ uses
   FireDAC.Stan.Async,
   FireDAC.DApt,
   Dext.Entity.DataSet,
-  Dext.Entity.Core,
-  Dext.EF.Design.DataProvider;
+  Dext.Entity.DataProvider,
+  Dext.Entity.Core;
 
 type
   TPreviewForm = class(TForm)
@@ -98,10 +98,10 @@ var
   SQL: string;
 begin
   if not Assigned(ADataSet.DataProvider) then
-    raise Exception.Create('DataProvider is missing.');
+    raise Exception.Create('Provider is missing.');
     
   if not ADataSet.DataProvider.GetInterface(IEntityDataProvider, DP) then
-    raise Exception.Create('Invalid DataProvider.');
+    raise Exception.Create('Invalid Provider.');
 
   if ADataSet.EntityClassName = '' then
      raise Exception.Create('EntityClassName is missing.');
@@ -110,11 +110,14 @@ begin
   if MD = nil then
     raise Exception.Create('Entity metadata not found.');
 
-  FQuery.Connection := TEntityDataProvider(ADataSet.DataProvider).Connection;
+  FQuery.Connection := ADataSet.DataProvider.DatabaseConnection;
   if FQuery.Connection = nil then
-     raise Exception.Create('Connection is not assigned to DataProvider.');
+     raise Exception.Create('Connection is not assigned to Provider.');
 
-  SQL := 'SELECT * FROM ' + MD.TableName; // Simplified
+  SQL := DP.BuildPreviewSql(ADataSet.EntityClassName, 50);
+  if SQL = '' then
+    SQL := 'SELECT * FROM ' + MD.TableName;
+
   FQuery.SQL.Text := SQL;
   FQuery.Open;
   

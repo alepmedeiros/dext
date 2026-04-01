@@ -116,6 +116,9 @@
         <DCCReference Include="MainForm.pas">
             <Form>FormMain</Form>
         </DCCReference>
+        <DCCReference Include="MasterDetailForm.pas">
+            <Form>FormMasterDetailReal</Form>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

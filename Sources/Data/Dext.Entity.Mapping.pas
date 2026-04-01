@@ -180,6 +180,7 @@ type
     IsLazy: Boolean; // New: Support for Auto-Proxies / Explicit Lazy
     IsEnum: Boolean; // New: Flag to identify enumeration types
     Prop: TRttiProperty; // Cached RTTI property
+    Visible: Boolean;
     // UI Metadata
     DisplayLabel: string;
     DisplayFormat: string;

@@ -259,6 +259,10 @@ type
     ['{884D5514-6F29-4F58-BF76-2244EEF9452A}']
     function GetEntities: TArray<string>;
     function GetEntityMetadata(const AClassName: string): TEntityClassMetadata;
+    function GetEntityUnitName(const AClassName: string): string;
+    function ResolveEntityClass(const AClassName: string): TClass;
+    function BuildPreviewSql(const AClassName: string; AMaxRows: Integer = 50): string;
+    function CreatePreviewItems(const AClassName: string; AMaxRows: Integer = 50): IObjectList;
   end;
 
   /// <summary>
