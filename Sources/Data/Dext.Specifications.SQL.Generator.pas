@@ -1544,7 +1544,14 @@ begin
       if IsVersion then
       begin
         // Optimistic Concurrency Logic
-        
+        if IsNullable(Val.TypeInfo) then
+        begin
+          NullableHelper := TNullableHelper.Create(Val.TypeInfo);
+          if NullableHelper.HasValue(Val.GetReferenceToRawData) then
+            Val := NullableHelper.GetValue(Val.GetReferenceToRawData);
+        end;
+        TryUnwrapSmartValue(Val);
+
         // 1. Add to WHERE clause: Version = :OldVersion
         ParamName := GetNextParamName;
         FParams.Add(ParamName, Val);
@@ -1554,10 +1561,6 @@ begin
         SBWhere.Append(FDialect.QuoteIdentifier(ColName)).Append(' = :').Append(ParamName);
         
         // 2. Add to SET clause: Version = :NewVersion (OldVersion + 1)
-        
-        // Handle Smart Types even for version if needed (unlikely)
-        TryUnwrapSmartValue(Val);
-        
         ParamNameNew := GetNextParamName;
         if Val.IsEmpty then NewVersionVal := 1 else NewVersionVal := Val.AsInteger + 1;
         FParams.Add(ParamNameNew, NewVersionVal);
@@ -1574,7 +1577,15 @@ begin
       end
       else if IsPK then
       begin
-        // Primary Key -> WHERE clause
+        // Primary Key -> WHERE clause (unwrap Nullable<T> and Prop<T> before binding)
+        if IsNullable(Val.TypeInfo) then
+        begin
+          NullableHelper := TNullableHelper.Create(Val.TypeInfo);
+          if NullableHelper.HasValue(Val.GetReferenceToRawData) then
+            Val := NullableHelper.GetValue(Val.GetReferenceToRawData);
+        end;
+        TryUnwrapSmartValue(Val);
+
         ParamName := GetNextParamName;
         FParams.Add(ParamName, Val);
         
