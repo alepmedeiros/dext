@@ -113,6 +113,7 @@ type
     procedure SetMasterFields(const Value: string);
     function CompareObjectsInternal(A, B: TObject; const APropNames: TArray<string>; RttiType: TRttiType): Integer;
     procedure ApplyAttributesToField(AField: TField; AContainer: TRttiObject);
+    procedure ApplyMapMetadataToFields;
     procedure SetMasterInheritance(AEntity: TObject);
     
     function ReadFieldValue(Field: TField; out Value: Variant): Boolean; overload;
@@ -129,6 +130,7 @@ type
     procedure InternalOpen; override;
     procedure InternalClose; override;
     procedure InternalInitFieldDefs; override;
+    procedure SetActive(Value: Boolean); override;
     procedure SyncDetailData(const AFieldName: string; ADetailDataSet: TDataSet);
     function CreateNestedDataSet(DataSetField: TDataSetField): TDataSet; override;
 
@@ -1317,8 +1319,14 @@ begin
       end;
 
       Active := False;  // Fecha o dataset para resetar buffers
-      FieldDefs.Clear;  
+      FieldDefs.Clear;
       FEntityClass := nil;
+
+      // Clear preview data from previous entity
+      for var Dict in FPreviewData do
+        Dict.Free;
+      SetLength(FPreviewData, 0);
+      FIsDesignTimePreview := False;
     end;
       
     ResolveEntityClassFromProvider;
@@ -1329,6 +1337,18 @@ begin
       if (FEntityMap <> nil) and (FTableName = '') then
         FTableName := FEntityMap.TableName;
       GenerateFields;
+
+      // Auto-activate preview if connection is available
+      if (FDataProvider <> nil) and
+         (FDataProvider.DatabaseConnection <> nil) and
+         (not Active) then
+      begin
+        try
+          Active := True;
+        except
+          // Silently ignore - preview activation is optional
+        end;
+      end;
     end;
   end;
 end;
@@ -1439,7 +1459,24 @@ begin
 end;
 
 
+
 { TEntityDataSet }
+
+procedure TEntityDataSet.SetActive(Value: Boolean);
+begin
+  // Prevent grid flicker during design-time preview activation
+  if Value and (csDesigning in ComponentState) then
+  begin
+    DisableControls;
+    try
+      inherited SetActive(Value);
+    finally
+      EnableControls;
+    end;
+  end
+  else
+    inherited SetActive(Value);
+end;
 
 procedure TEntityDataSet.InternalOpen;
 var
@@ -1578,6 +1615,9 @@ begin
   // Native cursor reset
   FCurrentRec := -1;
   BindFields(True);
+
+  // Apply visual attributes from EntityMap to all Fields
+  ApplyMapMetadataToFields;
 end;
 
 
@@ -2356,6 +2396,60 @@ begin
       AField.DisplayWidth := DisplayWidthAttribute(Attr).Value
     else if Attr is VisibleAttribute then
       AField.Visible := VisibleAttribute(Attr).Visible;
+  end;
+end;
+
+procedure TEntityDataSet.ApplyMapMetadataToFields;
+var
+  PropMap: TPropertyMap;
+  Field: TField;
+begin
+  if FEntityMap = nil then Exit;
+  if Fields.Count = 0 then Exit;
+
+  for PropMap in FEntityMap.Properties.Values do
+  begin
+    if PropMap.IsNavigation or PropMap.IsIgnored then Continue;
+
+    Field := FindField(PropMap.PropertyName);
+    if Field = nil then Continue;
+
+    // DisplayLabel / Caption
+    if PropMap.DisplayLabel <> '' then
+      Field.DisplayLabel := PropMap.DisplayLabel;
+
+    // DisplayWidth
+    if PropMap.DisplayWidth > 0 then
+      Field.DisplayWidth := PropMap.DisplayWidth;
+
+    // DisplayFormat (Numeric and DateTime)
+    if PropMap.DisplayFormat <> '' then
+    begin
+      if Field is TNumericField then
+        TNumericField(Field).DisplayFormat := PropMap.DisplayFormat
+      else if Field is TDateTimeField then
+        TDateTimeField(Field).DisplayFormat := PropMap.DisplayFormat;
+    end;
+
+    // EditMask
+    if PropMap.EditMask <> '' then
+      Field.EditMask := PropMap.EditMask;
+
+    // Alignment
+    if PropMap.Alignment <> taLeftJustify then
+      Field.Alignment := PropMap.Alignment;
+
+    // Visible
+    Field.Visible := PropMap.Visible;
+
+    // Required / ReadOnly
+    Field.Required := PropMap.IsRequired and (not PropMap.IsAutoInc);
+    if PropMap.IsAutoInc then
+      Field.ReadOnly := True;
+
+    // User-defined preparation (highest precedence)
+    if Assigned(FOnPrepareField) then
+      FOnPrepareField(Self, Field);
   end;
 end;
 

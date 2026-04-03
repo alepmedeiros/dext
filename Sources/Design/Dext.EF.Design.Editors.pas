@@ -364,6 +364,7 @@ begin
     case Index of
       0: TEntityDataSet(List[0]).BuildFieldDefs;
       1: ShowEntityPreview(TEntityDataSet(List[0]));
+      2: TEntityDataSet(List[0]).Active := not TEntityDataSet(List[0]).Active;
     end;
   end;
 end;
@@ -373,12 +374,13 @@ begin
   case Index of
     0: Result := 'Dext: Generate Fields (Auto)';
     1: Result := 'Dext: Preview Data...';
+    2: Result := 'Dext: Toggle Design-Time Preview';
   end;
 end;
 
 function TEntityDataSetSelectionEditor.GetVerbCount: Integer;
 begin
-  Result := 2;
+  Result := 3;
 end;
 
 procedure RegisterEditors;

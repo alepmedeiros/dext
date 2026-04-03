@@ -61,9 +61,6 @@ type
     PanelTop: TPanel;
     RealMasterDetailButton: TSpeedButton;
     Splitter: TSplitter;
-    EntityDataSetId: TIntegerField;
-    EntityDataSetDate: TDateTimeField;
-    EntityDataSetCustomer: TWideStringField;
     procedure FormCreate(Sender: TObject);
     procedure RealMasterDetailButtonClick(Sender: TObject);
   private

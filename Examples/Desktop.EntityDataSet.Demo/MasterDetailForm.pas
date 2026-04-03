@@ -16,9 +16,11 @@ type
     FDate: TDateTime;
     FCustomer: string;
   public
-    [PK, DisplayName('Código')]
+    [PK, DisplayLabel('Código')]
     property Id: Integer read FId write FId;
+    [DisplayLabel('Data')]
     property Date: TDateTime read FDate write FDate;
+    [DisplayLabel('Cliente'), DisplayWidth(100)]
     property Customer: string read FCustomer write FCustomer;
     constructor Create(AId: Integer; ACustomer: string);
   end;

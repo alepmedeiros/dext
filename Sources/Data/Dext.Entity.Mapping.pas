@@ -838,6 +838,7 @@ begin
   DisplayWidth := 0;
   EditMask := '';
   Alignment := taLeftJustify;
+  Visible := True;
 end;
 
 { TRelationshipBuilder<T> }

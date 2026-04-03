@@ -3,7 +3,7 @@ object FormMain: TFormMain
   Top = 0
   Caption = 'Dext Framework - Entity DataSet Demo'
   ClientHeight = 442
-  ClientWidth = 610
+  ClientWidth = 910
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,7 +16,7 @@ object FormMain: TFormMain
     AlignWithMargins = True
     Left = 3
     Top = 244
-    Width = 604
+    Width = 904
     Height = 3
     Cursor = crVSplit
     Align = alTop
@@ -27,7 +27,7 @@ object FormMain: TFormMain
   object DBGridProducts: TDBGrid
     Left = 0
     Top = 41
-    Width = 610
+    Width = 910
     Height = 200
     Align = alTop
     DataSource = DataSource
@@ -41,7 +41,7 @@ object FormMain: TFormMain
   object DBGridDetail: TDBGrid
     Left = 0
     Top = 250
-    Width = 610
+    Width = 910
     Height = 192
     Align = alClient
     DataSource = DataSourceDetail
@@ -55,7 +55,7 @@ object FormMain: TFormMain
   object PanelTop: TPanel
     Left = 0
     Top = 0
-    Width = 610
+    Width = 910
     Height = 41
     Align = alTop
     BevelOuter = bvNone
@@ -90,24 +90,8 @@ object FormMain: TFormMain
     TableName = 'order'
     DataProvider = EntityDataProvider
     EntityClassName = 'TOrder'
-    Active = True
     Left = 464
     Top = 88
-    object EntityDataSetId: TIntegerField
-      Alignment = taLeftJustify
-      DisplayLabel = 'C'#243'digo'
-      FieldName = 'Id'
-    end
-    object EntityDataSetDate: TDateTimeField
-      DisplayLabel = 'Data de Cadastro'
-      FieldName = 'Date'
-    end
-    object EntityDataSetCustomer: TWideStringField
-      DisplayLabel = 'Cliente'
-      DisplayWidth = 100
-      FieldName = 'Customer'
-      Size = 255
-    end
   end
   object EntityDataProvider: TEntityDataProvider
     DatabaseConnection = FDConnection
@@ -180,9 +164,9 @@ object FormMain: TFormMain
     DebugMode = True
     EntitiesMetadata = <
       item
-        EntityClassName = 'TOrder'
-        TableName = 'order'
-        EntityUnitName = 'MasterDetailForm'
+        EntityClassName = 'TStockItem'
+        TableName = 'stock'
+        EntityUnitName = 'MainForm'
         Members = <
           item
             Name = 'Id'
@@ -199,6 +183,117 @@ object FormMain: TFormMain
             Visible = True
           end
           item
+            Name = 'Warehouse'
+            MemberType = 'string'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 0
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+          end
+          item
+            Name = 'Quantity'
+            MemberType = 'Double'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 0
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+          end>
+      end
+      item
+        EntityClassName = 'TProduct'
+        TableName = 'products'
+        EntityUnitName = 'MainForm'
+        Members = <
+          item
+            Name = 'Id'
+            MemberType = 'Integer'
+            IsPrimaryKey = True
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 0
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+          end
+          item
+            Name = 'Description'
+            MemberType = 'string'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 200
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 75
+            Visible = True
+          end
+          item
+            Name = 'Price'
+            MemberType = 'Money'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 0
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+          end
+          item
+            Name = 'Stock'
+            MemberType = 'IList'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 0
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = False
+          end>
+      end
+      item
+        EntityClassName = 'TOrder'
+        TableName = 'order'
+        EntityUnitName = 'MasterDetailForm'
+        Members = <
+          item
+            Name = 'Id'
+            MemberType = 'Integer'
+            IsPrimaryKey = True
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 0
+            Precision = 0
+            Scale = 0
+            DisplayLabel = 'C'#243'digo'
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+          end
+          item
             Name = 'Date'
             MemberType = 'TDateTime'
             IsPrimaryKey = False
@@ -208,6 +303,7 @@ object FormMain: TFormMain
             MaxLength = 0
             Precision = 0
             Scale = 0
+            DisplayLabel = 'Data'
             Alignment = taLeftJustify
             DisplayWidth = 0
             Visible = True
@@ -222,8 +318,9 @@ object FormMain: TFormMain
             MaxLength = 0
             Precision = 0
             Scale = 0
+            DisplayLabel = 'Cliente'
             Alignment = taLeftJustify
-            DisplayWidth = 0
+            DisplayWidth = 100
             Visible = True
           end>
       end
