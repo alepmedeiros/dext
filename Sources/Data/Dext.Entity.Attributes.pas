@@ -64,6 +64,12 @@ type
   end;
 
   /// <summary>
+  ///   Marks a property as a Currency field.
+  /// </summary>
+  CurrencyAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
   ///   Alias for PrimaryKeyAttribute
   /// </summary>
   PKAttribute = PrimaryKeyAttribute;

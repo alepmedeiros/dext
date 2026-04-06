@@ -117,6 +117,7 @@
         <DCCReference Include="Dext.Entity.DataSet.Export.Tests.pas"/>
         <DCCReference Include="Dext.Entity.DefaultValue.Tests.pas"/>
         <DCCReference Include="Dext.Entity.Design.Metadata.Tests.pas"/>
+        <DCCReference Include="Dext.Entity.ReportedIssues.Tests.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

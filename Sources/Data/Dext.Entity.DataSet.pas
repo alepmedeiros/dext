@@ -214,7 +214,7 @@ type
     procedure LoadFromUtf8Json<T: class>(const ASpan: TByteSpan); overload;
     procedure Refresh;
     procedure BuildFieldDefs;
-    procedure GenerateFields;
+    procedure GenerateFields(ARemoveOrphans: Boolean = False; AUpdateExisting: Boolean = True);
     function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream; override;
     function GetCurrentObject: TObject;
     property Items: IObjectList read FItems write SetItems;
@@ -415,13 +415,16 @@ begin
   if SameText(ATypeName, 'string') then Result := ftWideString
   else if SameText(ATypeName, 'Integer') or SameText(ATypeName, 'Int32') then Result := ftInteger
   else if SameText(ATypeName, 'LargeInt') or SameText(ATypeName, 'Int64') then Result := ftLargeint
-  else if SameText(ATypeName, 'Double') or SameText(ATypeName, 'Currency') or SameText(ATypeName, 'Money') or SameText(ATypeName, 'Float') then Result := ftFloat
+  else if SameText(ATypeName, 'Double') or SameText(ATypeName, 'Float') then Result := ftFloat
+  else if SameText(ATypeName, 'Currency') or SameText(ATypeName, 'Money') then Result := ftCurrency
   else if SameText(ATypeName, 'TDateTime') or SameText(ATypeName, 'DateTime') then Result := ftDateTime
   else if SameText(ATypeName, 'TDate') or SameText(ATypeName, 'Date') then Result := ftDate
   else if SameText(ATypeName, 'TTime') or SameText(ATypeName, 'Time') then Result := ftTime
   else if SameText(ATypeName, 'Boolean') then Result := ftBoolean
   else if SameText(ATypeName, 'TBytes') or SameText(ATypeName, 'Blob') then Result := ftBlob
   else if SameText(ATypeName, 'TGUID') then Result := ftGuid
+  else if ATypeName.StartsWith('I', True) or ATypeName.StartsWith('TList<', True) or ATypeName.StartsWith('TObjectList<', True) then Result := ftUnknown
+  else if ATypeName.StartsWith('T', True) then Result := ftUnknown // Likely a Navigation property (e.g. TStock, TCategory)
   else Result := ftString;
 end;
 
@@ -1306,17 +1309,8 @@ begin
       FTableName := ''; // Força o preenchimento do TableName da nova classe
       FItems := nil;    // Explode o cache de preview antigo
       
-      // Clear persistent fields that were auto-generated
-      var LCanClear: Boolean;
-      LCanClear := True;
-      if (Owner <> nil) and (csLoading in Owner.ComponentState) then
-        LCanClear := False;
-
-      if LCanClear then
-      begin
-        for var i := FieldCount - 1 downto 0 do
-          Fields[i].Free;
-      end;
+      // Delegated to GenerateFields(ARemoveOrphans = True) to safely manage Fields list
+      // without ripping underlying persistent fields prematurely.
 
       Active := False;  // Fecha o dataset para resetar buffers
       FieldDefs.Clear;
@@ -1336,7 +1330,7 @@ begin
       EnsureEntityMapResolved;
       if (FEntityMap <> nil) and (FTableName = '') then
         FTableName := FEntityMap.TableName;
-      GenerateFields;
+      GenerateFields(True, True); // Enforce orphan removal and full generation when entity class completely changes
 
       // Auto-activate preview if connection is available
       if (FDataProvider <> nil) and
@@ -1947,7 +1941,7 @@ begin
   FCurrentRec := FVirtualIndex.Count;
 end;
 
-procedure TEntityDataSet.GenerateFields;
+procedure TEntityDataSet.GenerateFields(ARemoveOrphans: Boolean = False; AUpdateExisting: Boolean = True);
 var
   DP: IEntityDataProvider;
   MD: TObject;
@@ -1957,22 +1951,55 @@ var
   LType: TFieldType;
   LSize: Integer;
   LT: string;
+  ProcessedFields: TStringList;
 begin
   if not Assigned(FDataProvider) then Exit;
   if not FDataProvider.GetInterface(IEntityDataProvider, DP) then Exit;
   if FEntityClassName = '' then Exit;
 
+  try
+    TFile.AppendAllText('C:\dev\Dext\dext_metadata_debug.log', 
+      Format('--- DataSet GenerateFields: Entity=%s Designing=%s ---' + sLineBreak, 
+        [FEntityClassName, BoolToStr(csDesigning in ComponentState, True)]), TEncoding.UTF8);
+  except
+  end;
+
+  // DESIGN-TIME: Force the provider to scan the source code and refresh its cache
+  if (csDesigning in ComponentState) then
+  begin
+    DP.SyncMetadata(FEntityClassName);
+  end;
+
   MD := DP.GetEntityMetadata(FEntityClassName);
   if MD = nil then Exit;
 
+  try
+    TFile.AppendAllText('C:\dev\Dext\dext_metadata_debug.log', 
+      Format('--- DataSet Refresh Entry: %s (DisplayName=%s, Members=%d) ---' + sLineBreak, 
+        [FEntityClassName, TEntityClassMetadata(MD).DisplayName, TEntityClassMetadata(MD).Members.Count]), TEncoding.UTF8);
+  except
+  end;
+
+  try
+    TFile.AppendAllText('C:\dev\Dext\dext_metadata_debug.log', Format('--- DataSet GenerateFields for %s ---' + sLineBreak, [FEntityClassName]));
+  except
+  end;
+
   ClassMD := TEntityClassMetadata(MD);
   
+  ProcessedFields := TStringList.Create;
+  ProcessedFields.CaseSensitive := False;
+
   DisableControls;
   try
     if Active then Close;
-    
-    // Clear existing fields if any (optional, usually users manage this)
-    // FieldDefs.Clear; 
+
+    while FieldCount > 0 do
+    begin
+      Field := Fields[0];
+      Field.DataSet := nil;
+      Field.Free;
+    end;
     
     for var i := 0 to ClassMD.Members.Count - 1 do
     begin
@@ -1982,8 +2009,24 @@ begin
 
       LT := Member.MemberType;
       LType := StringToFieldType(LT);
+      if Member.IsCurrency then
+        LType := ftCurrency;
+
+      if LType = ftUnknown then
+        Continue;
+
+      ProcessedFields.Add(Member.Name);
 
       Field := FindField(Member.Name);
+      
+      // If a field exists but has the wrong type class, it cannot be reused!
+      if (Field <> nil) and (Field.ClassType <> DefaultFieldClasses[LType]) then
+      begin
+        Field.Name := '';
+        Field.Free;
+        Field := nil;
+      end;
+
       if Field = nil then
       begin
         Field := DefaultFieldClasses[LType].Create(Owner);
@@ -1991,31 +2034,91 @@ begin
         Field.DataSet := Self;
 
         if Self.Name <> '' then
-          Field.Name := Self.Name + Member.Name;
-      end;
+        begin
+          var LTargetName := Self.Name + Member.Name;
+          if Owner <> nil then
+          begin
+            var LExisting := Owner.FindComponent(LTargetName);
+            if LExisting <> nil then
+              LExisting.Name := ''; // Prevent component name collision 
+          end;
+          try
+            Field.Name := LTargetName;
+          except
+            // Delphi IDE often ghosts components in the .pas file's published section
+            // even after they are removed. If ValidateRename throws "already exists",
+            // we safely catch it and leave the field persistent but dynamically named (blank).
+            on E: Exception do 
+              Field.Name := '';
+          end;
+        end;
+      end
+      else if not AUpdateExisting then
+        Continue;
       
+      // SYNC ALL PROPERTIES (New or Existing)
+        
+      Field.Index := i;
       Field.Visible := Member.Visible;
       Field.ReadOnly := Member.IsReadOnly;
       Field.Required := Member.IsRequired;
+      
       if (Field is TStringField) or (Field is TWideStringField) then
         Field.Size := LSize;
       
-      if Member.DisplayLabel <> '' then Field.DisplayLabel := Member.DisplayLabel;
-      if Member.DisplayWidth > 0 then Field.DisplayWidth := Member.DisplayWidth;
+      // Metadata takes precedence, otherwise reset to default (Member Name)
+      if Member.DisplayLabel <> '' then
+        Field.DisplayLabel := Member.DisplayLabel
+      else
+        Field.DisplayLabel := Member.Name;
+      
+      if Member.DisplayWidth > 0 then
+        Field.DisplayWidth := Member.DisplayWidth;
       
       if Field is TNumericField then
-        TNumericField(Field).DisplayFormat := Member.DisplayFormat;
-        
+      begin
+        // Metadata takes precedence if provided, otherwise fallback to default formatting
+        if Member.DisplayFormat <> '' then
+          TNumericField(Field).DisplayFormat := Member.DisplayFormat
+        else if LType <> ftCurrency then
+          TNumericField(Field).DisplayFormat := '#,##0.00'; 
+          
+        if Member.Alignment = taLeftJustify then
+          Field.Alignment := taRightJustify // Numbers are usually right-aligned
+        else
+          Field.Alignment := Member.Alignment;
+      end
+      else
+        Field.Alignment := Member.Alignment;
+
       if Field is TDateTimeField then
-        TDateTimeField(Field).DisplayFormat := Member.DisplayFormat;
+      begin
+        if Member.DisplayFormat <> '' then
+          TDateTimeField(Field).DisplayFormat := Member.DisplayFormat;
+      end;
 
       if Member.EditMask <> '' then
          Field.EditMask := Member.EditMask;
-         
-      Field.Alignment := Member.Alignment;
+        
+      if Field is TFloatField then
+        TFloatField(Field).currency := Member.IsCurrency;
+        
+      // Force IDE and Grids to see the change for persistent fields
+      if (csDesigning in ComponentState) then
+        DataEvent(deLayoutChange, 0);
+    end;
+
+    if ARemoveOrphans then
+    begin
+      for var i := Fields.Count - 1 downto 0 do
+      begin
+        if ProcessedFields.IndexOf(Fields[i].FieldName) = -1 then
+          Fields[i].Free;
+      end;
     end;
   finally
     EnableControls;
+    ProcessedFields.Free;
   end;
 end;
 

@@ -6,14 +6,18 @@ uses
   System.SysUtils,
   System.Classes,
   System.RegularExpressions,
+  System.IOUtils,
   DesignIntf,
   DesignEditors,
   ToolsAPI,
   VCLEditors,
   Data.DB,
+  Dext.Collections,
+  Dext.Collections.Base,
   Dext.Entity.DataSet,
   Dext.Entity.DataProvider,
   Dext.Entity.Core,
+  Dext.Entity.Metadata,
   Dext.EF.Design.Metadata,
   Dext.EF.Design.Preview;
 
@@ -46,6 +50,7 @@ type
     procedure ExecuteVerb(Index: Integer; const List: IDesignerSelections); override;
   end;
 
+function FindOwnerProject(ADesigner: IDesigner): IOTAProject;
 procedure RegisterEditors;
 
 implementation
@@ -79,25 +84,70 @@ begin
   Result := False;
 end;
 
-function PopulateProviderModelUnitsFromActiveProject(AProvider: TEntityDataProvider): Integer;
+function FindOwnerProject(ADesigner: IDesigner): IOTAProject;
 var
+  ModuleServices: IOTAModuleServices;
+  Module: IOTAModule;
+  ProjectGroup: IOTAProjectGroup;
   Project: IOTAProject;
+  CurrentFile: string;
+  I, J, K: Integer;
+begin
+  Result := nil;
+  if ADesigner = nil then
+    Exit;
+
+  ModuleServices := BorlandIDEServices as IOTAModuleServices;
+  if ModuleServices = nil then
+    Exit;
+
+  Module := ModuleServices.CurrentModule;
+  if Module = nil then
+    Exit;
+
+  CurrentFile := Module.FileName;
+
+  // Find which project contains this file
+  for I := 0 to ModuleServices.ModuleCount - 1 do
+  begin
+    Module := ModuleServices.Modules[I];
+    if (Module <> nil) and Supports(Module, IOTAProjectGroup, ProjectGroup) then
+    begin
+      for J := 0 to ProjectGroup.ProjectCount - 1 do
+      begin
+        Project := ProjectGroup.Projects[J];
+        if Project = nil then
+          Continue;
+
+        for K := 0 to Project.GetModuleCount - 1 do
+        begin
+          if SameText(ChangeFileExt(Project.GetModule(K).FileName, ''), 
+                      ChangeFileExt(CurrentFile, '')) then
+          begin
+            Result := Project;
+            Exit;
+          end;
+        end;
+      end;
+    end;
+  end;
+end;
+
+function PopulateProviderModelUnitsFromProject(AProvider: TEntityDataProvider; AProject: IOTAProject): Integer;
+var
   ModuleInfo: IOTAModuleInfo;
   FileName: string;
   I: Integer;
 begin
   Result := 0;
-  if AProvider = nil then
-    Exit;
-
-  if not TryGetActiveProject(Project) then
+  if (AProvider = nil) or (AProject = nil) then
     Exit;
 
   AProvider.ModelUnits.BeginUpdate;
   try
-    for I := 0 to Project.GetModuleCount - 1 do
+    for I := 0 to AProject.GetModuleCount - 1 do
     begin
-      ModuleInfo := Project.GetModule(I);
+      ModuleInfo := AProject.GetModule(I);
       if ModuleInfo = nil then
         Continue;
 
@@ -117,6 +167,28 @@ begin
   finally
     AProvider.ModelUnits.EndUpdate;
   end;
+end;
+
+function PopulateProviderModelUnitsFromActiveProject(AProvider: TEntityDataProvider; ADesigner: IDesigner = nil): Integer;
+var
+  Project: IOTAProject;
+begin
+  Result := 0;
+  if AProvider = nil then
+    Exit;
+
+  // Try to find the project that owns the current form first
+  if ADesigner <> nil then
+    Project := FindOwnerProject(ADesigner);
+
+  // Fallback to active project
+  if Project = nil then
+    TryGetActiveProject(Project);
+
+  if Project = nil then
+    Exit;
+
+  Result := PopulateProviderModelUnitsFromProject(AProvider, Project);
 end;
 
 procedure RefreshBoundDataSets(AProvider: TEntityDataProvider; ADesigner: IDesigner);
@@ -140,25 +212,91 @@ end;
 
 function ReadEditorContent(const AEditor: IOTASourceEditor): string;
 const
-  BufferSize = 1024;
+  BufferSize = 1024 * 32;
 var
   Reader: IOTAEditReader;
+  Buffer: AnsiString;
   Read: Integer;
   Position: Integer;
-  Buffer: AnsiString;
 begin
   Result := '';
+  if (AEditor = nil) then Exit;
   Reader := AEditor.CreateReader;
   Position := 0;
-
   repeat
     SetLength(Buffer, BufferSize);
     Read := Reader.GetText(Position, PAnsiChar(Buffer), BufferSize);
-    SetLength(Buffer, Read);
-    Result := Result + string(Buffer);
+    if Read > 0 then
+    begin
+      SetLength(Buffer, Read);
+      Result := Result + UTF8ToString(Buffer);
+    end;
     Inc(Position, Read);
   until Read < BufferSize;
 end;
+
+function GetModuleContent(const AFileName: string): string;
+var
+  ModuleServices: IOTAModuleServices;
+  Module: IOTAModule;
+  Editor: IOTAEditor;
+  SourceEditor: IOTASourceEditor;
+  I: Integer;
+begin
+  Result := '';
+  if not Supports(BorlandIDEServices, IOTAModuleServices, ModuleServices) then Exit;
+  
+  Module := ModuleServices.FindModule(AFileName);
+  if Module = nil then Exit;
+  
+  for I := 0 to Module.GetModuleFileCount - 1 do
+  begin
+    Editor := Module.GetModuleFileEditor(I);
+    if Supports(Editor, IOTASourceEditor, SourceEditor) then
+    begin
+      Result := ReadEditorContent(SourceEditor);
+      if Result <> '' then Break;
+    end;
+  end;
+end;
+
+procedure DesignTimeRefreshUnit(AProvider: TEntityDataProvider; const AFileName: string);
+var
+  Parser: TEntityMetadataParser;
+  ParsedList: IList<TEntityClassMetadata>;
+  ParsedCollection: ICollection;
+  MD: TEntityClassMetadata;
+  Content: string;
+begin
+  if (AProvider = nil) or (AFileName = '') then
+    Exit;
+
+  Content := GetModuleContent(AFileName);
+
+  Parser := TEntityMetadataParser.Create;
+  try
+    ParsedList := Parser.ParseUnit(AFileName, Content);
+    try
+      for MD in ParsedList do
+      begin
+        AProvider.AddOrSetMetadata(MD);
+        AProvider.LogDebug(Format('RefreshUnitFromIDE: %s (%s) Table=%s Members=%d',
+          [MD.EntityClassName, MD.EntityUnitName, MD.TableName, MD.Members.Count]));
+      end;
+
+      if Supports(ParsedList, ICollection, ParsedCollection) then
+        ParsedCollection.OwnsObjects := False;
+    finally
+      ParsedList := nil;
+    end;
+  finally
+    Parser.Free;
+  end;
+
+  AProvider.UpdateRefreshSummary;
+end;
+
+
 
 function GetCurrentSourceEditor: IOTASourceEditor;
 var
@@ -324,16 +462,33 @@ begin
   Provider := TEntityDataProvider(Component);
 
   case Index of
-    0:
+    0: // Scan Active Project + Refresh Metadata
       begin
-        PopulateProviderModelUnitsFromActiveProject(Provider);
+        PopulateProviderModelUnitsFromActiveProject(Provider, Designer);
         RefreshProviderMetadata(Provider);
         RefreshBoundDataSets(Provider, Designer);
         if Designer <> nil then
           Designer.Modified;
       end;
-    1:
+    1: // Refresh Entity Metadata
       begin
+        RefreshProviderMetadata(Provider);
+        RefreshBoundDataSets(Provider, Designer);
+        if Designer <> nil then
+          Designer.Modified;
+      end;
+    2: // Clear All Cached Metadata
+      begin
+        Provider.ClearMetadata;
+        Provider.LastRefreshSummary := 'Cache cleared. Use "Scan Project" to reload.';
+        if Designer <> nil then
+          Designer.Modified;
+      end;
+    3: // Clear + Rescan Active Project
+      begin
+        Provider.ClearMetadata;
+        Provider.ModelUnits.Clear;
+        PopulateProviderModelUnitsFromActiveProject(Provider, Designer);
         RefreshProviderMetadata(Provider);
         RefreshBoundDataSets(Provider, Designer);
         if Designer <> nil then
@@ -345,27 +500,116 @@ end;
 function TEntityDataProviderEditor.GetVerb(Index: Integer): string;
 begin
   case Index of
-    0: Result := 'Scan Active Project + Refresh Metadata';
-    1: Result := 'Refresh Entity Metadata';
+    0: Result := 'Dext: Scan Project + Refresh Metadata';
+    1: Result := 'Dext: Refresh Entity Metadata';
+    2: Result := 'Dext: Clear All Cached Metadata';
+    3: Result := 'Dext: Clear + Rescan Active Project';
   end;
 end;
 
 function TEntityDataProviderEditor.GetVerbCount: Integer;
 begin
-  Result := 2;
+  Result := 4;
 end;
 
 { TEntityDataSetSelectionEditor }
 
 procedure TEntityDataSetSelectionEditor.ExecuteVerb(Index: Integer; const List: IDesignerSelections);
+var
+  DataSet: TEntityDataSet;
+  Provider: TEntityDataProvider;
 begin
-  if (List.Count > 0) and (List[0] is TEntityDataSet) then
-  begin
-    case Index of
-      0: TEntityDataSet(List[0]).BuildFieldDefs;
-      1: ShowEntityPreview(TEntityDataSet(List[0]));
-      2: TEntityDataSet(List[0]).Active := not TEntityDataSet(List[0]).Active;
-    end;
+  if (List.Count = 0) or not (List[0] is TEntityDataSet) then
+    Exit;
+
+  DataSet := TEntityDataSet(List[0]);
+
+  case Index of
+    0: // Generate Fields (Auto)
+      DataSet.GenerateFields;
+    1: // Preview Data
+      ShowEntityPreview(DataSet);
+    2: // Toggle Design-Time Preview
+      DataSet.Active := not DataSet.Active;
+    3: // Refresh Entity (Scan + Rebuild Fields)
+      begin
+        Provider := DataSet.DataProvider;
+        if Provider = nil then
+          Exit;
+
+        // Re-scan only the unit of this entity if possible
+        var UnitName := Provider.GetEntityUnitName(DataSet.EntityClassName);
+        if UnitName <> '' then
+        begin
+          // Find the full filename from ModelUnits
+          for var I := 0 to Provider.ModelUnits.Count - 1 do
+          begin
+            if SameText(ChangeFileExt(ExtractFileName(Provider.ModelUnits[I]), ''), UnitName) then
+            begin
+              DesignTimeRefreshUnit(Provider, Provider.ModelUnits[I]);
+              Break;
+            end;
+          end;
+        end
+        else
+        begin
+          // Full refresh as fallback
+          PopulateProviderModelUnitsFromActiveProject(Provider, Designer);
+          RefreshProviderMetadata(Provider);
+        end;
+
+        // Rebuild fields on this dataset
+        DataSet.DisableControls;
+        try
+          if DataSet.Active then
+            DataSet.Close;
+
+          DataSet.GenerateFields(True, True); // RemoveOrphans=True, UpdateExisting=True
+        finally
+          DataSet.EnableControls;
+        end;
+
+        if Designer <> nil then
+          Designer.Modified;
+      end;
+      4: // Dext: Sync Fields (Keep Customizations)
+      begin
+        Provider := DataSet.DataProvider;
+        if Provider = nil then
+          Exit;
+
+        var UnitName := Provider.GetEntityUnitName(DataSet.EntityClassName);
+        if UnitName <> '' then
+        begin
+          for var I := 0 to Provider.ModelUnits.Count - 1 do
+          begin
+            if SameText(ChangeFileExt(ExtractFileName(Provider.ModelUnits[I]), ''), UnitName) then
+            begin
+              DesignTimeRefreshUnit(Provider, Provider.ModelUnits[I]);
+              Break;
+            end;
+          end;
+        end
+        else
+        begin
+          PopulateProviderModelUnitsFromActiveProject(Provider, Designer);
+          RefreshProviderMetadata(Provider);
+        end;
+
+        DataSet.DisableControls;
+        try
+          if DataSet.Active then
+            DataSet.Close;
+
+          // Merge fields safely without overwriting user customizations
+          DataSet.GenerateFields(True, False); // RemoveOrphans=True, UpdateExisting=False
+        finally
+          DataSet.EnableControls;
+        end;
+
+        if Designer <> nil then
+          Designer.Modified;
+      end;
   end;
 end;
 
@@ -375,12 +619,14 @@ begin
     0: Result := 'Dext: Generate Fields (Auto)';
     1: Result := 'Dext: Preview Data...';
     2: Result := 'Dext: Toggle Design-Time Preview';
+    3: Result := 'Dext: Refresh Entity (Scan + Rebuild Fields)';
+    4: Result := 'Dext: Sync Fields (Keep Customizations)';
   end;
 end;
 
 function TEntityDataSetSelectionEditor.GetVerbCount: Integer;
 begin
-  Result := 3;
+  Result := 5;
 end;
 
 procedure RegisterEditors;
@@ -391,4 +637,8 @@ begin
   RegisterSelectionEditor(TEntityDataSet, TEntityDataSetSelectionEditor);
 end;
 
+initialization
+  GOnGetSourceContent := GetModuleContent;
+finalization
+  GOnGetSourceContent := nil;
 end.

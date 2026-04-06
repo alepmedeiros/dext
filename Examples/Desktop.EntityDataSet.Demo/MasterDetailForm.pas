@@ -35,8 +35,11 @@ type
   public
     [PK]
     property Id: Integer read FId write FId;
+    [DisplayLabel('Pedido')]
     property OrderId: Integer read FOrderId write FOrderId;
+    [DisplayLabel('Nome do Produto'), DisplayWidth(100)]
     property Product: string read FProduct write FProduct;
+    [DisplayLabel('Quantidade')]
     property Qty: Integer read FQty write FQty;
     constructor Create(AId, AOrderId: Integer; AProduct: string; AQty: Integer);
   end;

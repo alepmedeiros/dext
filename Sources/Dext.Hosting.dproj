@@ -124,14 +124,6 @@
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Registry.pas"/>
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.CodeCoverage.pas"/>
         <DCCReference Include="Hosting\CLI\Dext.Hosting.CLI.Tools.Sonar.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.Classes.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.Consts.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.Lexer.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.Lexer.Types.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.Types.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.SimpleParserEx.pas"/>
         <DCCReference Include="Hosting\CLI\Tools\Dext.Hosting.CLI.Tools.FacadeGenerator.pas"/>
         <DCCReference Include="Hosting\Dext.Hosting.pas"/>
         <BuildConfiguration Include="Base">

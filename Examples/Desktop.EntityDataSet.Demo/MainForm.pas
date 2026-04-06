@@ -9,7 +9,7 @@ uses
   Dext.Collections, Dext.Core.Activator,  Dext.Entity.DataSet,  Dext.Entity.DataProvider,
   FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf,
   FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.VCLUI.Wait,
-  FireDAC.Comp.Client, Dext.Entity.DiagTest, FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef,
+  FireDAC.Comp.Client, FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef,
   FireDAC.Stan.ExprFuncs, FireDAC.Phys.SQLiteWrapper.Stat;
 
 type
@@ -23,9 +23,11 @@ type
     FQuantity: Double;
   public
     constructor Create(Id: Integer; const Warehouse: string; Qty: Double);
-    [PK]
+    [PK, DisplayLabel('Código #')]
     property Id: Integer read FId write FId;
+    [DisplayLabel('Armazem'), DisplayWidth(100)]
     property Warehouse: string read FWarehouse write FWarehouse;
+    [DisplayLabel('Quantidade')]
     property Quantity: Double read FQuantity write FQuantity;
   end;
 
@@ -39,11 +41,11 @@ type
   public
     constructor Create(Id: Integer; const Description: string; Price: Money);
     destructor Destroy; override;
-
-    [PK]
+    [PK, DisplayLabel('Código')]
     property Id: Integer read FId write FId;
-    [MaxLength(200), DisplayWidth(75)]
+    [DisplayLabel('Descrição'), DisplayWidth(75), MaxLength(200)]
     property Description: string read FDescription write FDescription;
+    [DisplayLabel('Valor'), Currency]
     property Price: Money read FPrice write FPrice;
     [Visible(False)]
     property Stock: IList<TStockItem> read FStock write FStock;
@@ -61,6 +63,9 @@ type
     PanelTop: TPanel;
     RealMasterDetailButton: TSpeedButton;
     Splitter: TSplitter;
+    EntityDataSetId: TIntegerField;
+    EntityDataSetDescription: TWideStringField;
+    EntityDataSetPrice: TCurrencyField;
     procedure FormCreate(Sender: TObject);
     procedure RealMasterDetailButtonClick(Sender: TObject);
   private

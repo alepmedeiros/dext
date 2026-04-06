@@ -150,6 +150,7 @@
         <DCCReference Include="Data\Dext.Entity.ProxyFactory.pas"/>
         <DCCReference Include="Data\Dext.Entity.Scaffolding.pas"/>
         <DCCReference Include="Data\Dext.Specifications.Parser.pas"/>
+        <DCCReference Include="Data\Dext.Entity.Metadata.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -9,7 +9,9 @@ uses
   Dext.Testing.Attributes,
   Dext.Collections,
   Dext.Entity.Core,
+  Dext.Entity.Metadata,
   Dext.EF.Design.Metadata;
+
 
 type
   [TestFixture('Design-time metadata parser')]

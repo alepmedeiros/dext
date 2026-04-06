@@ -14,10 +14,14 @@ uses
   Dext.Entity.Core,
   Dext.Entity.Dialects,
   Dext.Entity.Mapping,
+  Dext.Entity.Metadata,
   Dext.Core.Reflection,
   Dext.Utils;
 
 type
+  TRefreshUnitEvent = procedure(AProvider: TComponent; const AFileName: string) of object;
+  TGetSourceContentEvent = function(const AFileName: string): string;
+
   TEntityDataProvider = class(TComponent, IEntityDataProvider)
   private
     FModelUnits: TStrings;
@@ -28,6 +32,7 @@ type
     FDebugMode: Boolean;
     FLastRefreshSummary: string;
     FEntitiesMetadata: TEntityClassCollection;
+    FOnRefreshUnit: TRefreshUnitEvent;
     procedure SetEntitiesMetadata(const Value: TEntityClassCollection);
     function BuildEntityMap(AClass: TClass): TEntityMap;
     function BuildColumnList(AClass: TClass; const AClassName: string): string;
@@ -38,6 +43,7 @@ type
     procedure SetModelUnits(const Value: TStrings);
     procedure OnModelUnitsChange(Sender: TObject);
     procedure SetDatabaseConnection(const Value: TFDCustomConnection);
+    procedure SetLastRefreshSummary(const Value: string);
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Loaded; override;
@@ -47,7 +53,6 @@ type
     procedure ClearMetadata;
     procedure AddOrSetMetadata(const AMetadata: TEntityClassMetadata);
     procedure UpdateRefreshSummary;
-    procedure LogDebug(const AMsg: string);
     procedure RefreshMetadata;
     procedure RefreshUnit(const AFileName: string);
     function GetEntities: TArray<string>;
@@ -56,6 +61,10 @@ type
     function ResolveEntityClass(const AClassName: string): TClass;
     function BuildPreviewSql(const AClassName: string; AMaxRows: Integer = 50): string;
     function CreatePreviewItems(const AClassName: string; AMaxRows: Integer = 50): IObjectList;
+    /// <summary>
+    ///   Forces a design-time synchronization of metadata from source code for a specific entity.
+    /// </summary>
+    procedure SyncMetadata(const AEntityClassName: string);
   published
     property DatabaseConnection: TFDCustomConnection read FDatabaseConnection write SetDatabaseConnection;
     property ModelUnits: TStrings read FModelUnits write SetModelUnits;
@@ -64,9 +73,13 @@ type
     property PreviewMaxRows: Integer read FPreviewMaxRows write FPreviewMaxRows default 50;
     property DebugMode: Boolean read FDebugMode write FDebugMode default False;
     property EntityCount: Integer read GetEntityCount stored False;
-    property LastRefreshSummary: string read FLastRefreshSummary stored False;
+    property LastRefreshSummary: string read FLastRefreshSummary write SetLastRefreshSummary stored False;
+    property OnRefreshUnit: TRefreshUnitEvent read FOnRefreshUnit write FOnRefreshUnit;
     property EntitiesMetadata: TEntityClassCollection read FEntitiesMetadata write SetEntitiesMetadata;
   end;
+
+var
+  GOnGetSourceContent: TGetSourceContentEvent = nil;
 
 implementation
 
@@ -98,7 +111,6 @@ end;
 function TEntityDataProvider.BuildColumnList(AClass: TClass; const AClassName: string): string;
 var
   EntityMap: TEntityMap;
-  Metadata: TEntityClassMetadata;
   Columns: IList<string>;
 begin
   Columns := TCollections.CreateList<string>;
@@ -123,10 +135,10 @@ begin
   end
   else
   begin
-    Metadata := GetEntityMetadata(AClassName);
-    if Metadata <> nil then
-      for var i := 0 to Metadata.Members.Count - 1 do
-        Columns.Add(Metadata.Members[i].Name);
+    // DESIGN-TIME: We cannot reliably distinguish between primitive DB columns 
+    // and navigation properties (e.g. TStock, IList<TObject>) from raw string metadata 
+    // without full RTTI, so it's safer to just SELECT * and let the DB return the actual physical columns.
+    Exit('*');
   end;
 
   if Columns.Count = 0 then
@@ -156,14 +168,6 @@ begin
   Result := GetEnumName(TypeInfo(TDatabaseDialect), Ord(GetResolvedDialect));
 end;
 
-procedure TEntityDataProvider.LogDebug(const AMsg: string);
-begin
-  if not FDebugMode then
-    Exit;
-
-  DebugLog('[Dext.EntityDataProvider] ' + AMsg);
-end;
-
 procedure TEntityDataProvider.SetDialect(const Value: TDatabaseDialect);
 begin
   FDialect := Value;
@@ -191,9 +195,66 @@ var
 begin
   Metadata := GetEntityMetadata(AClassName);
   if Metadata <> nil then
-    Result := Metadata.UnitName
+    Result := Metadata.EntityUnitName
   else
     Result := '';
+end;
+
+procedure TEntityDataProvider.SyncMetadata(const AEntityClassName: string);
+var
+  FileName, UnitName, Content: string;
+  Parser: TEntityMetadataParser;
+  ParsedList: IList<TEntityClassMetadata>;
+  MD: TEntityClassMetadata;
+  Found: Boolean;
+begin
+  if not (csDesigning in ComponentState) then
+    Exit;
+
+  UnitName := GetEntityUnitName(AEntityClassName);
+  // Log critical state
+
+  if UnitName = '' then
+    Exit;
+
+  // Find the full path in ModelUnits
+  FileName := '';
+  for var I := 0 to FModelUnits.Count - 1 do
+  begin
+    if SameText(ChangeFileExt(ExtractFileName(FModelUnits[I]), ''), UnitName) then
+    begin
+      FileName := FModelUnits[I];
+      Break;
+    end;
+  end;
+
+  if FileName = '' then
+  begin
+    Exit;
+  end;
+
+  Content := '';
+  if Assigned(GOnGetSourceContent) then
+    Content := GOnGetSourceContent(FileName);
+
+  Parser := TEntityMetadataParser.Create;
+  try
+    ParsedList := Parser.ParseUnit(FileName, Content);
+    Found := False;
+    
+    for MD in ParsedList do
+      if SameText(MD.EntityClassName, AEntityClassName) then
+      begin
+        AddOrSetMetadata(MD);
+        Found := True;
+        Break;
+      end;
+      
+    if not Found then
+       
+  finally
+    Parser.Free;
+  end;
 end;
 
 function TEntityDataProvider.ResolveEntityClass(const AClassName: string): TClass;
@@ -371,6 +432,7 @@ begin
   FEntitiesMetadata.Clear;
 end;
 
+
 procedure TEntityDataProvider.AddOrSetMetadata(const AMetadata: TEntityClassMetadata);
 var
   NewMD: TEntityClassMetadata;
@@ -378,16 +440,22 @@ begin
   if AMetadata = nil then
     Exit;
 
+
   NewMD := FEntitiesMetadata.FindByName(AMetadata.EntityClassName);
   if NewMD = nil then
     NewMD := FEntitiesMetadata.Add;
 
   NewMD.EntityClassName := AMetadata.EntityClassName;
+  NewMD.DisplayName := AMetadata.DisplayName;
   NewMD.TableName := AMetadata.TableName;
   NewMD.EntityUnitName := AMetadata.EntityUnitName;
+
+  // Purge any stale members to ensure the new sync is clean
+  NewMD.Members.Clear;
   NewMD.Members.Assign(AMetadata.Members);
 
   FMetadataCache.AddOrSetValue(NewMD.EntityClassName, NewMD);
+  
 end;
 
 procedure TEntityDataProvider.SetEntitiesMetadata(const Value: TEntityClassCollection);
@@ -399,7 +467,6 @@ procedure TEntityDataProvider.UpdateRefreshSummary;
 begin
   FLastRefreshSummary := Format('%d entidade(s) encontradas em %d unit(s).',
     [FMetadataCache.Count, FModelUnits.Count]);
-  LogDebug(FLastRefreshSummary);
 end;
 
 procedure TEntityDataProvider.RefreshMetadata;
@@ -410,7 +477,14 @@ end;
 
 procedure TEntityDataProvider.RefreshUnit(const AFileName: string);
 begin
-  LogDebug('RefreshUnit requested for ' + AFileName + ', aguardando servico de design time.');
+  if Assigned(FOnRefreshUnit) then
+    FOnRefreshUnit(Self, AFileName)
+  else
+end;
+
+procedure TEntityDataProvider.SetLastRefreshSummary(const Value: string);
+begin
+  FLastRefreshSummary := Value;
 end;
 
 procedure TEntityDataProvider.SetDatabaseConnection(const Value: TFDCustomConnection);

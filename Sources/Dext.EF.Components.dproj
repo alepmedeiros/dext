@@ -77,6 +77,7 @@
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <DCC_UnitSearchPath>..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DcuOutput>..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
+        <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
         <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;$(DCC_UsePackage)</DCC_UsePackage>

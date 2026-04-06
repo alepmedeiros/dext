@@ -35,6 +35,7 @@ type
     FQuery: TFDQuery;
     FPanel: TPanel;
     FCloseBtn: TButton;
+    procedure MemoFieldGetText(Sender: TField; var Text: string; DisplayText: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
     procedure Preview(ADataSet: TEntityDataSet);
@@ -121,7 +122,22 @@ begin
   FQuery.SQL.Text := SQL;
   FQuery.Open;
   
-  Caption := 'Previewing: ' + MD.ClassName + ' (Table: ' + MD.TableName + ')';
+  for var I := 0 to FQuery.Fields.Count - 1 do
+  begin
+    if (FQuery.Fields[I].DataType = ftMemo) or (FQuery.Fields[I].DataType = ftWideMemo) then
+      FQuery.Fields[I].OnGetText := MemoFieldGetText;
+  end;
+  
+  Caption := 'Previewing: ' + MD.EntityClassName + ' (Table: ' + MD.TableName + ')';
+end;
+
+procedure TPreviewForm.MemoFieldGetText(Sender: TField; var Text: string;
+  DisplayText: Boolean);
+begin
+  if not Sender.IsNull then
+    Text := Sender.AsString
+  else
+    Text := '';
 end;
 
 end.

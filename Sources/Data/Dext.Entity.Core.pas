@@ -242,13 +242,19 @@ type
     FEditMask: string;
     FDisplayWidth: Integer;
     FVisible: Boolean;
+    FIsCurrency: Boolean;
+    FDefaultValue: string;
+    procedure SetName(const Value: string);
+    procedure SetMemberType(const Value: string);
+  protected
+    function GetDisplayName: string; override;
   public
     constructor Create(Collection: TCollection); overload; override;
     constructor Create; reintroduce; overload;
     procedure Assign(Source: TPersistent); override;
   published
-    property Name: string read FName write FName;
-    property MemberType: string read FMemberType write FMemberType;
+    property Name: string read FName write SetName;
+    property MemberType: string read FMemberType write SetMemberType;
     property IsPrimaryKey: Boolean read FIsPrimaryKey write FIsPrimaryKey;
     property IsRequired: Boolean read FIsRequired write FIsRequired;
     property IsAutoInc: Boolean read FIsAutoInc write FIsAutoInc;
@@ -262,6 +268,8 @@ type
     property EditMask: string read FEditMask write FEditMask;
     property DisplayWidth: Integer read FDisplayWidth write FDisplayWidth;
     property Visible: Boolean read FVisible write FVisible;
+    property IsCurrency: Boolean read FIsCurrency write FIsCurrency;
+    property DefaultValue: string read FDefaultValue write FDefaultValue;
   end;
 
   TEntityMemberCollection = class(TOwnedCollection)
@@ -277,18 +285,25 @@ type
   TEntityClassMetadata = class(TCollectionItem)
   private
     FEntityClassName: string;
+    FDisplayName: string;
     FTableName: string;
     FEntityUnitName: string;
     FMembers: TEntityMemberCollection;
     procedure SetMembers(const Value: TEntityMemberCollection);
+    procedure SetEntityClassName(const Value: string);
+    procedure SetTableName(const Value: string);
+  protected
+    function GetDisplayName: string; override;
+    procedure SetDisplayName(const Value: string); override;
   public
     constructor Create(Collection: TCollection); overload; override;
     constructor Create; reintroduce; overload;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
   published
-    property EntityClassName: string read FEntityClassName write FEntityClassName;
-    property TableName: string read FTableName write FTableName;
+    property EntityClassName: string read FEntityClassName write SetEntityClassName;
+    property DisplayName: string read FDisplayName write SetDisplayName;
+    property TableName: string read FTableName write SetTableName;
     property EntityUnitName: string read FEntityUnitName write FEntityUnitName;
     property Members: TEntityMemberCollection read FMembers write SetMembers;
   end;
@@ -312,6 +327,7 @@ type
     function ResolveEntityClass(const AClassName: string): TClass;
     function BuildPreviewSql(const AClassName: string; AMaxRows: Integer = 50): string;
     function CreatePreviewItems(const AClassName: string; AMaxRows: Integer = 50): IObjectList;
+    procedure SyncMetadata(const AEntityClassName: string);
   end;
 
   /// <summary>
@@ -486,6 +502,32 @@ begin
   inherited Create(Collection);
 end;
 
+function TEntityMemberMetadata.GetDisplayName: string;
+begin
+  if FName <> '' then
+    Result := FName + ': ' + FMemberType
+  else
+    Result := inherited GetDisplayName;
+end;
+
+procedure TEntityMemberMetadata.SetName(const Value: string);
+begin
+  if FName <> Value then
+  begin
+    FName := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TEntityMemberMetadata.SetMemberType(const Value: string);
+begin
+  if FMemberType <> Value then
+  begin
+    FMemberType := Value;
+    Changed(False);
+  end;
+end;
+
 constructor TEntityMemberMetadata.Create;
 begin
   Create(nil);
@@ -510,6 +552,8 @@ begin
     FEditMask := TEntityMemberMetadata(Source).EditMask;
     FDisplayWidth := TEntityMemberMetadata(Source).DisplayWidth;
     FVisible := TEntityMemberMetadata(Source).Visible;
+    FIsCurrency := TEntityMemberMetadata(Source).IsCurrency;
+    FDefaultValue := TEntityMemberMetadata(Source).DefaultValue; // Added this
   end
   else
     inherited Assign(Source);
@@ -555,6 +599,7 @@ begin
   if Source is TEntityClassMetadata then
   begin
     FEntityClassName := TEntityClassMetadata(Source).EntityClassName;
+    FDisplayName := TEntityClassMetadata(Source).DisplayName;
     FTableName := TEntityClassMetadata(Source).TableName;
     FEntityUnitName := TEntityClassMetadata(Source).EntityUnitName;
     FMembers.Assign(TEntityClassMetadata(Source).Members);
@@ -572,6 +617,43 @@ end;
 procedure TEntityClassMetadata.SetMembers(const Value: TEntityMemberCollection);
 begin
   FMembers.Assign(Value);
+end;
+
+function TEntityClassMetadata.GetDisplayName: string;
+begin
+  if FDisplayName <> '' then
+    Result := FDisplayName
+  else if FEntityClassName <> '' then
+    Result := FEntityClassName + ' (' + FTableName + ')'
+  else
+    Result := inherited GetDisplayName;
+end;
+
+procedure TEntityClassMetadata.SetDisplayName(const Value: string);
+begin
+  if FDisplayName <> Value then
+  begin
+    FDisplayName := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TEntityClassMetadata.SetEntityClassName(const Value: string);
+begin
+  if FEntityClassName <> Value then
+  begin
+    FEntityClassName := Value;
+    Changed(False);
+  end;
+end;
+
+procedure TEntityClassMetadata.SetTableName(const Value: string);
+begin
+  if FTableName <> Value then
+  begin
+    FTableName := Value;
+    Changed(False);
+  end;
 end;
 
 { TEntityClassCollection }
