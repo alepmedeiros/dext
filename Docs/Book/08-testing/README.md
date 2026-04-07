@@ -25,21 +25,21 @@ uses
   MyTests in 'MyTests.pas';
 
 begin
-  SetConsoleCharSet;   // REQUIRED for all console projects
   try
-    // Fluent Runner Configuration
-    // TTest.SetExitCode auto-sets ExitCode=0 (success) or 1 (failure)
-    TTest.SetExitCode(
-      TTest.Configure
-        .Verbose            // Always include: without this, output is empty
-        .RegisterFixtures([TCalculatorTests, TUserServiceTests])
-        .Run
+    // New Simplified Fluent Runner
+    RunTests(ConfigureTests
+      .Verbose             // Detailed output
+      // .UseTestInsight   // Optional: Force TestInsight even if not in IDE
+      // .UseDashboard     // Optional: Start Web Dashboard
+      .RegisterFixtures([
+        TCalculatorTests,
+        TUserServiceTests
+      ])
     );
   except
     on E: Exception do
-      Writeln('Error: ', E.Message);
+      Writeln('FATAL ERROR: ', E.ClassName, ': ', E.Message);
   end;
-  ConsolePause;        // REQUIRED: keeps console open when running in IDE
 end.
 ```
 
@@ -177,7 +177,33 @@ Every Web API must have a PowerShell integration test script (e.g., `Test.MyProj
 - **Enum values**: By default, Dext serializes enums as strings (`"tsOpen"` not `1`)
 - **JWT testing**: If the API uses JWT, include a `New-JwtToken` function in the script
 
-## Run Tests
+## IDE Integration (TestInsight)
+
+Dext includes native support for the **TestInsight** plugin. This provides a professional UI inside Delphi for running and debugging tests.
+
+### How to Enable
+1. Install [TestInsight](https://github.com/stefangliener/TestInsight).
+2. Enable `TESTINSIGHT` in your `Dext.inc` file (Disabled by default).
+3. The framework will automatically detect when you run tests from the TestInsight panel.
+
+### Features
+- **Visual Tree**: View tests in a structured tree.
+- **Run Selection**: Run only the tests or fixtures you click on.
+- **Double-Click to Code**: Instantly navigate to the test source code.
+- **Skip Reasons**: View why tests were ignored directly in the IDE.
+
+## Command Line Runner
+
+Usage: `MyTestProject.exe [parameters]`
+
+| Parameter | Alias | Description |
+| :--- | :--- | :--- |
+| `-verbose` | `-v` | Detailed console output |
+| `-log` | | Creates a UTF-8 log file (`.log`) |
+| `-dashboard`| `-d` | Starts the local Web Dashboard (Dext.Sidecar) |
+| `-testinsight`| `-x` | Enables TestInsight communication |
+
+### Dext CLI
 
 ```bash
 dext test

@@ -31,6 +31,7 @@ package Dext.Testing;
 
 requires
   rtl,
+  vcl,
   IndySystem,
   IndyProtocols,
   IndyCore,
@@ -53,6 +54,8 @@ contains
   Dext.Testing.Report in 'Testing\Dext.Testing.Report.pas',
   Dext.Testing.Runner in 'Testing\Dext.Testing.Runner.pas',
   Dext.Testing.Listeners.Telemetry in 'Testing\Dext.Testing.Listeners.Telemetry.pas',
-  Dext.Testing in 'Testing\Dext.Testing.pas';
+  Dext.Testing in 'Testing\Dext.Testing.pas',
+  Dext.Testing.TestInsight in 'Testing\Dext.Testing.TestInsight.pas',
+  Dext.Testing.Host in 'Testing\Dext.Testing.Host.pas';
 
 end.

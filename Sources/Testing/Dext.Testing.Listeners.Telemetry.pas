@@ -30,7 +30,7 @@ type
     procedure OnRunComplete(const Summary: TTestSummary);
     procedure OnFixtureStart(const FixtureName: string; TestCount: Integer);
     procedure OnFixtureComplete(const FixtureName: string);
-    procedure OnTestStart(const Fixture, Test: string);
+    procedure OnTestStart(const UnitName, Fixture, Test: string);
     procedure OnTestComplete(const Info: TTestInfo);
   end;
 
@@ -114,9 +114,9 @@ begin
    CacheLog(Format('{"event": "FixtureComplete", "name": "%s"}', [FixtureName]));
 end;
 
-procedure TTelemetryTestListener.OnTestStart(const Fixture, Test: string);
+procedure TTelemetryTestListener.OnTestStart(const UnitName, Fixture, Test: string);
 begin
-  CacheLog(Format('{"event": "TestStart", "fixture": "%s", "test": "%s"}', [Fixture, Test]));
+  CacheLog(Format('{"event": "TestStart", "unit": "%s", "fixture": "%s", "test": "%s"}', [UnitName, Fixture, Test]));
 end;
 
 procedure TTelemetryTestListener.OnTestComplete(const Info: TTestInfo);

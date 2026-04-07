@@ -1,4 +1,4 @@
-﻿unit Dext.Testing.Dashboard;
+unit Dext.Testing.Dashboard;
 
 interface
 
@@ -34,7 +34,7 @@ type
     procedure OnRunComplete(const Summary: TTestSummary);
     procedure OnFixtureStart(const FixtureName: string; TestCount: Integer);
     procedure OnFixtureComplete(const FixtureName: string);
-    procedure OnTestStart(const Fixture, Test: string);
+    procedure OnTestStart(const UnitName, Fixture, Test: string);
     procedure OnTestComplete(const Info: TTestInfo);
     
     // Helper
@@ -261,9 +261,9 @@ begin
   // Not used
 end;
 
-procedure TDashboardListener.OnTestStart(const Fixture, Test: string);
+procedure TDashboardListener.OnTestStart(const UnitName, Fixture, Test: string);
 begin
-  BroadcastEvent('test_start', Format('{"fixture": "%s", "test": "%s"}', [Fixture, Test]));
+  BroadcastEvent('test_start', Format('{"unit": "%s", "fixture": "%s", "test": "%s"}', [UnitName, Fixture, Test]));
 end;
 
 procedure TDashboardListener.OnTestComplete(const Info: TTestInfo);

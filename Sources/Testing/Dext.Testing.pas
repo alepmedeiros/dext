@@ -23,7 +23,8 @@
 {  Created: 2026-01-07                                                      }
 {                                                                           }
 {  Dext.Testing - Wildcard unit for all testing features.                    }
-{***************************************************************************}
+{$I Dext.inc}
+
 unit Dext.Testing;
 
 interface
@@ -49,7 +50,9 @@ uses
   Dext.Testing.Fluent,
   Dext.Testing.History,
   Dext.Testing.Report,
-  Dext.Testing.Runner
+  Dext.Testing.Runner,
+  Dext.Testing.TestInsight,
+  Dext.Testing.Host
   // {END_DEXT_USES}
   ;
 
@@ -158,6 +161,12 @@ type
   // Dext.Testing.Dashboard
   TDashboardListener = Dext.Testing.Dashboard.TDashboardListener;
 
+  // Dext.Testing.TestInsight
+  TTestInsightListener = Dext.Testing.TestInsight.TTestInsightListener;
+
+  // Dext.Testing.Host
+  TTestHost = Dext.Testing.Host.TTestHost;
+
   // Dext.Testing.DI
   TTestServiceProvider = Dext.Testing.DI.TTestServiceProvider;
 
@@ -235,6 +244,11 @@ function Should(const Value: Variant): ShouldVariant; overload;
 function ShouldDate(Value: TDateTime): ShouldDateTime; overload;
 function Should: ShouldHelper; overload;
 
+// Fluent Builders
+function ConfigureTests: TTestConfigurator;
+procedure RunTests(const Config: TTestConfigurator); overload;
+procedure RunTests; overload;
+
 implementation
 
 function Should(const Value: string): ShouldString; begin Result := Dext.Assertions.Should(Value); end;
@@ -250,4 +264,9 @@ function Should(const Value: TUUID): ShouldUUID; begin Result := Dext.Assertions
 function Should(const Value: Variant): ShouldVariant; begin Result := Dext.Assertions.Should(Value); end;
 function ShouldDate(Value: TDateTime): ShouldDateTime; begin Result := Dext.Assertions.ShouldDate(Value); end;
 function Should: ShouldHelper; begin end;
+
+function ConfigureTests: TTestConfigurator; begin Result := Dext.Testing.Fluent.ConfigureTests; end;
+procedure RunTests(const Config: TTestConfigurator); begin Dext.Testing.Host.RunTests(Config); end;
+procedure RunTests; begin Dext.Testing.Host.RunTests; end;
+
 end.

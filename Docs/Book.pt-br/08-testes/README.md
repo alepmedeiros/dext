@@ -25,21 +25,21 @@ uses
   MeusTestes in 'MeusTestes.pas';
 
 begin
-  SetConsoleCharSet;   // OBRIGATÓRIO para todos os projetos console
   try
-    // Configuração Fluente do Runner
-    // TTest.SetExitCode define automaticamente ExitCode=0 (sucesso) ou 1 (falha)
-    TTest.SetExitCode(
-      TTest.Configure
-        .Verbose            // Inclusão obrigatória para saída detalhada
-        .RegisterFixtures([TCalculadoraTests, TUsuarioServiceTests])
-        .Run
+    // Novo Runner Fluente Simplificado
+    RunTests(ConfigureTests
+      .Verbose             // Saída detalhada
+      // .UseTestInsight   // Opcional: Força TestInsight mesmo fora da IDE
+      // .UseDashboard     // Opcional: Inicia o Dashboard Web
+      .RegisterFixtures([
+        TCalculadoraTests,
+        TUsuarioServiceTests
+      ])
     );
   except
     on E: Exception do
-      Writeln('Erro: ', E.Message);
+      Writeln('ERRO FATAL: ', E.ClassName, ': ', E.Message);
   end;
-  ConsolePause;        // OBRIGATÓRIO: mantém console aberto na IDE
 end.
 ```
 
@@ -173,11 +173,37 @@ Toda Web API deve ter um script de teste de integração PowerShell (ex: `Test.M
 ### Dicas
 
 - **Erros IPv6/404**: Use sempre `$baseUrl = "http://127.0.0.1:9000"` em vez de `localhost`
-- **Headers**: Defina `Accept: application/json` e `Content-Type: application/json; charset=utf-8` explicitamente
-- **Enums**: Por padrão, o Dext serializa enums como strings (`"tsAberto"` e não `1`)
+- **Headers**: Defina `Accept: application/json` e `Content-Type: application/json; charset=utf-8` explicitly
+- **Enums**: Por padrão, o Dext serializes enums como strings (`"tsAberto"` e não `1`)
 - **JWT**: Se a API usar JWT, inclua uma função `New-JwtToken` no script
 
-## Executar Testes
+## Integração com IDE (TestInsight)
+
+O Dext inclui suporte nativo para o plugin **TestInsight**. Isso fornece uma interface profissional dentro do Delphi para executar e depurar testes.
+
+### Como Habilitar
+1. Instale o [TestInsight](https://github.com/stefangliener/TestInsight).
+2. Habilite `TESTINSIGHT` no seu arquivo `Dext.inc` (Desabilitado por padrão).
+3. O framework detectará automaticamente quando você rodar os testes pelo painel do TestInsight.
+
+### Funcionalidades
+- **Árvore Visual**: Veja os testes em uma árvore estruturada.
+- **Execução Seletiva**: Rode apenas os testes ou fixtures que você clicar.
+- **Duplo-clique para o Código**: Navegue instantaneamente para o código fonte do teste.
+- **Motivos de Skip**: Veja por que os testes foram ignorados diretamente na IDE.
+
+## Execução via Linha de Comando
+
+Uso: `MeuProjetoTestes.exe [parâmetros]`
+
+| Parâmetro | Alias | Descrição |
+| :--- | :--- | :--- |
+| `-verbose` | `-v` | Saída detalhada no console |
+| `-log` | | Cria um arquivo de log UTF-8 (`.log`) |
+| `-dashboard`| `-d` | Inicia o Dashboard Web local (Dext.Sidecar) |
+| `-testinsight`| `-x` | Habilita a comunicação com o TestInsight |
+
+### Dext CLI
 
 ```bash
 dext test

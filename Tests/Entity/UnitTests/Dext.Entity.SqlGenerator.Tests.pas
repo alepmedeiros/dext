@@ -1,4 +1,4 @@
-unit Dext.Entity.SqlGenerator.Tests;
+﻿unit Dext.Entity.SqlGenerator.Tests;
 
 interface
 
@@ -9,7 +9,7 @@ uses
   Dext.Mocks.Matching,
   Dext.Testing,
   Dext.Testing.Attributes,
-  Dext.Assertions,
+
   Dext.Entity.Dialects,
   Dext.Specifications.SQL.Generator,
   Dext.Specifications.Base,

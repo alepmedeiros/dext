@@ -37,6 +37,8 @@
 {                                                                           }
 {***************************************************************************}
 
+{$I Dext.inc}
+
 unit Dext.Testing.Fluent;
 
 interface
@@ -64,6 +66,7 @@ type
     FFixturePattern: string;
     FIncludeExplicit: Boolean;
     FFixtureClasses: TArray<TClass>;
+    FUseTestInsight: Boolean;
   public
     /// <summary>
     ///   Enables verbose output with detailed test information.
@@ -92,6 +95,11 @@ type
     ///   Enables the Live Dashboard Runner.
     /// </summary>
     function UseDashboard(Port: Integer = 9000; WaitAfterRun: Boolean = True): TTestConfigurator;
+
+    /// <summary>
+    ///   Enables integration with TestInsight IDE plugin.
+    /// </summary>
+    function UseTestInsight: TTestConfigurator;
 
     /// <summary>
     ///   Configures JUnit XML export.
@@ -147,6 +155,11 @@ type
     ///   Includes explicit tests in the run.
     /// </summary>
     function IncludeExplicitTests: TTestConfigurator;
+    
+    /// <summary>
+    ///  Filters tests by a manual selection (Unit.Class.Test).
+    /// </summary>
+    function FilterBySelection(const Tests: TArray<string>): TTestConfigurator;
 
     /// <summary>
     ///   Registers a fixture class (for classes in .dpr files).
@@ -157,6 +170,10 @@ type
     ///   Registers multiple fixture classes.
     /// </summary>
     function RegisterFixtures(const Classes: array of TClass): TTestConfigurator;
+
+    function IsTestInsightActive: Boolean;
+    function IsDashboardActive: Boolean;
+    function GetFixtureClasses: TArray<TClass>;
 
     /// <summary>
     ///   Runs all registered/discovered tests with the configured options.
@@ -215,14 +232,30 @@ type
     ///   Sets application ExitCode to 1 (Error).
     /// </summary>
     class procedure SetResultError; static;
+    
+    /// <summary>
+    ///   Checks if we are running in TestInsight mode (either by define or config).
+    /// </summary>
+    class function IsTestInsight: Boolean; static;
   end;
+
+function ConfigureTests: TTestConfigurator;
 
 implementation
 
 uses
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
   Dext.Testing.Report,
   Dext.Testing.Dashboard,
+  Dext.Testing.TestInsight,
   Dext.Utils;
+
+function ConfigureTests: TTestConfigurator;
+begin
+  Result := TTest.Configure;
+end;
 
 { TTestConfigurator }
 
@@ -255,6 +288,12 @@ begin
   FUseDashboard := True;
   FDashboardPort := Port;
   FWaitDashboard := WaitAfterRun;
+  Result := Self;
+end;
+
+function TTestConfigurator.UseTestInsight: TTestConfigurator;
+begin
+  FUseTestInsight := True;
   Result := Self;
 end;
 
@@ -330,6 +369,12 @@ begin
   Result := Self;
 end;
 
+function TTestConfigurator.FilterBySelection(const Tests: TArray<string>): TTestConfigurator;
+begin
+  TTestRunner.SetSelectedTests(Tests);
+  Result := Self;
+end;
+
 function TTestConfigurator.RegisterFixture(AClass: TClass): TTestConfigurator;
 begin
   SetLength(FFixtureClasses, Length(FFixtureClasses) + 1);
@@ -388,7 +433,17 @@ begin
     else if  (P = '-no-wait') or (P = '/no-wait') then
       FWaitDashboard := False
     else if (P = '-no-dashboard') or (P = '/no-dashboard') then
-      FUseDashboard := False;
+      FUseDashboard := False
+    else if (P = '-testinsight') or (P = '/testinsight') then
+      FUseTestInsight := True;
+  end;
+
+  // Start TestInsight
+  if FUseTestInsight and not TTestRunner.IsTestInsightActive then
+  begin
+    // This is a fallback for when TTest.Run is used without TTestHost.
+    // We register the listener here ONLY if it's not already active.
+    TTestRunner.RegisterListener(TTestInsightListener.Create);
   end;
 
   // Start Dashboard
@@ -401,11 +456,15 @@ begin
 
   // Register fixtures
   for Cls in FFixtureClasses do
+  begin
     TTestRunner.RegisterFixture(Cls);
+  end;
 
   // If no fixtures registered, discover automatically
-  if Length(FFixtureClasses) = 0 then
+  if (Length(FFixtureClasses) = 0) and (TTestRunner.FixtureCount = 0) then
+  begin
     TTestRunner.Discover;
+  end;
 
   // Build filter
   Filter := Default(TTestFilter);
@@ -436,18 +495,42 @@ begin
     TTestRunner.SaveHTMLReport(FHTMLFile);
 
   // Return success status
-  // Return success status
   Result := TTestRunner.Summary.Failed = 0;
-  
+
+  // Let Sidecar Sinks (Logging) and TestInsight REST posts flush properly
+  // This avoids premature process kill before all data is sent.
+  if FUseTestInsight or FUseDashboard then
+    Sleep(500);
+
   if FUseDashboard and FWaitDashboard then
   begin
-    SafeWriteLn;
-    SafeWriteLn('Press ENTER to close dashboard and exit...');
-    ReadLn;
+    {$IFDEF MSWINDOWS}
+    if (GetStdHandle(STD_OUTPUT_HANDLE) <> 0) and (GetStdHandle(STD_OUTPUT_HANDLE) <> INVALID_HANDLE_VALUE) then
+    begin
+      SafeWriteLn;
+      SafeWriteLn('Press ENTER to close dashboard and exit...');
+      ReadLn;
+    end;
+    {$ENDIF}
   end;
-  
+
   // Clean up listeners to prevent memory leaks from late finalization
   TTestRunner.ClearListeners;
+end;
+
+function TTestConfigurator.IsTestInsightActive: Boolean;
+begin
+  Result := FUseTestInsight;
+end;
+
+function TTestConfigurator.IsDashboardActive: Boolean;
+begin
+  Result := FUseDashboard;
+end;
+
+function TTestConfigurator.GetFixtureClasses: TArray<TClass>;
+begin
+  Result := FFixtureClasses;
 end;
 
 function TTestConfigurator.GetSummary: TTestSummary;
@@ -507,6 +590,11 @@ end;
 class procedure TTest.SetResultError;
 begin
   ExitCode := 1;
+end;
+
+class function TTest.IsTestInsight: Boolean;
+begin
+  Result := TTestRunner.IsTestInsightActive;
 end;
 
 initialization

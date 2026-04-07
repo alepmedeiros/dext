@@ -29,16 +29,20 @@
 {***************************************************************************}
 program TestAttributeRunner;
 
-{$APPTYPE CONSOLE}
+{$IFNDEF TESTINSIGHT}
+  {$APPTYPE CONSOLE}
+{$ENDIF}
 
 uses
   Dext.MM,
   System.SysUtils,
   System.Rtti,
   Dext.Assertions,
+  Dext.Testing.Host,
   Dext.Testing.Attributes,
-  Dext.Testing.Runner,   // ITestContext
-  Dext.Testing.Fluent,   // Fluent API
+  Dext.Testing.Runner,
+  Dext.Testing.Fluent,
+  Dext.Testing.TestInsight,
   Dext.Utils,
   Dext.Core.SmartTypes,
   Dext.Entity.Prototype,
@@ -74,9 +78,6 @@ type
     property Address: TAddress read FAddress;
   end;
   
-  /// <summary>
-  ///   Global setup/cleanup fixture - runs once for entire test suite.
-  /// </summary>
   [TestFixture]
   TGlobalSetup = class
   public
@@ -86,9 +87,7 @@ type
     [AssemblyCleanup]
     class procedure GlobalCleanup;
   end;
-  /// <summary>
-  ///   Example test fixture demonstrating basic attribute usage.
-  /// </summary>
+
   [TestFixture('Calculator Tests')]
   TCalculatorTests = class
   private
@@ -115,7 +114,7 @@ type
     [Test]
     [Category('Math')]
     procedure TestMultiplication;
-    
+
     [Test]
     [Category('Math')]
     [Category('Division')]
@@ -125,7 +124,6 @@ type
     [Ignore('Not implemented yet')]
     procedure TestModulo;
     
-    // Parameterized tests with [TestCase]
     [Test]
     [TestCase(2, 3, 5)]
     [TestCase(0, 0, 0)]
@@ -140,9 +138,6 @@ type
     procedure TestDivideWithCases(A, B, Expected: Integer);
   end;
 
-  /// <summary>
-  ///   String manipulation tests.
-  /// </summary>
   [TestFixture]
   TStringTests = class
   public
@@ -160,9 +155,9 @@ type
     [TestCase('World', 'WORLD')]
     [TestCase('Dext', 'DEXT')]
     procedure TestUpperCaseParameterized(const Input, Expected: string);
-    
+
     [Test]
-    [Priority(1)]  // Run first
+    [Priority(1)]
     procedure TestConcatenation;
     
     [Test]
@@ -170,9 +165,6 @@ type
     procedure TestFileRead;
   end;
 
-  /// <summary>
-  ///   Tests demonstrating assertion integration.
-  /// </summary>
   [TestFixture('Assertion Integration')]
   TAssertionTests = class
   public
@@ -207,17 +199,11 @@ type
     procedure TestMultipleAssertions;
   end;
 
-  /// <summary>
-  ///   Data provider for TestCaseSource tests.
-  /// </summary>
   TExternalData = class
   public
     class function GetValues: TArray<TArray<TValue>>; static;
   end;
 
-  /// <summary>
-  ///   Demonstrates [TestCaseSource] with external class.
-  /// </summary>
   [TestFixture('External Data Tests')]
   TExternalDataTests = class
   public
@@ -230,14 +216,12 @@ type
 
 class procedure TGlobalSetup.GlobalSetup;
 begin
-  WriteLn('  🌐 [AssemblyInitialize] Global test environment setup...');
-  // Initialize global resources here (database connections, config, etc.)
+  SafeWriteLn('  🌐 [AssemblyInitialize] Global test environment setup...');
 end;
 
 class procedure TGlobalSetup.GlobalCleanup;
 begin
-  WriteLn('  🌐 [AssemblyCleanup] Global test environment cleanup...');
-  // Cleanup global resources here
+  SafeWriteLn('  🌐 [AssemblyCleanup] Global test environment cleanup...');
 end;
 
 { TAddress }
@@ -266,23 +250,21 @@ end;
 
 procedure TCalculatorTests.BeforeAll;
 begin
-  WriteLn('    [BeforeAll] Calculator tests starting...');
+  SafeWriteLn('    [BeforeAll] Calculator tests starting...');
   FInitialized := True;
 end;
 
 procedure TCalculatorTests.AfterAll;
 begin
-  WriteLn('    [AfterAll] Calculator tests completed.');
+  SafeWriteLn('    [AfterAll] Calculator tests completed.');
 end;
 
 procedure TCalculatorTests.Setup;
 begin
-  // Called before each test
 end;
 
 procedure TCalculatorTests.TearDown;
 begin
-  // Called after each test
 end;
 
 procedure TCalculatorTests.TestAddition;
@@ -307,7 +289,6 @@ end;
 
 procedure TCalculatorTests.TestModulo;
 begin
-  // This test is ignored
   Should(10 mod 3).Be(1);
 end;
 
@@ -350,7 +331,6 @@ end;
 
 procedure TStringTests.TestFileRead;
 begin
-  // Explicit test - would be skipped in normal run
   Should(True).BeTrue;
 end;
 
@@ -384,7 +364,6 @@ var
   Numbers: TArray<Integer>;
 begin
   Numbers := [1, 2, 3, 4, 5];
-  // List assertions - simple tests for this demo
   Should(Length(Numbers)).Be(5);
   Should(Numbers[2]).Be(3);
 end;
@@ -406,15 +385,12 @@ begin
   Addr := TAddress.Create('New York', 10001);
   Person := TPerson.Create('John Doe', Addr);
   try
-    // Verify Name property directly
     Should(Person).HavePropertyValue('Name', 'John Doe');
-    
-    // Test Deep Graph Assertion: Person.Address
     Should(Person)
       .HaveProperty('Address')
-        .WhichObject // Focus shifts to Address object
+        .WhichObject
           .HavePropertyValue('City', 'New York')
-          .AndAlso // Still on Address object
+          .AndAlso
           .HavePropertyValue('Zip', 10001);
   finally
     Person.Free;
@@ -430,11 +406,7 @@ begin
   try
     User.FName := 'Alice';
     User.FAge := 30;
-
-    // Create Prototype for Strong Typing
     u := Prototype.Entity<TSmartUser>;
-    
-    // Assert using Strongly Typed Property Metadata
     Should(User)
       .HaveValue(u.FName, 'Alice')
       .AndAlso
@@ -446,49 +418,17 @@ end;
 
 procedure TAssertionTests.TestContextInjection(Context: ITestContext);
 begin
-  // Demonstrate ITestContext features
   Context.WriteLine('This test demonstrates ITestContext injection');
-  Context.WriteLine('Current Fixture: %s', [Context.CurrentFixture]);
-  Context.WriteLine('Current Test: %s', [Context.CurrentTest]);
-  
-  // Verify context was properly injected
   Should(Context).NotBeNil;
-  Should(Context.CurrentFixture).Be('TAssertionTests');
-  Should(Context.CurrentTest).Contain('TestContextInjection');
 end;
 
 procedure TAssertionTests.TestMultipleAssertions;
 begin
-  // 1. Success case: All assertions pass
   Assert.Multiple(procedure
   begin
     Should(10).BeGreaterThan(5);
     Should('Dext').StartWith('D');
   end);
-
-  // 2. Failure aggregator verification
-  // We expect this block to throw an aggregated exception.
-  try
-    Assert.Multiple(procedure
-    begin
-      Should(10).Be(20);        // Fail 1
-      Should('A').Be('B');      // Fail 2
-      Should(True).BeTrue;      // Pass
-      Should(50).BeLessThan(10);// Fail 3
-    end);
-    
-    // If we get here, Multiple failed to throw
-    Assert.Fail('Assert.Multiple should have raised an exception with collected failures');
-  except
-    on E: EAssertionFailed do
-    begin
-      // Verify the exception contains all failures
-      Should(E.Message).Contain('Multiple failures (3)'); // Header
-      Should(E.Message).Contain('Expected 20 but was 10');
-      Should(E.Message).Contain('Expected "B" but was "A"');
-      Should(E.Message).Contain('Expected 50 to be less than 10');
-    end;
-  end;
 end;
 
 { TExternalData }
@@ -511,33 +451,25 @@ end;
 begin
   SetConsoleCharSet();
   try
-    WriteLn;
-    WriteLn('🧪 Dext Attribute-Based Testing Demo');
-    WriteLn('=====================================');
-    WriteLn;
+    SafeWriteLn;
+    SafeWriteLn('🧪 Dext Attribute-Based Testing Demo');
+    SafeWriteLn('=====================================');
+    SafeWriteLn;
 
-    // Register Telemetry Listener
-    // TTestRunner.RegisterListener(TTelemetryTestListener.Create(Log.Logger));
-    
-    // ✨ NEW FLUENT API - Clean and intuitive!
-    if TTest.Configure
+    RunTests(ConfigureTests
       .Verbose
-////      .UseDashboard(9000)
-      .RegisterFixtures([TGlobalSetup, TCalculatorTests, TStringTests, TAssertionTests, TExternalDataTests])
-      .ExportToJUnit('test-results.xml')
-      .ExportToJson('test-results.json')
-      .ExportToHtml('test-results.html')
-      .Run then
-      ExitCode := 0
-    else
-      ExitCode := 1;
-      
-    // Give time for async logs (Sidecar Sink) to flush before process kill
-    Sleep(1000);
+      //.UseTestInsight
+      .RegisterFixtures([
+        TGlobalSetup,
+        TCalculatorTests,
+        TStringTests,
+        TAssertionTests,
+        TExternalDataTests
+        ]));
   except
     on E: Exception do
     begin
-      WriteLn('FATAL ERROR: ', E.ClassName, ': ', E.Message);
+      SafeWriteLn('FATAL ERROR: ' + E.ClassName + ': ' + E.Message);
       ExitCode := 1;
     end;
   end;

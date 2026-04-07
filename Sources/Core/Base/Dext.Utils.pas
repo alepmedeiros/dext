@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -73,12 +73,12 @@ begin
   if not ConsoleChecked then
   begin
     ConsoleChecked := True;
-    {$IFDEF CONSOLE}
-    ConsoleAvailable := True;
-    {$ELSE}
-      {$IFDEF MSWINDOWS}
+    {$IFDEF MSWINDOWS}
       var Handle := GetStdHandle(STD_OUTPUT_HANDLE);
       ConsoleAvailable := (Handle <> 0) and (Handle <> INVALID_HANDLE_VALUE);
+    {$ELSE}
+      {$IFDEF CONSOLE}
+      ConsoleAvailable := True;
       {$ELSE}
       ConsoleAvailable := System.IsConsole;
       {$ENDIF}

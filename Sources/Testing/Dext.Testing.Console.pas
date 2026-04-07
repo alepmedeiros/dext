@@ -27,7 +27,7 @@ uses
 
 class procedure TTestRunner.Run(const TestName: string; const Action: TProc);
 begin
-  Write('Running ', TestName, '... ');
+  SafeWrite('Running ' + TestName + '... ');
   try
     Action;
     Inc(FPassed);

@@ -6,7 +6,7 @@
         <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>1048577</TargetedPlatforms>
         <AppType>Package</AppType>
-        <FrameworkType>None</FrameworkType>
+        <FrameworkType>VCL</FrameworkType>
         <ProjectVersion>20.4</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <ProjectName Condition="'$(ProjectName)'==''">Dext.Testing</ProjectName>
@@ -60,7 +60,7 @@
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
         <VerInfo_Locale>1046</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
-        <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
+        <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
         <DCC_UnitSearchPath>..\Output\$(ProductVersion)_$(Platform)_$(Config);Dashboard;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DcuOutput>..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
     </PropertyGroup>
@@ -110,6 +110,7 @@
         <DCCReference Include="Dext.Core.dcp"/>
         <DCCReference Include="Dext.EF.Core.dcp"/>
         <DCCReference Include="Dext.Web.Core.dcp"/>
+        <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="Testing\Dext.Assertions.pas"/>
         <DCCReference Include="Testing\Dext.Mocks.Auto.pas"/>
         <DCCReference Include="Testing\Dext.Mocks.Interceptor.pas"/>
@@ -125,6 +126,8 @@
         <DCCReference Include="Testing\Dext.Testing.Runner.pas"/>
         <DCCReference Include="Testing\Dext.Testing.Listeners.Telemetry.pas"/>
         <DCCReference Include="Testing\Dext.Testing.pas"/>
+        <DCCReference Include="Testing\Dext.Testing.TestInsight.pas"/>
+        <DCCReference Include="Testing\Dext.Testing.Host.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
