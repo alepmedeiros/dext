@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -337,24 +337,24 @@ type
   // THandlerFuncWithContext<T> = Dext.Web.HandlerInvoker.THandlerFuncWithContext<T>;
 
   // Dext.Web.Indy
-  TIndyHttpResponse = Dext.Web.Indy.TIndyHttpResponse;
-  TIndyHttpRequest = Dext.Web.Indy.TIndyHttpRequest;
-  TIndyHttpContext = Dext.Web.Indy.TIndyHttpContext;
+  TDextIndyHttpResponse = Dext.Web.Indy.TDextIndyHttpResponse;
+  TDextIndyHttpRequest = Dext.Web.Indy.TDextIndyHttpRequest;
+  TDextIndyHttpContext = Dext.Web.Indy.TDextIndyHttpContext;
 
   // Dext.Web.Indy.Server
-  TIndyWebServer = Dext.Web.Indy.Server.TIndyWebServer;
+  TDextIndyWebServer = Dext.Web.Indy.Server.TDextIndyWebServer;
 
   // Dext.Web.Indy.SSL.Interfaces
   IIndySSLHandler = Dext.Web.Indy.SSL.Interfaces.IIndySSLHandler;
 
   // Dext.Web.Indy.SSL.OpenSSL
-  TIndyOpenSSLHandler = Dext.Web.Indy.SSL.OpenSSL.TIndyOpenSSLHandler;
+  TDextIndyOpenSSLHandler = Dext.Web.Indy.SSL.OpenSSL.TDextIndyOpenSSLHandler;
 
   // Dext.Web.Indy.SSL.Taurus
-  TIndyTaurusSSLHandler = Dext.Web.Indy.SSL.Taurus.TIndyTaurusSSLHandler;
+  TDextIndyTaurusSSLHandler = Dext.Web.Indy.SSL.Taurus.TDextIndyTaurusSSLHandler;
 
   // Dext.Web.Indy.Types
-  TIndyFormFile = Dext.Web.Indy.Types.TIndyFormFile;
+  TDextIndyFormFile = Dext.Web.Indy.Types.TDextIndyFormFile;
 
   // Dext.Web.Injection
   THandlerInjector = Dext.Web.Injection.THandlerInjector;

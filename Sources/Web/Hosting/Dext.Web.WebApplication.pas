@@ -184,7 +184,7 @@ begin
   
   // Ensure ALL interface fields are niled even if Teardown was skipped or partial.
   // Teardown nils these too, but we must be defensive in the destructor.
-  FActiveHost := nil;     // Releases TIndyWebServer → pipeline closures → middlewares
+  FActiveHost := nil;     // Releases TDextIndyWebServer → pipeline closures → middlewares
   FScanner := nil;        // Releases TControllerScanner → FCtx (TRttiContext)
   FAppBuilder := nil;     // Releases TApplicationBuilder → routes, middleware registrations
   FServiceProvider := nil; // Releases root DI provider → singletons
@@ -347,9 +347,9 @@ begin
     begin
       var ProviderName := ServerSection['SslProvider'];
       if SameText(ProviderName, 'Taurus') then
-        SSLHandler := TIndyTaurusSSLHandler.Create(CertFile, KeyFile, RootFile)
+        SSLHandler := TDextIndyTaurusSSLHandler.Create(CertFile, KeyFile, RootFile)
       else
-        SSLHandler := TIndyOpenSSLHandler.Create(CertFile, KeyFile, RootFile);
+        SSLHandler := TDextIndyOpenSSLHandler.Create(CertFile, KeyFile, RootFile);
     end
     else if (CertFile <> '') or (KeyFile <> '') then
       SafeWriteLn('[WARN] HTTPS configured but certificate files not found. Using HTTP.');
@@ -359,7 +359,7 @@ begin
   if Assigned(FServerFactory) then
     FActiveHost := FServerFactory(Port, RequestHandler, FServiceProvider)
   else
-    FActiveHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);
+    FActiveHost := TDextIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);
 end;
 
 procedure TWebApplication.Teardown;

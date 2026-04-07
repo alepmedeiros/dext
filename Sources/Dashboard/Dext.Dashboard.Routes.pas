@@ -58,7 +58,7 @@ var
 implementation
 
 uses
-  Dext.Web.Indy, // Access to TIndyHttpContext
+  Dext.Web.Indy, // Access to TDextIndyHttpContext
   IdContext,     // Access to TIdContext
   IdGlobal;      // Access to ToBytes/IndyTextEncoding_UTF8
 
@@ -973,8 +973,8 @@ begin
       IndyCtx: TIdContext;
     begin
          IndyCtx := nil;
-         if Ctx is TIndyHttpContext then
-            IndyCtx := TIndyHttpContext(Ctx).Context;
+         if Ctx is TDextIndyHttpContext then
+            IndyCtx := TDextIndyHttpContext(Ctx).Context;
 
 
 
@@ -1047,9 +1047,9 @@ begin
     for Ctx in FSSEClients do
     begin
       try
-        if Ctx is TIndyHttpContext then
+        if Ctx is TDextIndyHttpContext then
         begin
-           IndyCtx := TIndyHttpContext(Ctx).Context;
+           IndyCtx := TDextIndyHttpContext(Ctx).Context;
            if (IndyCtx <> nil) and (IndyCtx.Connection <> nil) and IndyCtx.Connection.Connected then
            begin
                IndyCtx.Connection.IOHandler.Write(ToBytes(Msg, IndyTextEncoding_UTF8));

@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -146,7 +146,7 @@ end;
 //var
 //  Handler: TRequestDelegate;
 //  RouteParams: IDictionary<string, string>;
-//  IndyContext: TIndyHttpContext;
+//  IndyContext: TDextIndyHttpContext;
 //begin
 //  var Path := AContext.Request.Path;
 //
@@ -155,9 +155,9 @@ end;
 //  begin
 //    try
 //      // ? INJETAR parâmetros de rota se encontrados
-//      if Assigned(RouteParams) and (AContext is TIndyHttpContext) then
+//      if Assigned(RouteParams) and (AContext is TDextIndyHttpContext) then
 //      begin
-//        IndyContext := TIndyHttpContext(AContext);
+//        IndyContext := TDextIndyHttpContext(AContext);
 //        IndyContext.SetRouteParams(RouteParams);
 //      end;
 //

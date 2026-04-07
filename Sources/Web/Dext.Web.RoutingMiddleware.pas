@@ -67,7 +67,7 @@ var
   Handler: TRequestDelegate;
   RouteParams: TRouteValueDictionary;
   Metadata: TEndpointMetadata;
-  IndyContext: TIndyHttpContext;
+  IndyContext: TDextIndyHttpContext;
 begin
   var Path := AContext.Request.Path;
   var Method := AContext.Request.Method;
@@ -77,9 +77,9 @@ begin
   begin
     try
       // ? INJETAR parâmetros de rota se encontrados
-      if (RouteParams.Count > 0) and (AContext is TIndyHttpContext) then
+      if (RouteParams.Count > 0) and (AContext is TDextIndyHttpContext) then
       begin
-        IndyContext := TIndyHttpContext(AContext);
+        IndyContext := TDextIndyHttpContext(AContext);
         IndyContext.SetRouteParams(RouteParams);
       end;
 
