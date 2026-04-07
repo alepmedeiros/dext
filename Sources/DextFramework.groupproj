@@ -18,6 +18,9 @@
         <Projects Include="Dext.Web.Core.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Dext.Testing.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="Dext.Web.Hubs.dproj">
             <Dependencies/>
         </Projects>
@@ -37,15 +40,6 @@
             <Dependencies/>
         </Projects>
         <Projects Include="..\Apps\Sidecar\DextSidecar.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="Dext.Testing.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="..\Tests\Testing\TestAttributeRunner.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="..\Tests\Entity\UnitTests\Dext.Entity.UnitTests.dproj">
             <Dependencies/>
         </Projects>
     </ItemGroup>
@@ -100,6 +94,15 @@
     </Target>
     <Target Name="Dext_Web_Core:Make">
         <MSBuild Projects="Dext.Web.Core.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Dext_Testing">
+        <MSBuild Projects="Dext.Testing.dproj"/>
+    </Target>
+    <Target Name="Dext_Testing:Clean">
+        <MSBuild Projects="Dext.Testing.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Dext_Testing:Make">
+        <MSBuild Projects="Dext.Testing.dproj" Targets="Make"/>
     </Target>
     <Target Name="Dext_Web_Hubs">
         <MSBuild Projects="Dext.Web.Hubs.dproj"/>
@@ -164,41 +167,14 @@
     <Target Name="DextSidecar:Make">
         <MSBuild Projects="..\Apps\Sidecar\DextSidecar.dproj" Targets="Make"/>
     </Target>
-    <Target Name="Dext_Testing">
-        <MSBuild Projects="Dext.Testing.dproj"/>
-    </Target>
-    <Target Name="Dext_Testing:Clean">
-        <MSBuild Projects="Dext.Testing.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Dext_Testing:Make">
-        <MSBuild Projects="Dext.Testing.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="TestAttributeRunner">
-        <MSBuild Projects="..\Tests\Testing\TestAttributeRunner.dproj"/>
-    </Target>
-    <Target Name="TestAttributeRunner:Clean">
-        <MSBuild Projects="..\Tests\Testing\TestAttributeRunner.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="TestAttributeRunner:Make">
-        <MSBuild Projects="..\Tests\Testing\TestAttributeRunner.dproj" Targets="Make"/>
-    </Target>
-    <Target Name="Dext_Entity_UnitTests">
-        <MSBuild Projects="..\Tests\Entity\UnitTests\Dext.Entity.UnitTests.dproj"/>
-    </Target>
-    <Target Name="Dext_Entity_UnitTests:Clean">
-        <MSBuild Projects="..\Tests\Entity\UnitTests\Dext.Entity.UnitTests.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="Dext_Entity_UnitTests:Make">
-        <MSBuild Projects="..\Tests\Entity\UnitTests\Dext.Entity.UnitTests.dproj" Targets="Make"/>
-    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_EF_Components;Dext_EF_Design;Dext_Web_Core;Dext_Web_Hubs;Dext_Events;Dext_Net;Dext_Hosting;Dext_UI;DextTool;DextSidecar;Dext_Testing;TestAttributeRunner;Dext_Entity_UnitTests"/>
+        <CallTarget Targets="Dext_Core;Dext_EF_Core;Dext_EF_Components;Dext_EF_Design;Dext_Web_Core;Dext_Testing;Dext_Web_Hubs;Dext_Events;Dext_Net;Dext_Hosting;Dext_UI;DextTool;DextSidecar"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_EF_Components:Clean;Dext_EF_Design:Clean;Dext_Web_Core:Clean;Dext_Web_Hubs:Clean;Dext_Events:Clean;Dext_Net:Clean;Dext_Hosting:Clean;Dext_UI:Clean;DextTool:Clean;DextSidecar:Clean;Dext_Testing:Clean;TestAttributeRunner:Clean;Dext_Entity_UnitTests:Clean"/>
+        <CallTarget Targets="Dext_Core:Clean;Dext_EF_Core:Clean;Dext_EF_Components:Clean;Dext_EF_Design:Clean;Dext_Web_Core:Clean;Dext_Testing:Clean;Dext_Web_Hubs:Clean;Dext_Events:Clean;Dext_Net:Clean;Dext_Hosting:Clean;Dext_UI:Clean;DextTool:Clean;DextSidecar:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_EF_Components:Make;Dext_EF_Design:Make;Dext_Web_Core:Make;Dext_Web_Hubs:Make;Dext_Events:Make;Dext_Net:Make;Dext_Hosting:Make;Dext_UI:Make;DextTool:Make;DextSidecar:Make;Dext_Testing:Make;TestAttributeRunner:Make;Dext_Entity_UnitTests:Make"/>
+        <CallTarget Targets="Dext_Core:Make;Dext_EF_Core:Make;Dext_EF_Components:Make;Dext_EF_Design:Make;Dext_Web_Core:Make;Dext_Testing:Make;Dext_Web_Hubs:Make;Dext_Events:Make;Dext_Net:Make;Dext_Hosting:Make;Dext_UI:Make;DextTool:Make;DextSidecar:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
