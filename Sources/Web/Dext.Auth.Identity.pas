@@ -34,10 +34,7 @@ uses
 
 type
   /// <summary>
-  ///   Represents the identity of a user.
-  /// </summary>
-  /// <summary>
-  ///   Contrato que define a identidade básica de um usuário (Nome, Tipo de Autenticação).
+  ///   Contract that defines the basic identity of a user (Name, Authentication Type).
   /// </summary>
   IIdentity = interface
     ['{F8E9D2C3-4A5B-6C7D-8E9F-0A1B2C3D4E5F}']
@@ -51,10 +48,7 @@ type
   end;
 
   /// <summary>
-  ///   Represents a user principal with claims.
-  /// </summary>
-  /// <summary>
-  ///   Contrato para um Principal baseado em Claims, permitindo validação de papéis (Roles) e acesso a metadados do usuário.
+  ///   Contract for a Claims-based Principal, allowing for Role validation and access to user metadata.
   /// </summary>
   IClaimsPrincipal = interface
     ['{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}']
@@ -126,10 +120,7 @@ type
   end;
 
   /// <summary>
-  ///   Fluent builder for creating claims arrays (interface).
-  /// </summary>
-  /// <summary>
-  ///   Builder fluente para facilitar a montagem de conjuntos de Claims (Identificadores, Roles, Perfil).
+  ///   Fluent builder to facilitate the assembly of Claims sets (Identifiers, Roles, Profile).
   /// </summary>
   IClaimsBuilder = interface
     ['{B2C3D4E5-F6A7-8B9C-0D1E-2F3A4B5C6D7E}']
@@ -145,10 +136,7 @@ type
   end;
 
   /// <summary>
-  ///   Fluent builder for creating claims arrays.
-  /// </summary>
-  /// <summary>
-  ///   Implementação padrão do construtor de Claims.
+  ///   Default implementation of the Claims builder.
   /// </summary>
   TClaimsBuilder = class(TInterfacedObject, IClaimsBuilder)
   private

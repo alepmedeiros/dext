@@ -60,10 +60,7 @@ type
   );
 
   /// <summary>
-  ///   Result of a rate limit check.
-  /// </summary>
-  /// <summary>
-  ///   Representa o resultado de uma verificação de limite de taxa.
+  ///   Represents the result of a rate limit check.
   /// </summary>
   TRateLimitResult = record
     IsAllowed: Boolean;
@@ -77,10 +74,7 @@ type
   end;
 
   /// <summary>
-  ///   Base interface for rate limiters.
-  /// </summary>
-  /// <summary>
-  ///   Interface base para todos os limitadores de taxa (FixedWindow, TokenBucket, etc).
+  ///   Base interface for all rate limiters (FixedWindow, TokenBucket, etc).
   /// </summary>
   IRateLimiter = interface
     ['{8A9B1C2D-3E4F-5A6B-7C8D-9E0F1A2B3C4D}']
@@ -90,10 +84,7 @@ type
   end;
 
   /// <summary>
-  ///   Configuration for rate limiting policy.
-  /// </summary>
-  /// <summary>
-  ///   Objeto de configuração que detalha os limites, algoritmos e mensagens de rejeição.
+  ///   Configuration object that details limits, algorithms, and rejection messages.
   /// </summary>
   TRateLimitConfig = class
   private

@@ -1507,33 +1507,33 @@ end;
 
 function TWebServicesHelper.AddWebStencils: TDextServices;
 var
-  LOptions: TViewOptions;
+  Options: TViewOptions;
 begin
-  LOptions := TViewOptions.Create;
-  Result := AddWebStencils(LOptions);
+  Options := TViewOptions.Create;
+  Result := AddWebStencils(Options);
 end;
 
 function TWebServicesHelper.AddWebStencils(AConfig: TProc<TViewOptions>): TDextServices;
 begin
-  var LOptions: TViewOptions := TViewOptions.Create;
+  var Options: TViewOptions := TViewOptions.Create;
   if Assigned(AConfig) then
-    AConfig(LOptions);
+    AConfig(Options);
     
-  Result := AddWebStencils(LOptions);
+  Result := AddWebStencils(Options);
 end;
 
 function TWebServicesHelper.AddWebStencils(const AOptions: TViewOptions): TDextServices;
 begin
   Result := Self;
   {$IFDEF DEXT_ENABLE_WEB_STENCILS}
-  var LOptions := AOptions;
+  var Options := AOptions;
   TWebStencilsViewEngine.RegisterWebStencilsFunctions;
-  var LFactory: TFunc<IServiceProvider, TObject> := function(Provider: IServiceProvider): TObject
+  var Factory: TFunc<IServiceProvider, TObject> := function(Provider: IServiceProvider): TObject
     begin
-      Result := TWebStencilsViewEngine.Create(LOptions);
+      Result := TWebStencilsViewEngine.Create(Options);
     end;
-
-  Self.AddSingleton<IViewEngine, TWebStencilsViewEngine>(LFactory);
+  
+  Self.AddSingleton<IViewEngine, TWebStencilsViewEngine>(Factory);
   {$ENDIF}
 end;
 

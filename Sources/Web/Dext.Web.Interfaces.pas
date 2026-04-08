@@ -336,7 +336,7 @@ type
   end;
 
   /// <summary>
-  ///   Representa uma aplicação web hospeda, permitindo configurar serviços e rotas de forma fluente.
+  ///   Represents a hosted web application, allowing fluent configuration of services and routes.
   /// </summary>
   IWebApplication = interface(IWebHost)
     ['{B6C96B49-0292-42A6-A767-C7EAF52F71FC}']
@@ -410,12 +410,12 @@ end;
 
 function TFormFileCollection.GetFile(const AName: string): IFormFile;
 var
-  LFile: IFormFile;
+  AFile: IFormFile;
 begin
-  for LFile in FItems do
+  for AFile in FItems do
   begin
-    if SameText(LFile.Name, AName) then
-      Exit(LFile);
+    if SameText(AFile.Name, AName) then
+      Exit(AFile);
   end;
   Result := nil;
 end;

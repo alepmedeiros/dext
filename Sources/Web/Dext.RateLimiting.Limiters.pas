@@ -41,9 +41,6 @@ type
   ///   Fixed window rate limiter.
   ///   Counts requests in fixed time windows.
   /// </summary>
-  /// <summary>
-  ///   Limitador de taxa usando o algoritmo Fixed Window (Janela Fixa).
-  /// </summary>
   TFixedWindowLimiter = class(TInterfacedObject, IRateLimiter)
   private
     type
@@ -69,9 +66,6 @@ type
   ///   Sliding window rate limiter.
   ///   More precise than fixed window, prevents edge cases.
   /// </summary>
-  /// <summary>
-  ///   Limitador de taxa usando o algoritmo Sliding Window (Janela Deslizante).
-  /// </summary>
   TSlidingWindowLimiter = class(TInterfacedObject, IRateLimiter)
   private
     type
@@ -96,9 +90,6 @@ type
   /// <summary>
   ///   Token bucket rate limiter.
   ///   Allows controlled bursts with token refill.
-  /// </summary>
-  /// <summary>
-  ///   Limitador de taxa usando o algoritmo Token Bucket (Balde de Tokens).
   /// </summary>
   TTokenBucketLimiter = class(TInterfacedObject, IRateLimiter)
   private
@@ -126,9 +117,6 @@ type
   /// <summary>
   ///   Concurrency limiter.
   ///   Limits number of concurrent requests.
-  /// </summary>
-  /// <summary>
-  ///   Limitador de acessos simultâneos (Concorrência).
   /// </summary>
   TConcurrencyLimiter = class(TInterfacedObject, IRateLimiter)
   private

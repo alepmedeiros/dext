@@ -46,71 +46,71 @@ type
   IObjectList = Dext.Collections.Base.IObjectList;
   
   {$M+}
-  /// <summary>Interface genérica para listas sequenciais com suporte a LINQ.</summary>
+  /// <summary>Generic interface for sequential lists with LINQ support.</summary>
   IList<T> = interface(Dext.Collections.Base.IEnumerable<T>)
     ['{8877539D-3522-488B-933B-8C4581177699}']
     function GetCount: Integer;
     function GetItem(Index: Integer): T;
     procedure SetItem(Index: Integer; const Value: T);
 
-    /// <summary>Adiciona um item ao final da lista.</summary>
+    /// <summary>Adds an item to the end of the list.</summary>
     procedure Add(const Value: T);
-    /// <summary>Adiciona uma sequência de itens à lista.</summary>
+    /// <summary>Adds a sequence of items to the list.</summary>
     procedure AddRange(const Values: IEnumerable<T>); overload;
     procedure AddRange(const Values: array of T); overload;
-    /// <summary>Insere um item em uma posição específica.</summary>
+    /// <summary>Inserts an item at a specific position.</summary>
     procedure Insert(Index: Integer; const Value: T);
-    /// <summary>Remove a primeira ocorrência do item. Retorna True se removido.</summary>
+    /// <summary>Removes the first occurrence of the item. Returns True if removed.</summary>
     function Remove(const Value: T): Boolean;
-    /// <summary>Remove e retorna o item sem liberá-lo da memória.</summary>
+    /// <summary>Removes and returns the item without freeing it from memory.</summary>
     function Extract(const Value: T): T;
-    /// <summary>Remove o item na posição especificada.</summary>
+    /// <summary>Removes the item at the specified position.</summary>
     procedure Delete(Index: Integer);
     procedure RemoveAt(Index: Integer);
-    /// <summary>Limpa todos os itens da lista.</summary>
+    /// <summary>Clears all items from the list.</summary>
     procedure Clear();
-    /// <summary>Verifica se o item está presente na lista.</summary>
+    /// <summary>Checks if the item is present in the list.</summary>
     function Contains(const Value: T): Boolean;
-    /// <summary>Retorna o índice da primeira ocorrência do item ou -1.</summary>
+    /// <summary>Returns the index of the first occurrence of the item or -1.</summary>
     function IndexOf(const Value: T): Integer;
 
     property Count: Integer read GetCount;
     property Items[Index: Integer]: T read GetItem write SetItem; default;
 
-    /// <summary>Filtra os elementos da lista com base em um predicado.</summary>
+    /// <summary>Filters the elements of the list based on a predicate.</summary>
     function Where(const Predicate: TFunc<T, Boolean>): IList<T>; overload;
-    /// <summary>Filtra os elementos da lista com base em uma expressão de critério.</summary>
+    /// <summary>Filters the elements of the list based on a criteria expression.</summary>
     function Where(const Expression: IExpression): IList<T>; overload;
 
-    /// <summary>Retorna o primeiro elemento da lista. Lança exceção se vazia.</summary>
+    /// <summary>Returns the first element of the list. Raises an exception if empty.</summary>
     function First: T; overload;
     function First(const Expression: IExpression): T; overload;
 
-    /// <summary>Retorna o último elemento da lista.</summary>
+    /// <summary>Returns the last element of the list.</summary>
     function Last: T;
 
-    /// <summary>Retorna o primeiro elemento ou o valor padrão (Default(T)) se a lista estiver vazia.</summary>
+    /// <summary>Returns the first element or the default value (Default(T)) if the list is empty.</summary>
     function FirstOrDefault: T; overload;
     function FirstOrDefault(const DefaultValue: T): T; overload;
     function FirstOrDefault(const Expression: IExpression): T; overload;
 
-    /// <summary>Verifica se existe algum elemento que satisfaça a condição.</summary>
+    /// <summary>Checks if there is any element that satisfies the condition.</summary>
     function Any(const Predicate: TFunc<T, Boolean>): Boolean; overload;
     function Any(const Expression: IExpression): Boolean; overload;
     function Any: Boolean; overload;
 
-    /// <summary>Verifica se todos os elementos satisfazem a condição.</summary>
+    /// <summary>Checks if all elements satisfy the condition.</summary>
     function All(const Predicate: TFunc<T, Boolean>): Boolean; overload;
     function All(const Expression: IExpression): Boolean; overload;
 
-    /// <summary>Executa uma ação para cada elemento da lista.</summary>
+    /// <summary>Executes an action for each element in the list.</summary>
     procedure ForEach(const Action: TProc<T>);
-    /// <summary>Ordena os elementos da lista.</summary>
+    /// <summary>Sorts the elements of the list.</summary>
     procedure Sort(const AComparer: IComparer<T> = nil);
-    /// <summary>Realiza uma busca binária (requer lista ordenada).</summary>
+    /// <summary>Performs a binary search (requires sorted list).</summary>
     function BinarySearch(const Value: T; out Index: Integer; const AComparer: IComparer<T> = nil): Boolean;
     function IndexedSort(const AComparer: IComparer<T> = nil): TArray<Integer>;
-    /// <summary>Converte a lista em um array estático.</summary>
+    /// <summary>Converts the list to a static array.</summary>
     function ToArray: TArray<T>;
   end;
 
@@ -192,8 +192,8 @@ type
   {$M+}
   {$RTTI EXPLICIT METHODS([vcPublic, vcPublished])}
   /// <summary>
-  ///   Implementação de lista genérica de alto desempenho com suporte nativo a LINQ.
-  ///   Utiliza um backend TRawList para otimizar alocação de memória e performance de busca.
+  ///   Generic high-performance list implementation with native LINQ support.
+  ///   Uses a TRawList backend to optimize memory allocation and search performance.
   /// </summary>
   TList<T> = class(TListBase<T>, IList<T>, ICollection, IObjectList)
   private
@@ -215,7 +215,7 @@ type
       Action: TCollectionNotification); virtual;
   public
     function GetInterfaceEnumerator: Dext.Collections.Base.IEnumerator<T>; override;
-    /// <summary>Retorna um enumerador baseado em ponteiros para máxima performance sem alocação de objetos.</summary>
+    /// <summary>Returns a pointer-based enumerator for maximum performance without object allocation.</summary>
     function GetEnumerator: TListEnumerator<T>; reintroduce; inline;
     
     // IObjectList implementation
@@ -235,7 +235,7 @@ type
     procedure IObjectList.Clear = Clear;
 
     constructor Create; overload;
-    /// <summary>Cria a lista definindo se ela deve ser a dona (Owns) dos objetos (somente classes).</summary>
+    /// <summary>Creates the list specifying whether it should own the objects (classes only).</summary>
     constructor Create(OwnsObjects: Boolean); overload;
 
     procedure Add(const Value: T); inline;
@@ -275,11 +275,11 @@ type
     function IndexedSort(const AComparer: IComparer<T> = nil): TArray<Integer>;
     function ToArray: TArray<T>;
 
-    /// <summary>Número de elementos presentes na lista.</summary>
+    /// <summary>Number of elements present in the list.</summary>
     property Count: Integer read GetCount;
-    /// <summary>Acesso indexado aos elementos.</summary>
+    /// <summary>Indexed access to elements.</summary>
     property Items[Index: Integer]: T read GetItem write SetItem; default;
-    /// <summary>Se True, libera automaticamente objetos (TObject) no Delete/Clear.</summary>
+    /// <summary>If True, automatically frees objects (TObject) on Delete/Clear.</summary>
     property OwnsObjects: Boolean read GetOwnsObjects write SetOwnsObjects;
   public
     destructor Destroy; override;
@@ -292,28 +292,28 @@ type
   {$M+}
   {$RTTI EXPLICIT METHODS([vcPublic])}
   /// <summary>
-  ///   Fábrica estática para criação de todas as coleções do Dext Framework.
-  ///   Sempre prefira usar TCollections ao invés de instanciar classes diretamente para garantir a resolução de interfaces corretas.
+  ///   Static factory for creating all collections in the Dext Framework.
+  ///   Always prefer using TCollections instead of instantiating classes directly to ensure correct interface resolution.
   /// </summary>
   TCollections = class
   public
-    /// <summary>Cria uma nova lista genérica (IList).</summary>
+    /// <summary>Creates a new generic list (IList).</summary>
     class function CreateList<T>(OwnsObjects: Boolean = False): IList<T>; static;
-    /// <summary>Cria uma lista de objetos com restrição de tipo (T: class).</summary>
+    /// <summary>Creates a list of objects with a type constraint (T: class).</summary>
     class function CreateObjectList<T: class>(OwnsObjects: Boolean = False): IList<T>; static;
-    /// <summary>Cria um dicionário (IDictionary).</summary>
+    /// <summary>Creates a dictionary (IDictionary).</summary>
     class function CreateDictionary<K, V>(ACapacity: Integer = 0): IDictionary<K, V>; overload; static;
     class function CreateDictionary<K, V>(AOwnsValues: Boolean; ACapacity: Integer = 0): IDictionary<K, V>; overload; static;
-    /// <summary>Cria um dicionário de strings com busca insensível a caso (Case-Insensitive).</summary>
+    /// <summary>Creates a case-insensitive string dictionary.</summary>
     class function CreateDictionaryIgnoreCase<K, V>(AOwnsValues: Boolean = False; ACapacity: Integer = 0): IDictionary<K, V>; static;
 
-    /// <summary>Cria uma pilha LIFO (Last-In, First-Out).</summary>
+    /// <summary>Creates a LIFO (Last-In, First-Out) stack.</summary>
     class function CreateStack<T>: IStack<T>; static;
-    /// <summary>Cria uma fila FIFO (First-In, First-Out).</summary>
+    /// <summary>Creates a FIFO (First-In, First-Out) queue.</summary>
     class function CreateQueue<T>: IQueue<T>; static;
-    /// <summary>Cria um conjunto de elementos únicos (HashSet).</summary>
+    /// <summary>Creates a set of unique elements (HashSet).</summary>
     class function CreateHashSet<T>: IHashSet<T>; static;
-    /// <summary>Cria um dicionário de strings de alta performance.</summary>
+    /// <summary>Creates a high-performance string dictionary.</summary>
     class function CreateStringDictionary(AIgnoreCase: Boolean = False): IStringDictionary; static;
   end;
   {$M-}

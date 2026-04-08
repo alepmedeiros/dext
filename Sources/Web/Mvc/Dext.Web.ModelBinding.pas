@@ -192,7 +192,7 @@ type
     class function BindRoute<T>(ABinder: IModelBinder; Context: IHttpContext): T; static;
   end;
 
-  // ✅ BINDING PROVIDER
+  // BINDING PROVIDER
   IBindingSourceProvider = interface
     ['{8D4F3A7C-1E4A-4B8D-B0E7-9F3A8C5D2B1E}']
     function GetBindingSource(Param: TRttiParameter): TBindingSource;
@@ -601,11 +601,11 @@ begin
         // Obter nome do campo (com suporte a atributos [FromHeader])
         FieldName := SourceProvider.GetBindingName(Field);
 
-        // Buscar valor do header (case-insensitive via GetHeader)
+        // Get header value (case-insensitive via GetHeader)
         FieldValue := Context.Request.GetHeader(FieldName);
         if FieldValue <> '' then
         begin
-          // ✅ USAR CONVERSÃO ROBUSTA
+          // USE ROBUST CONVERSION
           try
             var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
             Field.SetValue(Result.GetReferenceToRawData, Val);
@@ -827,7 +827,7 @@ begin
           raise EBindingException.CreateFmt('Service not found for class type: %s. Ensure it is registered in DI.', [String(AType.Name)]);
     end;
 
-    // ✅ NOVO: Suporte direto a interfaces
+    // NEW: Direct support for interfaces
     if AType.Kind = tkInterface then
     begin
       var InterfaceType := ContextRtti.GetType(AType) as TRttiInterfaceType;
@@ -845,11 +845,11 @@ begin
 
     TValue.Make(nil, AType, Result);
     RttiType := ContextRtti.GetType(AType);
-    // Services já inicializado acima
+    // Services already initialized above
 
     for Field in RttiType.GetFields do
     begin
-      // Verificar se o campo tem atributo [FromServices]
+      // Check if field has [FromServices] attribute
       var HasServicesAttr := False;
       for var Attr in Field.GetAttributes do
       begin
@@ -866,28 +866,28 @@ begin
           case Field.FieldType.TypeKind of
             tkInterface:
               begin
-                // Para interfaces, usar o GUID
+                // For interfaces, use GUID
                 var InterfaceType := Field.FieldType as TRttiInterfaceType;
                 ServiceType := TServiceType.FromInterface(InterfaceType.GUID);
 
-                // Obter serviço do container DI como interface
+                // Get service from DI container as interface
                 var InterfaceInstance := Services.GetServiceAsInterface(ServiceType);
                 if Assigned(InterfaceInstance) then
                 begin
-                  // ✅ CORREÇÃO: Criar TValue do tipo específico da interface
+                  // FIX: Create TValue of specific interface type
                   TValue.Make(@InterfaceInstance, Field.FieldType.Handle, ServiceInstance);
                   Field.SetValue(Result.GetReferenceToRawData, ServiceInstance);
                 end
                 else
                 begin
-                  // Serviço não encontrado - pode ser opcional ou requerido?
-                  // Por enquanto, deixamos o campo como nil
+                  // Service not found - could it be optional or required?
+                  // For now, leave field as nil
                 end;
               end;
 
             tkClass:
               begin
-                // ✅ CORREÇÃO: Usar o RTTI para obter a classe corretamente
+                // FIX: Use RTTI to get class correctly
                 var ClassType := (Field.FieldType as TRttiInstanceType).MetaclassType;
                 ServiceType := TServiceType.FromClass(ClassType);
 
@@ -1350,7 +1350,7 @@ begin
       Exit(BindingAttribute(Attr).Source);
   end;
 
-  // Default: FromBody para tipos complexos, FromQuery para simples
+  // Default: FromBody for complex types, FromQuery for simple types
   if Param.ParamType.TypeKind in [tkRecord, tkClass] then
     Result := bsBody
   else

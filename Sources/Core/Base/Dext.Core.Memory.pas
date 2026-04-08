@@ -32,15 +32,15 @@ uses
 
 type
   /// <summary>
-  ///   Interface para gerenciar o ciclo de vida de objetos via ARC (Automatic Reference Counting).
+  ///   Interface to manage an object's lifecycle via ARC (Automatic Reference Counting).
   /// </summary>
   ILifetime<T: class> = interface
     function GetValue: T;
   end;
 
   /// <summary>
-  ///   Implementação do gerenciador de ciclo de vida. 
-  ///   Desta forma, um objeto comum pode ser "embarcado" em uma interface para ser liberado automaticamente.
+  ///   Lifecycle manager implementation.
+  ///   It allows passing a standard object into an interface wrapper for auto-release reference counting.
   /// </summary>
   TLifetime<T: class> = class(TInterfacedObject, ILifetime<T>)
   private
@@ -52,15 +52,15 @@ type
   end;
 
   /// <summary>
-  ///   Interface para ações diferidas (Padrão Defer).
+  ///   Interface for deferred actions (Defer Pattern).
   /// </summary>
   IDeferred = interface
     ['{D1E2F3A4-B5C6-4D7E-8F9A-0B1C2D3E4F5A}']
   end;
 
   /// <summary>
-  ///   Implementação de uma ação que será executada automaticamente no Destrutor (quando a interface sair de escopo).
-  ///   Inspirado no comando 'defer' da linguagem Go.
+  ///   Implementation of an action that will be executed automatically in the Destructor (when the interface goes out of scope).
+  ///   Inspired by the 'defer' statement in the Go language.
   /// </summary>
   TDeferredAction = class(TInterfacedObject, IDeferred)
   private

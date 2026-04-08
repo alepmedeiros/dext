@@ -35,7 +35,7 @@ uses
   Dext.Web.Interfaces;
 
 /// <summary>
-///   Escreve uma resposta JSON com um código de status HTTP específico.
+///   Writes a JSON response with a specific HTTP status code.
 /// </summary>
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string); overload;
 
@@ -46,7 +46,7 @@ procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const 
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AFormat: string; const AArgs: array of const); overload;
 
 /// <summary>
-///   Escreve uma resposta de erro formatada em JSON com um código de status específico.
+///   Writes a formatted JSON error response with a specific status code.
 /// </summary>
 procedure RespondError(const AContext: IHttpContext; AStatusCode: Integer; const AMessage: string);
 

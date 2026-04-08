@@ -34,26 +34,26 @@ type
 
   TMockBehavior = (Loose, Strict);
 
-  /// <summary>Define expectativas de quantidade de chamadas para um membro mockado.</summary>
+  /// <summary>Defines call count expectations for a mocked member.</summary>
   Times = record
   private
     FMin: Integer;
     FMax: Integer;
     FDescription: string;
   public
-    /// <summary>Espera que o método nunca seja chamado.</summary>
+    /// <summary>Expects the method to never be called.</summary>
     class function Never: Times; static;
-    /// <summary>Espera que o método seja chamado exatamente uma vez.</summary>
+    /// <summary>Expects the method to be called exactly once.</summary>
     class function Once: Times; static;
-    /// <summary>Espera pelo menos uma chamada.</summary>
+    /// <summary>Expects at least one call.</summary>
     class function AtLeastOnce: Times; static;
-    /// <summary>Espera pelo menos N chamadas.</summary>
+    /// <summary>Expects at least N calls.</summary>
     class function AtLeast(Count: Integer): Times; static;
-    /// <summary>Espera no máximo N chamadas.</summary>
+    /// <summary>Expects at most N calls.</summary>
     class function AtMost(Count: Integer): Times; static;
-    /// <summary>Espera exatamente N chamadas.</summary>
+    /// <summary>Expects exactly N calls.</summary>
     class function Exactly(Count: Integer): Times; static;
-    /// <summary>Espera que a quantidade de chamadas esteja entre o intervalo Min e Max.</summary>
+    /// <summary>Expects the number of calls to be between the Min and Max range.</summary>
     class function Between(Min, Max: Integer): Times; static;
     function Matches(Count: Integer): Boolean;
     function ToString(ActualCount: Integer): string;
@@ -73,25 +73,25 @@ type
     procedure Reset;
   end;
 
-  /// <summary>Interface genérica que controla a instância e o comportamento de um Mock.</summary>
+  /// <summary>Generic interface that controls the instance and behavior of a Mock.</summary>
   IMock<T> = interface(IMock)
     ['{D7E8F9A0-1B2C-3D4E-5F6A-7B8C9D0E1F2A}']
     function GetInstance: T;
     function GetBehavior: TMockBehavior;
     procedure SetBehavior(Value: TMockBehavior);
-    /// <summary>Inicia a configuração de um comportamento (Setup/Returns/Throws).</summary>
+    /// <summary>Initiates the configuration of a behavior (Setup/Returns/Throws).</summary>
     function Setup: ISetup<T>;
-    /// <summary>Verifica se o membro foi recebido (chamado).</summary>
+    /// <summary>Verifies if the member was received (called).</summary>
     function Received: T; overload;
-    /// <summary>Verifica se o membro foi recebido uma quantidade específica de vezes.</summary>
+    /// <summary>Verifies if the member was received a specific number of times.</summary>
     function Received(const ATimes: Times): T; overload;
-    /// <summary>Verifica se o membro NÃO foi chamado.</summary>
+    /// <summary>Verifies if the member was NOT called.</summary>
     function DidNotReceive: T;
     procedure SetCallBase(Value: Boolean);
 
-    /// <summary>A instância mockada (Proxy) que implementa T.</summary>
+    /// <summary>The mocked instance (Proxy) that implements T.</summary>
     property Instance: T read GetInstance;
-    /// <summary>Define se o Mock é Loose (retorna padrão) ou Strict (erro se não configurado).</summary>
+    /// <summary>Defines if the Mock is Loose (returns default) or Strict (errors if not configured).</summary>
     property Behavior: TMockBehavior read GetBehavior write SetBehavior;
   end;
 
@@ -112,17 +112,17 @@ type
     function Callback(const Action: TProc<TArray<TValue>>): IWhen<T>;
   end;
 
-  /// <summary>Helper de configuração fluida para definições de comportamento.</summary>
+  /// <summary>Fluent configuration helper for behavior definitions.</summary>
   MockSetup<T> = record
   private
     FSetup: ISetup<T>;
   public
     constructor Create(const ASetup: ISetup<T>);
-    /// <summary>Define um valor genérico fixo para retorno.</summary>
+    /// <summary>Defines a fixed generic return value.</summary>
     function Returns(const Value: TValue): IWhen<T>; overload; inline;
-    /// <summary>Define um valor tipado fixo para retorno.</summary>
+    /// <summary>Defines a fixed typed return value.</summary>
     function Returns<TRet>(const Value: TRet): IWhen<T>; overload; inline;
-    /// <summary>Define uma sequência de valores que serão retornados sucessivamente em cada chamada.</summary>
+    /// <summary>Defines a sequence of values to be returned successively on each call.</summary>
     function ReturnsInSequence(const Values: TArray<TValue>): IWhen<T>; overload; inline;
     function ReturnsInSequence(const Values: TArray<Integer>): IWhen<T>; overload; inline;
     function ReturnsInSequence(const Values: TArray<string>): IWhen<T>; overload; inline;
@@ -132,9 +132,9 @@ type
     function Returns(Value: Boolean): IWhen<T>; overload; inline;
     function Returns(Value: Double): IWhen<T>; overload; inline;
     function Returns(Value: Int64): IWhen<T>; overload; inline;
-    /// <summary>Configura o mock para disparar uma exceção quando chamado.</summary>
+    /// <summary>Configures the mock to throw an exception when called.</summary>
     function Throws(ExceptionClass: ExceptClass; const Msg: string = ''): IWhen<T>; inline;
-    /// <summary>Executa um procedimento personalizado quando o método mockado é invocado.</summary>
+    /// <summary>Executes a custom procedure when the mocked method is invoked.</summary>
     function Executes(const Action: TProc<IInvocation>): IWhen<T>; inline;
     function Callback(const Action: TProc<TArray<TValue>>): IWhen<T>; inline;
   end;
@@ -144,40 +144,40 @@ type
     function When: T;
   end;
 
-  /// <summary>Container principal para criação e gestão de Mocks dinâmicos.</summary>
+  /// <summary>Main container for creating and managing dynamic Mocks.</summary>
   Mock<T> = record
   private
     FMock: IMock<T>;
     procedure EnsureCreated;
     function GetInstance: T;
   public
-    /// <summary>Cria uma nova instância de Mock com o comportamento especificado (padrão Loose).</summary>
+    /// <summary>Creates a new Mock instance with the specified behavior (default Loose).</summary>
     class function Create(Behavior: TMockBehavior = TMockBehavior.Loose): Mock<T>; overload; static;
     class function Create(Interceptor: TObject): Mock<T>; overload; static;
     class function FromInterface(const Intf: IMock<T>): Mock<T>; static;
 
-    /// <summary>A instância (Proxy) TIPADA que deve ser passada para o código sob teste.</summary>
+    /// <summary>The TYPED instance (Proxy) that should be passed to the code under test.</summary>
     property Instance: T read GetInstance;
-    /// <summary>Configura comportamentos (Expectations) para os métodos do Mock.</summary>
+    /// <summary>Configures behaviors (Expectations) for the Mock's methods.</summary>
     function Setup: MockSetup<T>;
-    /// <summary>Inicia a verificação de expectativas em modo tipado.</summary>
+    /// <summary>Initiates the verification of expectations in typed mode.</summary>
     function Received: T; overload;
-    /// <summary>Verifica se um método foi chamado N vezes conforme o parâmetro Times.</summary>
+    /// <summary>Verifies if a method was called N times according to the Times parameter.</summary>
     function Received(const ATimes: Times): T; overload;
-    /// <summary>Atalho para verificar que um método nunca foi chamado.</summary>
+    /// <summary>Shortcut to verify that a method was never called.</summary>
     function DidNotReceive: T;
-    /// <summary>Limpa as expectativas e o histórico de chamadas do Mock.</summary>
+    /// <summary>Clears the Mock's expectations and call history.</summary>
     procedure Reset;
-    /// <summary>Valida formalmente se todas as expectativas Strict foram atendidas.</summary>
+    /// <summary>Formally validates if all Strict expectations were met.</summary>
     procedure Verify; overload;
     function Verify(const ATimes: Times): T; overload;
-    /// <summary>Verifica se não houve qualquer outra chamada além das explicitamente validadas.</summary>
+    /// <summary>Verifies if there were no other calls besides the explicitly validated ones.</summary>
     procedure VerifyNoOtherCalls;
     function CallsBaseForUnconfiguredMembers: Mock<T>;
 
-    /// <summary>Conversão implícita para o tipo T, permitindo passar o record Mock diretamente onde T é esperado.</summary>
+    /// <summary>Implicit conversion to type T, allowing the Mock record to be passed directly where T is expected.</summary>
     class operator Implicit(const AMock: Mock<T>): T;
-    /// <summary>Alias alternativo para a instância mockada.</summary>
+    /// <summary>Alternative alias for the mocked instance.</summary>
     property Object_: T read GetInstance;
     function ProxyInterface: IMock<T>;
   end;

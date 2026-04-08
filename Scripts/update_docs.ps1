@@ -30,7 +30,7 @@ $DextExe = "dext" # Default to PATH
 
 # Check common locations
 $PossibleLocations = @(
-    "$RepoRoot\Apps\dext.exe",
+    "$RepoRoot\Apps\dext.exe"
 )
 
 foreach ($loc in $PossibleLocations) {

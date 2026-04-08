@@ -85,9 +85,6 @@ var
   EqIndex: Integer;
   EnvKey: string;
 begin
-  // Assuming FData is accessible. If TConfigurationProvider keeps it private, we must rely on Set or SetValue.
-  // Since User said "FData não está sendo atribuido", it implies FData is visible and wasn't set.
-  // We use direct access or standard dictionary methods.
   FData.Clear;
   Vars := TStringList.Create;
   try

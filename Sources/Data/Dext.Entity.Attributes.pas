@@ -38,7 +38,7 @@ type
 
 type
   /// <summary>
-  ///   Especifica o nome da tabela e esquema no banco de dados para a entidade.
+  ///   Specifies the table name and schema in the database for the entity.
   /// </summary>
   TableAttribute = class(TCustomAttribute)
   private
@@ -53,7 +53,7 @@ type
   end;
 
   /// <summary>
-  ///   Especifica o nome da coluna no banco de dados para a propriedade.
+  ///   Specifies the column name in the database for the property.
   /// </summary>
   ColumnAttribute = class(TCustomAttribute)
   private
@@ -187,9 +187,6 @@ type
 
   /// <summary>
   ///   Marks a property as JSON/JSONB column (PostgreSQL).
-  /// </summary>
-  /// <summary>
-  ///   Marca uma propriedade como coluna JSON (ou JSONB no PostgreSQL).
   /// </summary>
   JsonColumnAttribute = class(TCustomAttribute)
   private

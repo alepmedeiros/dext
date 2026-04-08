@@ -58,7 +58,7 @@ uses
 
 type
   /// <summary>
-  ///   Implementação de <see cref="IHttpResponse"/> para o servidor Indy.
+  ///   <see cref="IHttpResponse"/> implementation for the Indy server.
   /// </summary>
   TDextIndyHttpResponse = class(TInterfacedObject, IHttpResponse)
   private
@@ -85,8 +85,8 @@ type
   end;
 
   /// <summary>
-  ///   Implementação de <see cref="IHttpRequest"/> para o servidor Indy.
-  ///   Inclui suporte a parsing de QueryString, Headers, Cookies e Multipart/form-data.
+  ///   <see cref="IHttpRequest"/> implementation for the Indy server.
+  ///   Includes support for parsing QueryString, Headers, Cookies and Multipart/form-data.
   /// </summary>
   TDextIndyHttpRequest = class(TInterfacedObject, IHttpRequest)
   private
@@ -127,8 +127,8 @@ type
   end;
 
   /// <summary>
-  ///   Contexto de execução HTTP para o servidor Indy.
-  ///   Gerencia o ciclo de vida do escopo de serviços (DI) por requisição.
+  ///   HTTP execution context for the Indy server.
+  ///   Manages the lifecycle of the service scope (DI) per request.
   /// </summary>
   TDextIndyHttpContext = class(TInterfacedObject, IHttpContext)
   private
@@ -186,7 +186,7 @@ begin
   inherited Destroy;
 end;
 
-// ? NOVO: Parsear headers do Indy para dicionário
+// NEW: Parse Indy headers to dictionary
 function TDextIndyHttpRequest.ParseHeaders(AHeaderList: TIdHeaderList): IStringDictionary;
 var
   I: Integer;
@@ -269,7 +269,7 @@ end;
 function TDextIndyHttpRequest.GetPath: string;
 begin
   Result := FRequestInfo.Document;
-  // Garantir que paths vazios sejam '/'
+  // Ensure empty paths are '/'
   if Result = '' then
     Result := '/';
 end;
@@ -538,7 +538,7 @@ begin
   FResponseInfo := AResponseInfo;
 end;
 
-// ? NOVO: Adicionar header à response
+// NEW: Add header to response
 procedure TDextIndyHttpResponse.AddHeader(const AName, AValue: string);
 begin
   FResponseInfo.CustomHeaders.AddValue(AName, AValue);

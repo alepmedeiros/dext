@@ -43,7 +43,7 @@ type
     procedure Preview(ADataSet: TEntityDataSet);
   end;
 
-  /// <summary>Exibe uma janela modal com o preview dos dados da entidade vinculada ao DataSet.</summary>
+  /// <summary>Displays a modal window with a data preview of the entity bound to the DataSet.</summary>
 procedure ShowEntityPreview(ADataSet: TEntityDataSet);
 
 implementation

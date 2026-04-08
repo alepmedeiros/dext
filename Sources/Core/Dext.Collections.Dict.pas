@@ -68,33 +68,33 @@ type
     property Items[const AKey: string]: string read GetItem write SetItem; default;
   end;
 
-  /// <summary>Interface genérica para dicionários (Hash Maps).</summary>
+  /// <summary>Generic interface for dictionaries (Hash Maps).</summary>
   IDictionary<K, V> = interface(Dext.Collections.Base.IEnumerable<TPair<K, V>>)
     ['{A7E3F294-60B1-4C01-B8D5-4E5F3A2C1D70}']
     function GetCount: Integer;
     function GetItem(const Key: K): V;
     procedure SetItem(const Key: K; const Value: V);
 
-    /// <summary>Adiciona um novo par chave-valor. Lança exceção se a chave já existir.</summary>
+    /// <summary>Adds a new key-value pair. Raises an exception if the key already exists.</summary>
     procedure Add(const Key: K; const Value: V);
-    /// <summary>Adiciona ou atualiza o valor associado a uma chave.</summary>
+    /// <summary>Adds or updates the value associated with a key.</summary>
     procedure AddOrSetValue(const Key: K; const Value: V);
-    /// <summary>Tenta obter o valor associado a uma chave sem lançar exceções.</summary>
+    /// <summary>Attempts to get the value associated with a key without raising exceptions.</summary>
     function TryGetValue(const Key: K; out Value: V): Boolean;
-    /// <summary>Verifica se uma chave está presente no dicionário.</summary>
+    /// <summary>Checks if a key is present in the dictionary.</summary>
     function ContainsKey(const Key: K): Boolean;
-    /// <summary>Remove uma chave e seu valor. Retorna True se a chave existia.</summary>
+    /// <summary>Removes a key and its value. Returns True if the key existed.</summary>
     function Remove(const Key: K): Boolean;
-    /// <summary>Remove e retorna o valor associado a uma chave.</summary>
+    /// <summary>Removes and returns the value associated with a key.</summary>
     function Extract(const Key: K): V;
-    /// <summary>Remove todos os itens do dicionário.</summary>
+    /// <summary>Removes all items from the dictionary.</summary>
     procedure Clear;
 
-    /// <summary>Retorna um array contendo todas as chaves.</summary>
+    /// <summary>Returns an array containing all keys.</summary>
     function Keys: TArray<K>;
-    /// <summary>Retorna um array contendo todos os valores.</summary>
+    /// <summary>Returns an array containing all values.</summary>
     function Values: TArray<V>;
-    /// <summary>Converte o dicionário em um array de pares TPair.</summary>
+    /// <summary>Converts the dictionary into an array of TPair.</summary>
     function ToArray: TArray<TPair<K, V>>;
 
     property Count: Integer read GetCount;
@@ -134,8 +134,8 @@ type
   end;
 
   /// <summary>
-  ///   Implementação de dicionário genérico de alto desempenho.
-  ///   Utiliza um backend TRawDictionary para reduzir o "bloat" de generics e otimizar o uso de memória.
+  ///   High-performance generic dictionary implementation.
+  ///   Uses a TRawDictionary backend to reduce generics bloat and optimize memory usage.
   /// </summary>
   TDictionary<K, V> = class(TDictionaryBase<K, V>, IDictionary<K, V>)
   private
@@ -152,15 +152,15 @@ type
     function GetInterfaceEnumerator: IEnumerator<TPair<K, V>>; override;
 
     constructor Create; overload;
-    /// <summary>Cria o dicionário com uma capacidade inicial pré-alocada.</summary>
+    /// <summary>Creates the dictionary with a pre-allocated initial capacity.</summary>
     constructor Create(ACapacity: Integer); overload;
-    /// <summary>Cria o dicionário definindo se ele deve ser o dono (Owns) dos valores (apenas para classes).</summary>
+    /// <summary>Creates the dictionary specifying whether it should own the values (for classes only).</summary>
     constructor Create(AOwnsValues: Boolean; ACapacity: Integer = 0); overload;
-    /// <summary>Cria o dicionário com opções avançadas de sensibilidade a caso e capacidade.</summary>
+    /// <summary>Creates the dictionary with advanced options for case sensitivity and capacity.</summary>
     constructor Create(AIgnoreCase: Boolean; AOwnsValues: Boolean; ACapacity: Integer); overload;
     destructor Destroy; override;
 
-    /// <summary>Retorna um enumerador baseado em Record para alta performance em loops for-in.</summary>
+    /// <summary>Returns a Record-based enumerator for high performance in for-in loops.</summary>
     function GetEnumerator: TDictionaryEnumerator<K, V>; reintroduce; inline;
     
     procedure Add(const Key: K; const Value: V);
@@ -175,11 +175,11 @@ type
     function Values: TArray<V>;
     function ToArray: TArray<TPair<K, V>>;
 
-    /// <summary>Número de elementos presentes no dicionário.</summary>
+    /// <summary>Number of elements present in the dictionary.</summary>
     property Count: Integer read GetCount;
-    /// <summary>Acesso direto aos valores via chave. Lança exceção se a chave não existir no 'read'.</summary>
+    /// <summary>Direct access to values via key. Raises an exception if the key does not exist on 'read'.</summary>
     property Items[const Key: K]: V read GetItem write SetItem; default;
-    /// <summary>Se True, o dicionário irá liberar automaticamente os objetos (TObject) associados aos valores no Destroy/Clear.</summary>
+    /// <summary>If True, the dictionary will automatically free associated objects (TObject) on Destroy/Clear.</summary>
     property OwnsValues: Boolean read FOwnsValues write FOwnsValues;
   end;
 

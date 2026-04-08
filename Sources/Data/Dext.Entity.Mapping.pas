@@ -52,9 +52,6 @@ type
   IRelationshipBuilder<T: class> = interface;
 
   /// <summary>
-  ///   Fluent interface to configure an entity.
-  /// </summary>
-  /// <summary>
   ///   Fluent interface for programmatic configuration of an entity (Code-First).
   /// </summary>
   IEntityTypeBuilder<T: class> = interface
@@ -92,9 +89,6 @@ type
     function UsingEntity(const AJoinTableName, ALeftKey, ARightKey: string): IRelationshipBuilder<T>; overload;
   end;
 
-  /// <summary>
-  ///   Fluent interface to configure a property.
-  /// </summary>
   /// <summary>
   ///   Fluent interface for detailed configuration of properties and columns.
   /// </summary>
@@ -369,9 +363,6 @@ type
     procedure Configure(Builder: IEntityTypeBuilder<T>); virtual; abstract;
   end;
 
-  /// <summary>
-  ///   Central registry for mappings.
-  /// </summary>
   /// <summary>
   ///   Central model builder that stores all framework mapping definitions.
   /// </summary>

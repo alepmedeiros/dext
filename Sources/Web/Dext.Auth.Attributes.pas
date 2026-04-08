@@ -34,10 +34,7 @@ uses
 type
   /// <summary>
   ///   Marks a handler as requiring authentication.
-  /// </summary>
-  /// <summary>
-  ///   Atributo que exige que o usuário esteja autenticado para acessar o recurso.
-  ///   Opcionalmente permite filtrar por Papéis (Roles) e Esquema de Autenticação.
+  ///   Optionally allows filtering by Roles and Authentication Scheme.
   /// </summary>
   AuthorizeAttribute = class(TCustomAttribute)
   private
@@ -54,9 +51,6 @@ type
 
   /// <summary>
   ///   Marks a handler as allowing anonymous access (bypasses authentication).
-  /// </summary>
-  /// <summary>
-  ///   Atributo que permite acesso anônimo ao recurso, ignorando políticas globais de autorização.
   /// </summary>
   AllowAnonymousAttribute = class(TCustomAttribute)
   end;

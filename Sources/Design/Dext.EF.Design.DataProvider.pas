@@ -21,7 +21,7 @@ uses
 
 type
   /// <summary>
-  ///   Provedor de dados especializado para o ambiente de design do Delphi IDE.
+  ///   Specialized data provider for the Delphi IDE design environment.
   ///   Orchestrates discovery of entity metadata, detection of SQL dialects, and execution of queries for preview.
   /// </summary>
   TDesignEntityDataProvider = class(TComponent, IEntityDataProvider)
@@ -50,9 +50,9 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    /// <summary>Varre o projeto ativo na IDE em busca de unidades .pas que contenham entidades.</summary>
+    /// <summary>Scans the active project in the IDE looking for .pas units containing entities.</summary>
     function AutoDiscoverModelUnits: Integer;
-    /// <summary>Recarrega todos os metadados das unidades configuradas em ModelUnits.</summary>
+    /// <summary>Refreshes all metadata from the units configured in ModelUnits.</summary>
     procedure RefreshMetadata;
     /// <summary>Reloads metadata from a specific unit, processing the current source code (even if unsaved).</summary>
     procedure RefreshUnit(const AFileName: string);
@@ -62,7 +62,7 @@ type
     function ResolveEntityClass(const AClassName: string): TClass;
     /// <summary>Generates the SELECT SQL command with pagination based on the detected dialect.</summary>
     function BuildPreviewSql(const AClassName: string; AMaxRows: Integer = 50): string;
-    /// <summary>Executa a query e retorna uma lista de instâncias da entidade populadas com dados do banco.</summary>
+    /// <summary>Executes the query and returns a list of entity instances populated with database data.</summary>
     function CreatePreviewItems(const AClassName: string; AMaxRows: Integer = 50): IObjectList;
   published
     /// <summary>List of .pas files that make up the project's domain model.</summary>
@@ -74,10 +74,10 @@ type
     property Dialect: TDatabaseDialect read FDialect write SetDialect default ddUnknown;
     /// <summary>Friendly name of the SQL dialect in use.</summary>
     property DialectName: string read GetDialectName;
-    /// <summary>Limite de registros para o preview de dados.</summary>
+    /// <summary>Record limit for the data preview.</summary>
     property PreviewMaxRows: Integer read FPreviewMaxRows write FPreviewMaxRows default 50;
     property DebugMode: Boolean read FDebugMode write FDebugMode default False;
-    /// <summary>Quantidade total de entidades mapeadas e em cache.</summary>
+    /// <summary>Total amount of mapped and cached entities.</summary>
     property EntityCount: Integer read GetEntityCount stored False;
     /// <summary>Descriptive summary of the last metadata refresh operation.</summary>
     property LastRefreshSummary: string read FLastRefreshSummary stored False;

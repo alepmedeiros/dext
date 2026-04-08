@@ -38,10 +38,7 @@ uses
 
 type
   /// <summary>
-  ///   Advanced rate limiting middleware with multiple algorithms and partition strategies.
-  /// </summary>
-  /// <summary>
-  ///   Middleware avançado de Rate Limiting com suporte a múltiplos algoritmos e estratégias de partição.
+  ///   Advanced rate limiting middleware with support for multiple algorithms and partition strategies.
   /// </summary>
   TRateLimitMiddleware = class(TMiddleware)
   private
@@ -61,10 +58,7 @@ type
   end;
 
   /// <summary>
-  ///   Extension methods for IApplicationBuilder.
-  /// </summary>
-  /// <summary>
-  ///   Métodos de extensão para facilitar a configuração de Rate Limiting no <see cref="IApplicationBuilder"/>.
+  ///   Extension methods to facilitate Rate Limiting configuration in <see cref="IApplicationBuilder"/>.
   /// </summary>
   TApplicationBuilderRateLimitExtensions = class
   public

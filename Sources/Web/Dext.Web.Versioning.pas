@@ -34,7 +34,7 @@ uses
 
 type
   /// <summary>
-  ///   Contrato para leitura da versão da API a partir de uma requisição HTTP.
+  ///   Contract for reading the API version from an HTTP request.
   /// </summary>
   IApiVersionReader = interface
     ['{12312312-1234-1234-1234-1234567890AA}']
@@ -42,7 +42,7 @@ type
   end;
 
   /// <summary>
-  ///   Leitor de versão via Query String (ex: ?api-version=1.0).
+  ///   Version reader via Query String (e.g. ?api-version=1.0).
   /// </summary>
   TQueryStringApiVersionReader = class(TInterfacedObject, IApiVersionReader)
   private
@@ -53,7 +53,7 @@ type
   end;
 
   /// <summary>
-  ///   Leitor de versão via Header HTTP (ex: X-Version: 1.0).
+  ///   Version reader via HTTP Header (e.g. X-Version: 1.0).
   /// </summary>
   THeaderApiVersionReader = class(TInterfacedObject, IApiVersionReader)
   private
@@ -67,7 +67,7 @@ type
   ///   Combines multiple readers (e.g. check Header, then QueryString).
   /// </summary>
   /// <summary>
-  ///   Leitor composto que tenta extrair a versão de múltiplas fontes em sequência.
+  ///   Composite reader that attempts to extract the version from multiple sources in sequence.
   /// </summary>
   TCompositeApiVersionReader = class(TInterfacedObject, IApiVersionReader)
   private

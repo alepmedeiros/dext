@@ -32,7 +32,7 @@ uses
   Dext.Collections, Dext.Collections.Dict,
   Dext.Web.Core,
   Dext.Web.Interfaces,
-  Dext.Web.Routing;  // ? Para IRouteMatcher
+  Dext.Web.Routing;  // For IRouteMatcher
 
 type
   /// <summary>
@@ -60,7 +60,7 @@ uses
 constructor TRoutingMiddleware.Create(const ARouteMatcher: IRouteMatcher);
 begin
   inherited Create;
-  FRouteMatcher := ARouteMatcher;  // ? Interface gerencia ciclo de vida
+  FRouteMatcher := ARouteMatcher;  // Interface manages lifecycle
 end;
 
 destructor TRoutingMiddleware.Destroy;
@@ -78,11 +78,11 @@ begin
   var Path := AContext.Request.Path;
   var Method := AContext.Request.Method;
 
-  // ? USAR RouteMatcher via interface com suporte a Método
+  // Use RouteMatcher via interface with Method support
   if FRouteMatcher.FindMatchingRoute(AContext, Handler, RouteParams, Metadata) then
   begin
     try
-      // ? INJETAR parâmetros de rota se encontrados
+      // Inject route parameters if found
       if (RouteParams.Count > 0) and (AContext is TDextIndyHttpContext) then
       begin
         IndyContext := TDextIndyHttpContext(AContext);
@@ -119,7 +119,7 @@ begin
   end
   else
   begin
-    // Nenhuma rota encontrada - chamar next (404 handler)
+    // No matching route found - call next (404 handler)
     ANext(AContext);
   end;
 end;

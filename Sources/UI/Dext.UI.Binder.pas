@@ -79,8 +79,8 @@ type
   end;
   
   /// <summary>
-  ///   Motor de vinculação (Binder) baseado em RTTI que conecta controles de UI ao Modelo MVU.
-  ///   Descobre automaticamente atributos de vinculação nos campos do Frame e automatiza as atualizações bi-direcionais.
+  ///   RTTI-based binding engine that connects UI controls to the MVU Model.
+  ///   Automatically discovers binding attributes on Frame fields and automates two-way updates.
   /// </summary>
   TMVUBinder<TModel; TMsg: TMessage> = class
   public
@@ -104,13 +104,13 @@ type
     procedure HandleClick(Sender: TObject);
     procedure HandleChange(Sender: TObject);
   public
-    /// <summary>Cria uma nova instância do Binder associada a um Frame e um procedimento de despacho de mensagens.</summary>
+    /// <summary>Creates a new Binder instance associated with a Frame and a message dispatch procedure.</summary>
     constructor Create(AFrame: TComponent; ADispatch: TProc<TMsg>);
     destructor Destroy; override;
     
     /// <summary>
-    ///   Atualiza todos os controles vinculados a partir do estado atual do Modelo.
-    ///   Deve ser chamado após cada processamento de mensagem no ciclo MVU.
+    ///   Updates all bound controls from the current Model state.
+    ///   Must be called after each message processing in the MVU cycle.
     /// </summary>
     procedure Render(var Model: TModel);
   end;

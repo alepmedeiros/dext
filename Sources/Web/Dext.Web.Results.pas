@@ -43,7 +43,7 @@ uses
 
 type
   /// <summary>
-  ///   Classe base abstrata para implementações de <see cref="IResult"/>.
+  ///   Abstract base class for <see cref="IResult"/> implementations.
   /// </summary>
   TResult = class(TInterfacedObject, IResult)
   protected
@@ -64,7 +64,7 @@ type
   end;
 
   /// <summary>
-  ///   Resultado que retorna conteúdo formatado em JSON.
+  ///   Result that returns JSON formatted content.
   /// </summary>
   TJsonResult = class(TResult)
   private
@@ -76,7 +76,7 @@ type
   end;
 
   /// <summary>
-  ///   Resultado simples que retorna apenas o código de status HTTP (ex: 204 NoContent, 401 Unauthorized).
+  ///   Simple result that returns only the HTTP status code (e.g. 204 NoContent, 401 Unauthorized).
   /// </summary>
   TStatusCodeResult = class(TResult)
   private
@@ -87,7 +87,7 @@ type
   end;
 
   /// <summary>
-  ///   Resultado que retorna conteúdo textual com um Content-Type específico (ex: XML, Plain Text).
+  ///   Result that returns textual content with a specific Content-Type (e.g. XML, Plain Text).
   /// </summary>
   TContentResult = class(TResult)
   private
@@ -113,7 +113,7 @@ type
   end;
 
   /// <summary>
-  ///   Resultado que transmite o conteúdo de um Stream para a resposta HTTP.
+  ///   Result that streams the content of a Stream to the HTTP response.
   /// </summary>
   TStreamResult = class(TResult)
   private

@@ -28,7 +28,7 @@ uses
   Dext.Collections.Memory;
 
 type
-  /// Callback para comparação de elementos brutos
+  /// <summary>Callback for raw elements comparison</summary>
   TRawCompareFunc = reference to function(A, B: Pointer): Integer;
   TRawEqualFunc = function(A, B: Pointer; Size: Integer): Boolean;
   TRawEqualityFunc = reference to function(A, B: Pointer): Boolean;

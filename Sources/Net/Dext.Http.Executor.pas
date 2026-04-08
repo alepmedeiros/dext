@@ -41,50 +41,50 @@ uses
 
 type
   /// <summary>
-  ///   Resultado detalhado de uma execução HTTP, incluindo metadados da requisição.
-  ///   Ideal para exibição em interfaces de depuração e logs técnicos.
+  ///   Detailed result of an HTTP execution, including request metadata.
+  ///   Ideal for displaying in debugging interfaces and technical logs.
   /// </summary>
   THttpExecutionResult = record
-    /// <summary>Nome atribuído à requisição no arquivo .http.</summary>
+    /// <summary>Name assigned to the request in the .http file.</summary>
     RequestName: string;
-    /// <summary>Verbo HTTP utilizado (GET, POST, etc).</summary>
+    /// <summary>HTTP verb used (GET, POST, etc).</summary>
     RequestMethod: string;
-    /// <summary>URL completa após a resolução de variáveis.</summary>
+    /// <summary>Full URL after variable resolution.</summary>
     RequestUrl: string;
-    /// <summary>Código de status retornado pelo servidor.</summary>
+    /// <summary>Status code returned by the server.</summary>
     StatusCode: Integer;
-    /// <summary>Texto descritivo do status.</summary>
+    /// <summary>Descriptive text of the status.</summary>
     StatusText: string;
-    /// <summary>Corpo da resposta em formato string.</summary>
+    /// <summary>Response body in string format.</summary>
     ResponseBody: string;
-    /// <summary>Coleção de cabeçalhos retornados pelo servidor.</summary>
+    /// <summary>Collection of headers returned by the server.</summary>
     ResponseHeaders: IDictionary<string, string>;
-    /// <summary>Tempo total de execução em milissegundos.</summary>
+    /// <summary>Total execution time in milliseconds.</summary>
     DurationMs: Int64;
-    /// <summary>Indica se a requisição obteve um status de sucesso (2xx ou 3xx).</summary>
+    /// <summary>Indicates whether the request obtained a success status (2xx or 3xx).</summary>
     Success: Boolean;
-    /// <summary>Mensagem de erro técnica em caso de falha de conexão ou execução.</summary>
+    /// <summary>Technical error message in case of connection or execution failure.</summary>
     ErrorMessage: string;
   end;
 
   /// <summary>
-  ///   Executor especializado para requisições HTTP baseadas em THttpRequestInfo.
-  ///   Atua como ponte entre o parser de arquivos .http e o TRestClient do Dext.
+  ///   Specialized executor for HTTP requests based on THttpRequestInfo.
+  ///   Acts as a bridge between the .http file parser and the Dext TRestClient.
   /// </summary>
   THttpExecutor = class
   private
     class function MethodToEnum(const AMethod: string): TDextHttpMethod; static;
   public
-    /// <summary>Executa uma requisição HTTP de forma assíncrona.</summary>
+    /// <summary>Executes an HTTP request asynchronously.</summary>
     class function ExecuteAsync(const ARequest: THttpRequestInfo): TAsyncBuilder<IRestResponse>; static;
     
-    /// <summary>Executa uma requisição resolvendo variáveis dinâmicas antes do envio.</summary>
+    /// <summary>Executes a request by resolving dynamic variables before sending.</summary>
     class function ExecuteWithVariablesAsync(ARequest: THttpRequestInfo; 
       AVariables: IList<THttpVariable>): TAsyncBuilder<IRestResponse>; static;
     
     /// <summary>
-    ///   Executa uma requisição de forma síncrona (blocante) e retorna um resultado detalhado.
-    ///   Recomendado apenas para ferramentas de CLI ou Dashboards de monitoramento.
+    ///   Executes a request synchronously (blocking) and returns a detailed result.
+    ///   Recommended only for CLI tools or monitoring Dashboards.
     /// </summary>
     class function ExecuteSync(ARequest: THttpRequestInfo; 
       AVariables: IList<THttpVariable>): THttpExecutionResult; static;

@@ -63,10 +63,7 @@ type
   end;
 
   /// <summary>
-  ///   JWT token generator and validator interface.
-  /// </summary>
-  /// <summary>
-  ///   Contrato para o manipulador de tokens JWT, permitindo geração e validação.
+  ///   JWT token handler contract, allowing for generation and validation.
   /// </summary>
   IJwtTokenHandler = interface
     ['{A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D}']
@@ -90,10 +87,7 @@ type
   end;
 
   /// <summary>
-  ///   JWT authentication configuration options.
-  /// </summary>
-  /// <summary>
-  ///   Opções de configuração de JWT (Secret, Issuer, Audience).
+  ///   JWT configuration options (Secret, Issuer, Audience).
   /// </summary>
   TJwtOptions = record
   public
@@ -124,13 +118,7 @@ type
   end;
 
   /// <summary>
-  ///   Fluent builder for creating JWT options.
-  /// </summary>
-  /// <summary>
-  ///   Fluent builder for creating JWT options.
-  /// </summary>
-  /// <summary>
-  ///   Builder fluente para construção de objetos <see cref="TJwtOptions"/>.
+  ///   Fluent builder for creating <see cref="TJwtOptions"/> objects.
   /// </summary>
   TJwtOptionsBuilder = record
   private
@@ -184,10 +172,7 @@ type
   end;
 
   /// <summary>
-  ///   JWT token generator and validator.
-  /// </summary>
-  /// <summary>
-  ///   Implementação padrão do manipulador de tokens JWT usando HS256.
+  ///   Default implementation of the JWT token handler using HS256.
   /// </summary>
   TJwtTokenHandler = class(TInterfacedObject, IJwtTokenHandler)
   private

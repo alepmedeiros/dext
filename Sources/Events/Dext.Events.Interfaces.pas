@@ -62,8 +62,8 @@ type
   end;
 
   /// <summary>
-  ///   Manipulador de eventos tipado. Implemente esta interface para reagir ao tipo de evento T.
-  ///   Os manipuladores (Handlers) são resolvidos via DI a cada publicação, permitindo injeção de dependências.
+  ///   Typed event handler. Implement this interface to react to the event type T.
+  ///   Handlers are resolved via DI on each publish, allowing dependency injection.
   /// </summary>
   IEventHandler<T> = interface(IEventHandler)
     ['{B2F85D39-4E0A-5C6B-9D1F-3E7A2B8C4D0F}']
@@ -87,35 +87,35 @@ type
   end;
 
   /// <summary>
-  ///   Fachada para publicação de um único tipo de evento.
-  ///   Segue o Princípio de Segregação de Interface (ISP) — injete IEventPublisher&lt;T&gt; ao invés de IEventBus
-  ///   em componentes que publicam apenas um tipo específico de evento.
+  ///   Facade for publishing a single type of event.
+  ///   Follows the Interface Segregation Principle (ISP) — inject IEventPublisher&lt;T&gt; instead of IEventBus
+  ///   in components that only publish a specific type of event.
   /// </summary>
   IEventPublisher<T> = interface
     ['{A7B3C9D1-E5F4-4B2A-9E0D-1C8F7A6B5D3E}']
-    /// <summary>Publica o evento de forma síncrona e aguarda o processamento de todos os handlers.</summary>
+    /// <summary>Publishes the event synchronously and waits for all handlers to process.</summary>
     function Publish(const AEvent: T): TPublishResult;
-    /// <summary>Publica o evento em uma thread de background (fire-and-forget).</summary>
+    /// <summary>Publishes the event in a background thread (fire-and-forget).</summary>
     procedure PublishBackground(const AEvent: T);
   end;
 
   /// <summary>
-  ///   O Barramento Central de Eventos do Dext (Event Bus).
-  ///   Permite o desacoplamento total entre produtores e consumidores de mensagens In-Memory.
+  ///   The Dext Central Event Bus.
+  ///   Allows complete decoupling between in-memory message producers and consumers.
   /// </summary>
   IEventBus = interface
     ['{D4B07F5B-6A2C-7E8D-1F3B-5A9C4D0E6F2B}']
 
     /// <summary>
-    ///   Despacha um evento de forma síncrona. Invoca todos os Handlers e Behaviors registrados.
-    ///   Retorna estatísticas da publicação. Lança exceção se algum handler falhar.
+    ///   Dispatches an event synchronously. Invokes all registered Handlers and Behaviors.
+    ///   Returns publication statistics. Raises an exception if any handler fails.
     /// </summary>
     function Dispatch(AEventType: PTypeInfo;
       const AEvent: TValue): TPublishResult;
 
     /// <summary>
-    ///   Despacha um evento de forma assíncrona (fire-and-forget).
-    ///   O processamento ocorre em uma thread separada com um escopo de DI isolado.
+    ///   Dispatches an event asynchronously (fire-and-forget).
+    ///   Processing occurs in a separate thread with an isolated DI scope.
     /// </summary>
     procedure DispatchBackground(AEventType: PTypeInfo; const AEvent: TValue);
   end;

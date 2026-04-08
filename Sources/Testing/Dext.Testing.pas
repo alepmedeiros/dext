@@ -230,39 +230,39 @@ const
   // {END_DEXT_ALIASES}
 
 // Global helper functions for cleaner syntax
-/// <summary>Inicia uma asserção fluida (Fluent Assertion) para strings.</summary>
+/// <summary>Initiates a fluent assertion for strings.</summary>
 function Should(const Value: string): ShouldString; overload;
-/// <summary>Inicia uma asserção fluida para inteiros de 32 bits.</summary>
+/// <summary>Initiates a fluent assertion for 32-bit integers.</summary>
 function Should(Value: Integer): ShouldInteger; overload;
-/// <summary>Inicia uma asserção fluida para inteiros de 64 bits.</summary>
+/// <summary>Initiates a fluent assertion for 64-bit integers.</summary>
 function Should(Value: Int64): ShouldInt64; overload;
-/// <summary>Inicia uma asserção fluida para valores booleanos.</summary>
+/// <summary>Initiates a fluent assertion for Boolean values.</summary>
 function Should(Value: Boolean): ShouldBoolean; overload;
-/// <summary>Inicia uma asserção fluida para números de ponto flutuante (Double).</summary>
+/// <summary>Initiates a fluent assertion for floating-point numbers (Double).</summary>
 function Should(Value: Double): ShouldDouble; overload;
-/// <summary>Inicia uma asserção fluida para interceptação de exceções em procedimentos anônimos.</summary>
+/// <summary>Initiates a fluent assertion to intercept exceptions in anonymous procedures.</summary>
 function Should(const Action: TProc): ShouldAction; overload;
-/// <summary>Inicia uma asserção fluida para objetos, permitindo verificar nulidade e tipos.</summary>
+/// <summary>Initiates a fluent assertion for objects, allowing null and type checks.</summary>
 function Should(const Value: TObject): ShouldObject; overload;
-/// <summary>Inicia uma asserção fluida para interfaces.</summary>
+/// <summary>Initiates a fluent assertion for interfaces.</summary>
 function Should(const Value: IInterface): ShouldInterface; overload;
-/// <summary>Inicia uma asserção fluida para identificadores globais únicos (GUID).</summary>
+/// <summary>Initiates a fluent assertion for globally unique identifiers (GUID).</summary>
 function Should(const Value: TGUID): ShouldGuid; overload;
-/// <summary>Inicia uma asserção fluida para UUIDs nativos do Dext.</summary>
+/// <summary>Initiates a fluent assertion for native Dext UUIDs.</summary>
 function Should(const Value: TUUID): ShouldUUID; overload;
-/// <summary>Inicia uma asserção fluida para tipos Variant.</summary>
+/// <summary>Initiates a fluent assertion for Variant types.</summary>
 function Should(const Value: Variant): ShouldVariant; overload;
-/// <summary>Inicia uma asserção fluida especializada para datas e horas.</summary>
+/// <summary>Initiates a specialized fluent assertion for dates and times.</summary>
 function ShouldDate(Value: TDateTime): ShouldDateTime; overload;
-/// <summary>Helper genérico para outras asserções fluas especializadas.</summary>
+/// <summary>Generic helper for other specialized fluent assertions.</summary>
 function Should: ShouldHelper; overload;
 
 // Fluent Builders
-/// <summary>Inicia o builder de configuração fluida para a execução de testes.</summary>
+/// <summary>Initiates the fluent configuration builder for test execution.</summary>
 function ConfigureTests: TTestConfigurator;
-/// <summary>Executa os testes utilizando uma configuração personalizada.</summary>
+/// <summary>Executes the tests using a custom configuration.</summary>
 procedure RunTests(const Config: TTestConfigurator); overload;
-/// <summary>Executa todos os testes registrados na aplicação com as configurações padrão.</summary>
+/// <summary>Executes all registered tests in the application using default settings.</summary>
 procedure RunTests; overload;
 
 implementation

@@ -34,14 +34,8 @@ uses
 
 type
   /// <summary>
-  ///   Fluent builder for rate limiting policies.
-  /// </summary>
-  /// <summary>
-  ///   Fluent builder for rate limiting policies.
-  /// </summary>
-  /// <summary>
-  ///   Record gerenciado que fornece uma interface fluente para definir políticas de Rate Limiting.
-  ///   Suporta limites por janela fixa, deslizante, bucket de tokens e concorrência.
+  ///   Managed record that provides a fluent interface for defining Rate Limiting policies.
+  ///   Supports fixed window, sliding window, token bucket, and concurrency limits.
   /// </summary>
   TRateLimitPolicy = record
   private

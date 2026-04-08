@@ -39,9 +39,6 @@ type
   /// <summary>
   ///   Middleware that validates JWT tokens and populates the User principal.
   /// </summary>
-  /// <summary>
-  ///   Middleware responsável por interceptar o cabeçalho de autorização, validar o token JWT e popular o usuário atual (Principal).
-  /// </summary>
   TJwtAuthenticationMiddleware = class(TInterfacedObject, IMiddleware)
   private
     FOptions: TJwtOptions;
@@ -59,9 +56,6 @@ type
 
   /// <summary>
   ///   Extension methods for adding JWT authentication to the application pipeline.
-  /// </summary>
-  /// <summary>
-  ///   Métodos de extensão para o <see cref="IApplicationBuilder"/> permitindo a configuração fluente de autenticação JWT.
   /// </summary>
   TApplicationBuilderJwtExtensions = class
   public

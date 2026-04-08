@@ -38,7 +38,7 @@ uses
 
 type
   /// <summary>
-  ///   Base para implementação de provedores de configuração (JSON, Env, CLI, etc).
+  ///   Base for the implementation of configuration providers (JSON, Env, CLI, etc.).
   /// </summary>
   TConfigurationProvider = class(TInterfacedObject, IConfigurationProvider)
   protected
@@ -75,7 +75,7 @@ type
   end;
 
   /// <summary>
-  ///   Raiz da configuração que agrega múltiplos provedores. O último provedor adicionado tem precedência na resolução de chaves repetidas (Last-In-First-Out).
+  ///   The root of the configuration that aggregates multiple providers. The last provider added takes precedence when resolving repeated keys (Last-In-First-Out).
   /// </summary>
   TConfigurationRoot = class(TInterfacedObject, IConfigurationRoot, IConfiguration)
   private
@@ -88,22 +88,22 @@ type
     constructor Create(const Providers: IList<IConfigurationProvider>);
     destructor Destroy; override;
     
-    /// <summary>Força o recarregamento de todos os provedores (ex: reler arquivos JSON ou variáveis de ambiente do SO).</summary>
+    /// <summary>Forces a reload of all providers (e.g., re-reading JSON files or OS environment variables).</summary>
     procedure Reload;
     function GetSectionChildren(const Path: string): TArray<IConfigurationSection>;
     
     // IConfiguration
-    /// <summary>Obtém ou define o valor de uma configuração pela chave absoluta (ex: "Database:Default:Host").</summary>
+    /// <summary>Gets or sets the value of a configuration by its absolute key (e.g., "Database:Default:Host").</summary>
     function GetItem(const Key: string): string;
     procedure SetItem(const Key, Value: string);
-    /// <summary>Obtém uma sub-seção específica da configuração como um objeto navegável.</summary>
+    /// <summary>Gets a specific configuration sub-section as a navigable object.</summary>
     function GetSection(const Key: string): IConfigurationSection;
-    /// <summary>Retorna todas as sub-seções imediatas do nível atual.</summary>
+    /// <summary>Returns all immediate sub-sections of the current level.</summary>
     function GetChildren: TArray<IConfigurationSection>;
   end;
 
   /// <summary>
-  ///   Builder para construção do sistema de configuração. Permite registrar fontes de dados antes de processar e gerar a raiz consolidada.
+  ///   Builder for constructing the configuration system. Allows registering data sources before processing and generating the consolidated root.
   /// </summary>
   TConfigurationBuilder = class(TInterfacedObject, IConfigurationBuilder)
   private
@@ -116,9 +116,9 @@ type
     function GetSources: IList<IConfigurationSource>;
     function GetProperties: IDictionary<string, TObject>;
     
-    /// <summary>Adiciona uma fonte de dados (JSON, YAML, Env, etc) ao pipeline de construção.</summary>
+    /// <summary>Adds a data source (JSON, YAML, Env, etc.) to the construction pipeline.</summary>
     function Add(Source: IConfigurationSource): IConfigurationBuilder;
-    /// <summary>Consolida todas as fontes e gera o provedor raiz para consumo pela aplicação.</summary>
+    /// <summary>Consolidates all sources and generates the root provider for consumption by the application.</summary>
     function Build: IConfigurationRoot;
   end;
 
@@ -139,23 +139,23 @@ type
   end;
 
   /// <summary>
-  ///   Fachada fluente para criação simplificada de configurações.
+  ///   Fluent facade for simplified creation of configurations.
   /// </summary>
   TDextConfiguration = record
   private
     FBuilder: IConfigurationBuilder;
   public
     constructor Create(const ABuilder: IConfigurationBuilder);
-    /// <summary>Inicia a criação de uma nova configuração fluente.</summary>
+    /// <summary>Initiates the creation of a new fluent configuration.</summary>
     class function New: TDextConfiguration; static;
 
-    /// <summary>Adiciona uma fonte customizada ao builder.</summary>
+    /// <summary>Adds a custom source to the builder.</summary>
     function Add(const ASource: IConfigurationSource): TDextConfiguration;
-    /// <summary>Adiciona valores estáticos em memória à configuração.</summary>
+    /// <summary>Adds static in-memory values to the configuration.</summary>
     function AddValues(const AValues: array of TPair<string, string>): TDextConfiguration;
-    /// <summary>Constrói e retorna a raiz de configuração finalizada.</summary>
+    /// <summary>Builds and returns the finalized configuration root.</summary>
     function Build: IConfigurationRoot;
-    /// <summary>Retorna o builder subjacente para configurações manuais avançadas.</summary>
+    /// <summary>Returns the underlying builder for advanced manual configurations.</summary>
     function Unwrap: IConfigurationBuilder;
   end;
 

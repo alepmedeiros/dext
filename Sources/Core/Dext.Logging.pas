@@ -48,7 +48,7 @@ type
     Error = 4,
     /// <summary>Critical failures that require immediate attention (e.g., out of resources, crash).</summary>
     Critical = 5,
-    /// <summary>Desativa todo o registro de logs.</summary>
+    /// <summary>Disables all log recording.</summary>
     None = 6
   );
   {$M+}
@@ -60,7 +60,7 @@ type
     procedure Dispose;
   end;
 
-  /// <summary>Interface principal para registro de mensagens de log estruturadas.</summary>
+  /// <summary>Main interface for recording structured log messages.</summary>
   ILogger = interface
     ['{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}']
     /// <summary>Logs a message with the specified severity level.</summary>
@@ -73,10 +73,10 @@ type
     
     /// <summary>Starts a logical log scope (e.g., RequestId, TransactionId). The scope is closed when releasing the IDisposable.</summary>
     function BeginScope(const AMessage: string; const AArgs: array of const): IDisposable; overload;
-    /// <summary>Inicia um escopo baseado em um objeto de estado (ex: um registro ou entidade).</summary>
+    /// <summary>Starts a scope based on a state object (e.g., a record or entity).</summary>
     function BeginScope(const AState: TObject): IDisposable; overload;
 
-    // Métodos curtos (Preferidos)
+    // Short methods (Preferred)
     procedure Trace(const AMessage: string); overload;
     procedure Trace(const AMessage: string; const AArgs: array of const); overload;
     
@@ -97,7 +97,7 @@ type
     procedure Critical(const AMessage: string; const AArgs: array of const); overload;
     procedure Critical(const AException: Exception; const AMessage: string; const AArgs: array of const); overload;
     
-    // Métodos legados (Compatibilidade)
+    // Legacy methods (Compatibility)
     procedure LogTrace(const AMessage: string); overload;
     procedure LogTrace(const AMessage: string; const AArgs: array of const); overload;
     

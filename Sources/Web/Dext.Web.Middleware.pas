@@ -41,7 +41,7 @@ uses
 type
   // Common HTTP Exceptions
   /// <summary>
-  ///   Classe base para exceções que resultam em códigos de status HTTP específicos.
+  ///   Base class for exceptions that result in specific HTTP status codes.
   /// </summary>
   EHttpException = class(Exception)
   private
@@ -82,7 +82,7 @@ type
   end;
 
   /// <summary>
-  ///   Estrutura para reportar erros HTTP seguindo o padrão RFC 7807 (Problem Details).
+  ///   Structure to report HTTP errors following the RFC 7807 (Problem Details) standard.
   /// </summary>
   TProblemDetails = record
     &Type: string;
@@ -95,7 +95,7 @@ type
   end;
 
   /// <summary>
-  ///   Middleware responsável por capturar exceções não tratadas e retornar respostas padronizadas.
+  ///   Middleware responsible for capturing unhandled exceptions and returning standardized responses.
   /// </summary>
   TExceptionHandlerMiddleware = class(TMiddleware)
   private
@@ -108,7 +108,7 @@ type
   
   // Minimal implementation reuse TExceptionHandlerMiddleware logic with Development options
   /// <summary>
-  ///   Middleware que exibe uma página de erro detalhada durante o desenvolvimento.
+  ///   Middleware that displays a detailed error page during development.
   /// </summary>
   TDeveloperExceptionPageMiddleware = class(TExceptionHandlerMiddleware)
   public
@@ -126,7 +126,7 @@ type
   end;
 
   /// <summary>
-  ///   Middleware para logar detalhes das requisições e respostas HTTP.
+  ///   Middleware for logging details of HTTP requests and responses.
   /// </summary>
   THttpLoggingMiddleware = class(TMiddleware)
   private

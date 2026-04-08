@@ -42,8 +42,8 @@ type
   IRestRequestData = interface;
 
   /// <summary>
-  ///   Builder fluído para construção de operações REST complexas.
-  ///   Utiliza uma interface interna para gerenciamento seguro de estado e suporte a asincronismo.
+  ///   Fluent builder for constructing complex REST operations.
+  ///   Uses an internal interface for safe state management and asynchronous support.
   /// </summary>
   TRestRequest = record
   private
@@ -54,25 +54,25 @@ type
     constructor Create(AClient: TRestClient; AMethod: TDextHttpMethod; const AEndpoint: string);
 
     // Configuração
-    /// <summary>Adiciona um cabeçalho HTTP customizado à requisição.</summary>
+    /// <summary>Adds a custom HTTP header to the request.</summary>
     function Header(const AName, AValue: string): TRestRequest;
-    /// <summary>Adiciona um parâmetro de consulta (Query String) à URL.</summary>
+    /// <summary>Adds a query parameter (Query String) to the URL.</summary>
     function QueryParam(const AName, AValue: string): TRestRequest;
-    /// <summary>Define o corpo da requisição a partir de um Stream.</summary>
+    /// <summary>Defines the request body from a Stream.</summary>
     function Body(ABody: TStream; AOwns: Boolean = False): TRestRequest; overload;
-    /// <summary>Define o corpo da requisição serializando o objeto T para JSON.</summary>
+    /// <summary>Defines the request body by serializing the object T to JSON.</summary>
     function Body<T: class>(const ABody: T): TRestRequest; overload;
-    /// <summary>Define uma string JSON raw como corpo da requisição.</summary>
+    /// <summary>Defines a raw JSON string as the request body.</summary>
     function JsonBody(const AJson: string): TRestRequest;
-    /// <summary>Associa um token de cancelamento à execução desta requisição.</summary>
+    /// <summary>Associates a cancellation token with the execution of this request.</summary>
     function Cancellation(AToken: ICancellationToken): TRestRequest;
 
     // Execução
-    /// <summary>Executa a requisição de forma assíncrona e retorna a resposta bruta.</summary>
+    /// <summary>Executes the request asynchronously and returns the raw response.</summary>
     function Execute: TAsyncBuilder<IRestResponse>; overload;
-    /// <summary>Executa a requisição e desserializa o resultado JSON para o tipo T.</summary>
+    /// <summary>Executes the request and deserializes the JSON result to type T.</summary>
     function Execute<T: class>: TAsyncBuilder<T>; overload;
-    /// <summary>Executa a requisição e retorna o conteúdo do corpo como uma string.</summary>
+    /// <summary>Executes the request and returns the body content as a string.</summary>
     function ExecuteAsString: TAsyncBuilder<string>;
   end;
 

@@ -41,7 +41,7 @@ type
 type
   /// <summary>Base options for Data API, allowing non-generic configuration.</summary>
   /// <summary>
-  ///   Opções de configuração para uma Data API, permitindo controle de permissões, nomenclatura e Swagger.
+  ///   Configuration options for a Data API, allowing control over permissions, naming conventions, and Swagger.
   /// </summary>
   TDataApiOptions = class
   protected
@@ -94,7 +94,7 @@ type
   end;
 
   /// <summary>
-  ///   Handler responsável por processar as requisições HTTP para uma entidade específica, mapeando-as para o ORM.
+  ///   Handler responsible for processing HTTP requests for a specific entity, mapping them to the ORM.
   /// </summary>
   TDataApiHandler<T: class> = class
   private
@@ -129,7 +129,7 @@ type
 
   /// <summary>Non-generic entry point for Data API mapping.</summary>
   /// <summary>
-  ///   Ponto de entrada para mapeamento simplificado de Data APIs no pipeline da aplicação.
+  ///   Entry point for simplified mapping of Data APIs in the application pipeline.
   /// </summary>
   TDataApi = class
   public

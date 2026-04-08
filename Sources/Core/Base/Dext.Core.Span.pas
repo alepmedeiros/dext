@@ -47,8 +47,8 @@ type
   end;
 
   /// <summary>
-  ///   Uma Span é uma referência leve e sem alocação (zero-allocation) para uma região contígua de memória.
-  ///   Ideal para processar buffers, arrays e strings sem criar cópias desnecessárias.
+  ///   A Span is a lightweight, zero-allocation reference to a contiguous region of memory.
+  ///   Ideal for processing buffers, arrays, and strings without creating unnecessary copies.
   /// </summary>
   TSpan<T> = record
   private
@@ -79,14 +79,14 @@ type
     property Items[Index: Integer]: T read GetItem write SetItem; default;
     property IsEmpty: Boolean read GetLength; // Added helper
   public
-    /// <summary>Cria uma Span vazia (nil).</summary>
+    /// <summary>Creates an empty Span (nil).</summary>
     class function Empty: TSpan<T>; static;
-    /// <summary>Cria uma Span a partir de um array dinâmico, referenciando a memória original.</summary>
+    /// <summary>Creates a Span from a dynamic array, referencing its original memory.</summary>
     class function From(var AArray: TArray<T>): TSpan<T>; static;
   end;
 
   /// <summary>
-  ///   Versão somente-leitura de TSpan. Garante que os dados originais não sejam modificados via interface de Span.
+  ///   Read-only version of TSpan. Guarantees that original data cannot be modified via the Span interface.
   /// </summary>
   TReadOnlySpan<T> = record
   private
@@ -116,8 +116,8 @@ type
   end;
 
   /// <summary>
-  ///   Especialização de TSpan para Bytes (TByteSpan).
-  ///   Otimizada para processamento de protocolos de rede e motores de parsing (JSON/REST).
+  ///   Specialized TSpan for Bytes (TByteSpan).
+  ///   Optimized for network protocol processing and parser engines (JSON/REST).
   /// </summary>
   TByteSpan = record
   private

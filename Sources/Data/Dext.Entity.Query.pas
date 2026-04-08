@@ -107,7 +107,7 @@ type
   ///   Implemented as a record for automatic lifecycle management.
   /// </summary>
   /// <summary>
-  ///   Orquestrador de consultas fluentes (LINQ-like). 
+  ///   Orchestrator for fluent queries (LINQ-like). 
   ///   Implemented as a record for automatic lifecycle management and low overhead.
   /// </summary>
   TFluentQuery<T> = record
@@ -151,7 +151,7 @@ type
     function GetEnumerator: IEnumerator<T>;
     
     /// <summary>
-    ///   Retorna um enumerador especializado para alta performance que reutiliza instâncias de objetos.
+    ///   Returns a specialized high-performance enumerator that reuses object instances.
     /// </summary>
     function GetStreamingEnumerator: IEnumerator<T>;
     

@@ -38,8 +38,8 @@ type
   TDextServiceScope = class;
 
   /// <summary>
-  ///   Provedor de serviços (Dext DI Container). Resolve instâncias registradas respeitando o ciclo de vida.
-  ///   Gerencia armazenamento híbrido para garantir a limpeza correta de Objetos (Free) e Interfaces (ARC).
+  ///   Service Provider (Dext DI Container). Resolves registered instances respecting the lifecycle.
+  ///   Manages hybrid storage to ensure correct cleanup of Objects (Free) and Interfaces (ARC).
   /// </summary>
   TDextServiceProvider = class(TInterfacedObject, IServiceProvider)
   private
@@ -62,22 +62,22 @@ type
     function FindDescriptor(const AServiceType: TServiceType): TServiceDescriptor;
   public
     constructor Create(const ADescriptors: IList<TServiceDescriptor>); overload;
-    /// <summary>Cria um provedor com escopo isolado, herdando registros do provedor pai para instâncias 'Scoped'.</summary>
+    /// <summary>Creates a provider with an isolated scope, inheriting registrations from the parent provider for 'Scoped' instances.</summary>
     constructor CreateScoped(AParent: IServiceProvider; const ADescriptors: IList<TServiceDescriptor>); overload;
     destructor Destroy; override;
 
-    /// <summary>Resolve uma instância do serviço solicitado. Retorna nil se o serviço não estiver registrado.</summary>
+    /// <summary>Resolves an instance of the requested service. Returns nil if the service is not registered.</summary>
     function GetService(const AServiceType: TServiceType): TObject;
-    /// <summary>Resolve uma instância e a retorna como uma interface (requer suporte a ARC no objeto resolvida).</summary>
+    /// <summary>Resolves an instance and returns it as an interface (requires ARC support on the resolved object).</summary>
     function GetServiceAsInterface(const AServiceType: TServiceType): IInterface;
-    /// <summary>Resolve uma instância do serviço. Lança exception EServiceNotFound se o serviço não estiver registrado.</summary>
+    /// <summary>Resolves an instance of the service. Raises an EServiceNotFound exception if the service is not registered.</summary>
     function GetRequiredService(const AServiceType: TServiceType): TObject;
-    /// <summary>Inicia um novo escopo de isolamento (ex: para uma nova requisição HTTP ou tarefa em background).</summary>
+    /// <summary>Starts a new isolation scope (e.g., for a new HTTP request or background task).</summary>
     function CreateScope: IServiceScope;
   end;
 
   /// <summary>
-  ///   Escopo de serviço. Garante que os serviços registrados como 'Scoped' sejam liberados ao fim do ciclo (ex: fim de requisição HTTP).
+  ///   Service scope. Ensures that services registered as 'Scoped' are freed at the end of the lifecycle (e.g., end of an HTTP request).
   /// </summary>
   TDextServiceScope = class(TInterfacedObject, IServiceScope)
   private
@@ -88,7 +88,7 @@ type
   end;
 
   /// <summary>
-  ///   Coleção de registros de serviços. Permite configurar o container de DI seguindo o padrão Builder.
+  ///   Collection of service registrations. Allows configuring the DI container following the Builder pattern.
   /// </summary>
   TDextServiceCollection = class(TInterfacedObject, IServiceCollection)
   private
@@ -99,27 +99,27 @@ type
     destructor Destroy; override;
 
     function GetDescriptors: IList<TServiceDescriptor>;
-    /// <summary>Registra um serviço persistente para toda a vida da aplicação (Shared/Static).</summary>
+    /// <summary>Registers a persistent service for the entire application lifetime (Shared/Static).</summary>
     function AddSingleton(const AServiceType: TServiceType;
                          const AImplementationClass: TClass;
                          const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection; overload;
     
-    /// <summary>Registra uma instância pré-existente como Singleton (o container assume a propriedade).</summary>
+    /// <summary>Registers a pre-existing instance as a Singleton (the container assumes ownership).</summary>
     function AddSingleton(const AServiceType: TServiceType;
                          AInstance: TObject): IServiceCollection; overload;
 
-    /// <summary>Registra um serviço que será recriado em cada solicitação de resolução.</summary>
+    /// <summary>Registers a service that will be recreated on each resolution request.</summary>
     function AddTransient(const AServiceType: TServiceType;
                           const AImplementationClass: TClass;
                           const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection;
 
-    /// <summary>Registra um serviço cuja instância é mantida viva apenas dentro do escopo atual (ex: IServiceScope).</summary>
+    /// <summary>Registers a service whose instance is kept alive only within the current scope (e.g., IServiceScope).</summary>
     function AddScoped(const AServiceType: TServiceType;
                        const AImplementationClass: TClass;
                        const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection;
 
     procedure AddRange(const AOther: IServiceCollection);
-    /// <summary>Finaliza as configurações e materializa o provedor de serviços (Container) para uso.</summary>
+    /// <summary>Finalizes configurations and materializes the service provider (Container) for use.</summary>
     function BuildServiceProvider: IServiceProvider;
   end;
 

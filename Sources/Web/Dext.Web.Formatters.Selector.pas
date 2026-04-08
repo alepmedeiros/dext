@@ -37,7 +37,7 @@ uses
 
 type
   /// <summary>
-  ///   Representa um valor de tipo de mídia com seu respectivo peso de qualidade (q-factor).
+  ///   Represents a media type value with its respective quality weight (q-factor).
   /// </summary>
   TMediaTypeHeaderValue = record
     MediaType: string;
@@ -46,7 +46,7 @@ type
   end;
 
   /// <summary>
-  ///   Seletor padrão responsável por escolher o melhor formatador de saída baseado no cabeçalho 'Accept' da requisição.
+  ///   Default selector responsible for choosing the best output formatter based on the 'Accept' header of the request.
   /// </summary>
   TDefaultOutputFormatterSelector = class(TInterfacedObject, IOutputFormatterSelector)
   public

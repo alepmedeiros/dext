@@ -35,7 +35,7 @@ uses
 
 type
   /// <summary>
-  ///   Contrato base para o pipeline de execução do Dext, responsável por orquestrar o processamento de uma requisição HTTP.
+  ///   Base contract for the Dext execution pipeline, responsible for orchestrating the processing of an HTTP request.
   /// </summary>
   IDextPipeline = interface
     ['{A3B4C5D6-E7F8-4A9B-8C0D-1E2F3A4B5C6D}']
@@ -43,12 +43,12 @@ type
   end;
 
   /// <summary>
-  ///   Implementação padrão do pipeline Dext que armazena a cadeia completa de middlewares e rotas.
+  ///   Default implementation of the Dext pipeline that stores the complete chain of middlewares and routes.
   /// </summary>
   TDextPipeline = class(TInterfacedObject, IDextPipeline)
   private
-    FMappedRoutes: IDictionary<string, TRequestDelegate>;       // Rotas fixas
-    FRoutePatterns: IDictionary<TRoutePattern, TRequestDelegate>; // ? NOVO: Padrões com parâmetros
+    FMappedRoutes: IDictionary<string, TRequestDelegate>;       // Fixed routes
+    FRoutePatterns: IDictionary<TRoutePattern, TRequestDelegate>; // Generic route patterns with parameters
     FMiddlewarePipeline: TRequestDelegate;
 
 //    function FindMatchingRoute(const APath: string;
@@ -56,7 +56,7 @@ type
 //      out ARouteParams: IDictionary<string, string>): Boolean;
   public
     constructor Create(AMappedRoutes: IDictionary<string, TRequestDelegate>;
-      ARoutePatterns: IDictionary<TRoutePattern, TRequestDelegate>; // ? NOVO: Receber padrões
+      ARoutePatterns: IDictionary<TRoutePattern, TRequestDelegate>; // Receive patterns
       APipeline: TRequestDelegate);
     destructor Destroy; override;
     procedure Execute(AContext: IHttpContext);
@@ -79,7 +79,7 @@ var
 begin
   inherited Create;
 
-  // ? Clonar rotas fixas
+  // Clone fixed routes
   FMappedRoutes := TCollections.CreateDictionary<string, TRequestDelegate>;
   for Path in AMappedRoutes.Keys do
   begin
@@ -87,7 +87,7 @@ begin
       FMappedRoutes.Add(Path, Handler);
   end;
 
-  // ? NOVO: Clonar padrões de rota
+  // Clone route patterns
   FRoutePatterns := TCollections.CreateDictionary<TRoutePattern, TRequestDelegate>;
   for RoutePattern in ARoutePatterns.Keys do
   begin
@@ -108,7 +108,7 @@ var
 begin
   FMappedRoutes := nil;
 
-  // ? NOVO: Liberar padrões de rota
+  // Release route patterns
   for RoutePattern in FRoutePatterns.Keys do
     RoutePattern.Free;
   FRoutePatterns := nil;
@@ -143,7 +143,7 @@ end;
 
 procedure TDextPipeline.Execute(AContext: IHttpContext);
 begin
-  // ? Apenas executa o pipeline completo
+  // Just execute the complete pipeline
   // O roteamento agora está DENTRO do pipeline como um middleware
   FMiddlewarePipeline(AContext);
 end;

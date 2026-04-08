@@ -18,9 +18,6 @@ type
   /// <summary>
   ///   Configuration options for OpenAPI document generation.
   /// </summary>
-  /// <summary>
-  ///   Opções de configuração para a geração do documento OpenAPI (ex: Título, Versão, Segurança).
-  /// </summary>
   TOpenAPIOptions = record
     Title: string;
     Description: string;
@@ -77,9 +74,6 @@ type
   /// <summary>
   ///   Fluent builder for creating OpenAPI/Swagger options.
   ///   This is a managed record - no manual memory management required.
-  /// </summary>
-  /// <summary>
-  ///   Builder fluente para construção de objetos <see cref="TOpenAPIOptions"/>.
   /// </summary>
   TOpenAPIBuilder = record
   private
@@ -160,9 +154,6 @@ type
 
   /// <summary>
   ///   Generates OpenAPI 3.0 documentation from endpoint metadata.
-  /// </summary>
-  /// <summary>
-  ///   Orquestrador responsável por varrer os metadados dos endpoints e gerar o esquema OpenAPI 3.0 via RTTI.
   /// </summary>
   TOpenAPIGenerator = class
   private

@@ -47,8 +47,8 @@ type
   end;
 
   /// <summary>
-  ///   Registro central de conversores de tipo no Dext.
-  ///   Permite mapear transformações entre pares de tipos (Ex: String -> GUID) ou categorias (Ex: Variant -> Enum).
+  ///   Central registry of type converters in Dext.
+  ///   Allows mapping transformations between pairs of types (e.g., String -> GUID) or categories (e.g., Variant -> Enum).
   /// </summary>
   TValueConverterRegistry = class
   private
@@ -58,27 +58,27 @@ type
     class destructor Destroy;
     class function GetKey(ASource, ATarget: PTypeInfo): string;
   public
-    /// <summary>Registra um conversor para um par exato de tipos via PTypeInfo.</summary>
+    /// <summary>Registers a converter for an exact pair of types via PTypeInfo.</summary>
     class procedure RegisterConverter(ASource, ATarget: PTypeInfo; AConverter: IValueConverter); overload;
-    /// <summary>Registra um conversor para categorias de tipos (Ex: qualquer Integer para qualquer Enum).</summary>
+    /// <summary>Registers a converter for type categories (e.g., any Integer to any Enum).</summary>
     class procedure RegisterConverter(ASourceKind, ATargetKind: TTypeKind; AConverter: IValueConverter); overload;
-    /// <summary>Localiza o melhor conversor disponível para o par de tipos solicitado.</summary>
+    /// <summary>Locates the best available converter for the requested pair of types.</summary>
     class function GetConverter(ASource, ATarget: PTypeInfo): IValueConverter;
   end;
 
   /// <summary>
-  ///   Motor de execução de conversões. 
-  ///   Esta classe orquestra a lógica de conversão, lidando inclusive com Smart Types (Prop<T>) e Nullables automaticamente.
+  ///   Conversion execution engine.
+  ///   This class orchestrates the conversion logic, also automatically handling Smart Types (Prop<T>) and Nullables.
   /// </summary>
   TValueConverter = class
   public
-    /// <summary>Converte um TValue para o tipo alvo especificado.</summary>
+    /// <summary>Converts a TValue to the specified target type.</summary>
     class function Convert(const AValue: TValue; ATargetType: PTypeInfo): TValue; overload;
-    /// <summary>Converte um TValue para o tipo genérico T solicitado.</summary>
+    /// <summary>Converts a TValue to the requested generic type T.</summary>
     class function Convert<T>(const AValue: TValue): T; overload;
-    /// <summary>Converte o valor e o atribui diretamente a uma propriedade RTTI de uma instância.</summary>
+    /// <summary>Converts the value and assigns it directly to an RTTI property of an instance.</summary>
     class procedure ConvertAndSet(Instance: TObject; Prop: TRttiProperty; const Value: TValue);
-    /// <summary>Converte o valor e o atribui diretamente a um campo (Field) RTTI de uma instância.</summary>
+    /// <summary>Converts the value and assigns it directly to an RTTI field of an instance.</summary>
     class procedure ConvertAndSetField(Instance: TObject; Field: TRttiField; const Value: TValue);
   end;
 

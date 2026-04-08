@@ -37,9 +37,6 @@ type
   /// <summary>
   ///   Descriptor for an action (controller method).
   /// </summary>
-  /// <summary>
-  ///   Descreve uma ação (método de controller) sendo executada.
-  /// </summary>
   TActionDescriptor = record
     ControllerName: string;
     ActionName: string;
@@ -49,9 +46,6 @@ type
 
   /// <summary>
   ///   Context for action execution (before action runs).
-  /// </summary>
-  /// <summary>
-  ///   Contexto de execução antes da ação ser chamada. Permite curto-circuito via SetResult.
   /// </summary>
   IActionExecutingContext = interface
     ['{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}']
@@ -67,9 +61,6 @@ type
 
   /// <summary>
   ///   Context for action executed (after action runs).
-  /// </summary>
-  /// <summary>
-  ///   Contexto após a execução da ação. Permite manipular o resultado e tratar exceções.
   /// </summary>
   IActionExecutedContext = interface
     ['{B2C3D4E5-F6A7-8901-2345-67890ABCDEF1}']
@@ -90,9 +81,6 @@ type
 
   /// <summary>
   ///   Base interface for action filters.
-  /// </summary>
-  /// <summary>
-  ///   Contrato base para filtros de ação que interceptam a execução de Controllers.
   /// </summary>
   IActionFilter = interface
     ['{C3D4E5F6-A7B8-9012-3456-7890ABCDEF12}']

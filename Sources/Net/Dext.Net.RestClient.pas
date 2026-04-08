@@ -43,24 +43,24 @@ uses
   Dext.Threading.CancellationToken;
 
  type
-  /// <summary>Métodos HTTP suportados pelo cliente REST.</summary>
+  /// <summary>Supported HTTP methods for the REST client.</summary>
   TDextHttpMethod = (hmGET, hmPOST, hmPUT, hmDELETE, hmPATCH, hmHEAD, hmOPTIONS);
 
-  /// <summary>Tipos de conteúdo (MIME) comuns para requisições e respostas.</summary>
+  /// <summary>Common MIME content types for requests and responses.</summary>
   TDextContentType = (ctJson, ctXml, ctFormUrlEncoded, ctMultipartFormData, ctBinary, ctText);
 
-  /// <summary>Representa a resposta de uma requisição HTTP.</summary>
+  /// <summary>Represents an HTTP request response.</summary>
   IRestResponse = interface
     ['{B1A2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}']
-    /// <summary>Retorna o código de status HTTP (ex: 200, 404).</summary>
+    /// <summary>Returns the HTTP status code (e.g. 200, 404).</summary>
     function GetStatusCode: Integer;
-    /// <summary>Retorna o texto descritivo do status (ex: "OK", "Not Found").</summary>
+    /// <summary>Returns the descriptive status text (e.g. "OK", "Not Found").</summary>
     function GetStatusText: string;
-    /// <summary>Retorna o corpo da resposta como um Stream.</summary>
+    /// <summary>Returns the response body as a Stream.</summary>
     function GetContentStream: TStream;
-    /// <summary>Retorna o corpo da resposta como string (UTF-8).</summary>
+    /// <summary>Returns the response body as string (UTF-8).</summary>
     function GetContentString: string;
-    /// <summary>Obtém o valor de um cabeçalho específico da resposta.</summary>
+    /// <summary>Gets the value of a specific response header.</summary>
     function GetHeader(const AName: string): string;
     
     property StatusCode: Integer read GetStatusCode;
@@ -69,10 +69,10 @@ uses
     property ContentString: string read GetContentString;
   end;
 
-  /// <summary>Representa uma resposta HTTP cujo conteúdo é automaticamente desserializado para o tipo T.</summary>
+  /// <summary>Represents an HTTP response whose content is automatically deserialized to type T.</summary>
   IRestResponse<T> = interface(IRestResponse)
     ['{C1D2E3F4-A5B6-4C7D-8E9F-0A1B2C3D4E5F}']
-    /// <summary>Retorna o objeto desserializado.</summary>
+    /// <summary>Returns the deserialized object.</summary>
     function GetData: T;
     property Data: T read GetData;
   end;
@@ -105,23 +105,23 @@ uses
     destructor Destroy; override;
   end;
 
-  /// <summary>Interface de um Cliente REST altamente configurável e assíncrono.</summary>
+  /// <summary>Interface for a highly configurable and asynchronous REST Client.</summary>
   IRestClient = interface
     ['{A3B4C5D6-E7F8-49A0-B1C2-D3E4F5A6B7C8}']
-    /// <summary>Define a URL base para todas as subseqüentes requisições.</summary>
+    /// <summary>Defines the base URL for all subsequent requests.</summary>
     function BaseUrl(const AValue: string): IRestClient;
-    /// <summary>Define o tempo limite global (em milissegundos).</summary>
+    /// <summary>Defines the global timeout (in milliseconds).</summary>
     function Timeout(AValue: Integer): IRestClient;
-    /// <summary>Configura o número máximo de retentativas automáticas em caso de falha de rede.</summary>
+    /// <summary>Configures the maximum number of automatic retries in case of network failure.</summary>
     function Retry(AValue: Integer): IRestClient;
-    /// <summary>Associa um provedor de autenticação (Bearer, Basic, API Key).</summary>
+    /// <summary>Associates an authentication provider (Bearer, Basic, API Key).</summary>
     function Auth(AProvider: IAuthenticationProvider): IRestClient;
-    /// <summary>Adiciona um cabeçalho HTTP fixo ao cliente.</summary>
+    /// <summary>Adds a fixed HTTP header to the client.</summary>
     function Header(const AName, AValue: string): IRestClient;
-    /// <summary>Define o Content-Type padrão das requisições.</summary>
+    /// <summary>Defines the default Content-Type for requests.</summary>
     function ContentType(AValue: TDextContentType): IRestClient;
     
-    /// <summary>Executa uma requisição HTTP de forma assíncrona.</summary>
+    /// <summary>Executes an asynchronous HTTP request.</summary>
     function ExecuteAsync(AMethod: TDextHttpMethod; const AEndpoint: string; 
       const ABody: TStream = nil; AOwnsBody: Boolean = False;
       AHeaders: IDictionary<string, string> = nil): TAsyncBuilder<IRestResponse>;
@@ -157,8 +157,8 @@ uses
   end;
 
   /// <summary>
-  ///   Fachada fluente para o Cliente REST do Dext. 
-  ///   Combina alta performance (Connection Pooling) com simplicidade de uso.
+  ///   Fluent facade for the Dext REST Client. 
+  ///   Combines high performance (Connection Pooling) with ease of use.
   /// </summary>
   TRestClient = record
   private
@@ -166,33 +166,33 @@ uses
     class var FSharedPool: TConnectionPool;
     class destructor Destroy;
   public
-    /// <summary>Inicia a configuração de um novo cliente REST.</summary>
+    /// <summary>Starts configuring a new REST Client.</summary>
     class function Create(const ABaseUrl: string = ''): TRestClient; static;
     
     // Configuração Fluída
     function BaseUrl(const AValue: string): TRestClient;
     function Timeout(AValue: Integer): TRestClient;
     function Retry(AValue: Integer): TRestClient;
-    /// <summary>Configura autenticação Bearer (JWT) para as requisições.</summary>
+    /// <summary>Configures Bearer (JWT) authentication for requests.</summary>
     function BearerToken(const AToken: string): TRestClient;
-    /// <summary>Configura autenticação básica (Username/Password).</summary>
+    /// <summary>Configures basic authentication (Username/Password).</summary>
     function BasicAuth(const AUsername, APassword: string): TRestClient;
-    /// <summary>Configura autenticação via Chave de API.</summary>
+    /// <summary>Configures API Key authentication.</summary>
     function ApiKey(const AName, AValue: string; AInHeader: Boolean = True): TRestClient;
     function Auth(AProvider: IAuthenticationProvider): TRestClient;
     function Header(const AName, AValue: string): TRestClient;
     function ContentType(AValue: TDextContentType): TRestClient;
 
     // HTTP Operations
-    /// <summary>Executa um GET assíncrono e retorna a resposta bruta.</summary>
+    /// <summary>Executes an asynchronous GET and returns the raw response.</summary>
     function Get(const AEndpoint: string = ''): TAsyncBuilder<IRestResponse>; overload;
-    /// <summary>Executa um GET assíncrono e desserializa o JSON automaticamente para o tipo T.</summary>
+    /// <summary>Executes an asynchronous GET and automatically deserializes the JSON to type T.</summary>
     function Get<T: class>(const AEndpoint: string = ''): TAsyncBuilder<T>; overload;
     
-    /// <summary>Executa um POST assíncrono.</summary>
+    /// <summary>Executes an asynchronous POST.</summary>
     function Post(const AEndpoint: string = ''): TAsyncBuilder<IRestResponse>; overload;
     function Post(const AEndpoint: string; const ABody: TStream): TAsyncBuilder<IRestResponse>; overload;
-    /// <summary>Executa um POST enviando um objeto serializado como JSON e aguarda resposta tipada.</summary>
+    /// <summary>Executes a POST sending an object serialized as JSON and awaits a typed response.</summary>
     function Post<TRes: class>(const AEndpoint: string; const ABody: TRes): TAsyncBuilder<IRestResponse<TRes>>; overload;
     
     function Put(const AEndpoint: string = ''): TAsyncBuilder<IRestResponse>; overload;
@@ -208,7 +208,7 @@ uses
       AHeaders: IDictionary<string, string> = nil): TAsyncBuilder<IRestResponse>;
 
     /// <summary>
-    ///   Executa uma requisição definida por um objeto THttpRequestInfo (compatível com parsers .http).
+    ///   Executes a request defined by a THttpRequestInfo object (compatible with .http parsers).
     /// </summary>
     function Execute(RequestInfo: THttpRequestInfo): TAsyncBuilder<IRestResponse>;
 

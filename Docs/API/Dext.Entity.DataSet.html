@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dext.Entity.DataSet - Dext Framework 1.0</title>
+    
+    <!-- Blocking script to avoid theme flicker --> 
+    <script>
+        (function() {
+            const storedTheme = localStorage.getItem('dext-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', storedTheme);
+        })();
+    </script>
+    
+    <!-- Theme & Layout (Separate files for internal Dext Tooling) -->
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="layout.css">
+    
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Dext Framework 1.0</h3>
+            <small>Documentation</small>
+        </div>
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search API..." id="searchInput">
+        </div>
+        <div class="nav-list" id="navList">
+            <!-- Sidebar Content Injected Here -->
+            <a href="Dext.html" class="nav-item">Dext</a>
+<a href="Dext.Assertions.html" class="nav-item">Dext.Assertions</a>
+<a href="Dext.Auth.Attributes.html" class="nav-item">Dext.Auth.Attributes</a>
+<a href="Dext.Auth.BasicAuth.html" class="nav-item">Dext.Auth.BasicAuth</a>
+<a href="Dext.Auth.Identity.html" class="nav-item">Dext.Auth.Identity</a>
+<a href="Dext.Auth.JWT.html" class="nav-item">Dext.Auth.JWT</a>
+<a href="Dext.Auth.Middleware.html" class="nav-item">Dext.Auth.Middleware</a>
+<a href="Dext.Caching.html" class="nav-item">Dext.Caching</a>
+<a href="Dext.Caching.Redis.html" class="nav-item">Dext.Caching.Redis</a>
+<a href="Dext.Collections.html" class="nav-item">Dext.Collections</a>
+<a href="Dext.Collections.Algorithms.html" class="nav-item">Dext.Collections.Algorithms</a>
+<a href="Dext.Collections.Base.html" class="nav-item">Dext.Collections.Base</a>
+<a href="Dext.Collections.Channels.html" class="nav-item">Dext.Collections.Channels</a>
+<a href="Dext.Collections.Comparers.html" class="nav-item">Dext.Collections.Comparers</a>
+<a href="Dext.Collections.Concurrent.html" class="nav-item">Dext.Collections.Concurrent</a>
+<a href="Dext.Collections.Dict.html" class="nav-item">Dext.Collections.Dict</a>
+<a href="Dext.Collections.Extensions.html" class="nav-item">Dext.Collections.Extensions</a>
+<a href="Dext.Collections.Factory.html" class="nav-item">Dext.Collections.Factory</a>
+<a href="Dext.Collections.Frozen.html" class="nav-item">Dext.Collections.Frozen</a>
+<a href="Dext.Collections.HashSet.html" class="nav-item">Dext.Collections.HashSet</a>
+<a href="Dext.Collections.Memory.html" class="nav-item">Dext.Collections.Memory</a>
+<a href="Dext.Collections.Queue.html" class="nav-item">Dext.Collections.Queue</a>
+<a href="Dext.Collections.Raw.html" class="nav-item">Dext.Collections.Raw</a>
+<a href="Dext.Collections.RawDict.html" class="nav-item">Dext.Collections.RawDict</a>
+<a href="Dext.Collections.Simd.html" class="nav-item">Dext.Collections.Simd</a>
+<a href="Dext.Collections.Stack.html" class="nav-item">Dext.Collections.Stack</a>
+<a href="Dext.Collections.Vector.html" class="nav-item">Dext.Collections.Vector</a>
+<a href="Dext.Configuration.Binder.html" class="nav-item">Dext.Configuration.Binder</a>
+<a href="Dext.Configuration.Core.html" class="nav-item">Dext.Configuration.Core</a>
+<a href="Dext.Configuration.EnvironmentVariables.html" class="nav-item">Dext.Configuration.EnvironmentVariables</a>
+<a href="Dext.Configuration.Interfaces.html" class="nav-item">Dext.Configuration.Interfaces</a>
+<a href="Dext.Configuration.Json.html" class="nav-item">Dext.Configuration.Json</a>
+<a href="Dext.Configuration.Yaml.html" class="nav-item">Dext.Configuration.Yaml</a>
+<a href="Dext.Core.Activator.html" class="nav-item">Dext.Core.Activator</a>
+<a href="Dext.Core.DateUtils.html" class="nav-item">Dext.Core.DateUtils</a>
+<a href="Dext.Core.Debug.html" class="nav-item">Dext.Core.Debug</a>
+<a href="Dext.Core.Enums.html" class="nav-item">Dext.Core.Enums</a>
+<a href="Dext.Core.Extensions.html" class="nav-item">Dext.Core.Extensions</a>
+<a href="Dext.Core.Memory.html" class="nav-item">Dext.Core.Memory</a>
+<a href="Dext.Core.Reflection.html" class="nav-item">Dext.Core.Reflection</a>
+<a href="Dext.Core.SmartTypes.html" class="nav-item">Dext.Core.SmartTypes</a>
+<a href="Dext.Core.Span.html" class="nav-item">Dext.Core.Span</a>
+<a href="Dext.Core.ValueConverters.html" class="nav-item">Dext.Core.ValueConverters</a>
+<a href="Dext.Core.Writers.html" class="nav-item">Dext.Core.Writers</a>
+<a href="Dext.Dashboard.Routes.html" class="nav-item">Dext.Dashboard.Routes</a>
+<a href="Dext.Dashboard.TestRunner.html" class="nav-item">Dext.Dashboard.TestRunner</a>
+<a href="Dext.Dashboard.TestScanner.html" class="nav-item">Dext.Dashboard.TestScanner</a>
+<a href="Dext.DI.Attributes.html" class="nav-item">Dext.DI.Attributes</a>
+<a href="Dext.DI.Comparers.html" class="nav-item">Dext.DI.Comparers</a>
+<a href="Dext.DI.Core.html" class="nav-item">Dext.DI.Core</a>
+<a href="Dext.DI.Extensions.html" class="nav-item">Dext.DI.Extensions</a>
+<a href="Dext.DI.Extensions.utf8.html" class="nav-item">Dext.DI.Extensions.utf8</a>
+<a href="Dext.DI.Interfaces.html" class="nav-item">Dext.DI.Interfaces</a>
+<a href="Dext.DI.Middleware.html" class="nav-item">Dext.DI.Middleware</a>
+<a href="Dext.EF.Design.DataProvider.html" class="nav-item">Dext.EF.Design.DataProvider</a>
+<a href="Dext.EF.Design.Editors.html" class="nav-item">Dext.EF.Design.Editors</a>
+<a href="Dext.EF.Design.Expert.html" class="nav-item">Dext.EF.Design.Expert</a>
+<a href="Dext.EF.Design.Metadata.html" class="nav-item">Dext.EF.Design.Metadata</a>
+<a href="Dext.EF.Design.Preview.html" class="nav-item">Dext.EF.Design.Preview</a>
+<a href="Dext.EF.Design.Registration.html" class="nav-item">Dext.EF.Design.Registration</a>
+<a href="Dext.Entity.html" class="nav-item">Dext.Entity</a>
+<a href="Dext.Entity.Attributes.html" class="nav-item">Dext.Entity.Attributes</a>
+<a href="Dext.Entity.Cache.html" class="nav-item">Dext.Entity.Cache</a>
+<a href="Dext.Entity.Collections.html" class="nav-item">Dext.Entity.Collections</a>
+<a href="Dext.Entity.Context.html" class="nav-item">Dext.Entity.Context</a>
+<a href="Dext.Entity.Core.html" class="nav-item">Dext.Entity.Core</a>
+<a href="Dext.Entity.DataProvider.html" class="nav-item">Dext.Entity.DataProvider</a>
+<a href="Dext.Entity.DataSet.html" class="nav-item">Dext.Entity.DataSet</a>
+<a href="Dext.Entity.DbSet.html" class="nav-item">Dext.Entity.DbSet</a>
+<a href="Dext.Entity.Dialects.html" class="nav-item">Dext.Entity.Dialects</a>
+<a href="Dext.Entity.Drivers.FireDAC.html" class="nav-item">Dext.Entity.Drivers.FireDAC</a>
+<a href="Dext.Entity.Drivers.FireDAC.Links.html" class="nav-item">Dext.Entity.Drivers.FireDAC.Links</a>
+<a href="Dext.Entity.Drivers.FireDAC.Manager.html" class="nav-item">Dext.Entity.Drivers.FireDAC.Manager</a>
+<a href="Dext.Entity.Drivers.FireDAC.Phys.html" class="nav-item">Dext.Entity.Drivers.FireDAC.Phys</a>
+<a href="Dext.Entity.Drivers.Interfaces.html" class="nav-item">Dext.Entity.Drivers.Interfaces</a>
+<a href="Dext.Entity.Grouping.html" class="nav-item">Dext.Entity.Grouping</a>
+<a href="Dext.Entity.Joining.html" class="nav-item">Dext.Entity.Joining</a>
+<a href="Dext.Entity.LazyLoading.html" class="nav-item">Dext.Entity.LazyLoading</a>
+<a href="Dext.Entity.Mapping.html" class="nav-item">Dext.Entity.Mapping</a>
+<a href="Dext.Entity.Metadata.html" class="nav-item">Dext.Entity.Metadata</a>
+<a href="Dext.Entity.Migrations.html" class="nav-item">Dext.Entity.Migrations</a>
+<a href="Dext.Entity.Migrations.Builder.html" class="nav-item">Dext.Entity.Migrations.Builder</a>
+<a href="Dext.Entity.Migrations.Differ.html" class="nav-item">Dext.Entity.Migrations.Differ</a>
+<a href="Dext.Entity.Migrations.Extractor.html" class="nav-item">Dext.Entity.Migrations.Extractor</a>
+<a href="Dext.Entity.Migrations.Generator.html" class="nav-item">Dext.Entity.Migrations.Generator</a>
+<a href="Dext.Entity.Migrations.Json.html" class="nav-item">Dext.Entity.Migrations.Json</a>
+<a href="Dext.Entity.Migrations.Model.html" class="nav-item">Dext.Entity.Migrations.Model</a>
+<a href="Dext.Entity.Migrations.Operations.html" class="nav-item">Dext.Entity.Migrations.Operations</a>
+<a href="Dext.Entity.Migrations.Runner.html" class="nav-item">Dext.Entity.Migrations.Runner</a>
+<a href="Dext.Entity.Migrations.Serializers.Json.html" class="nav-item">Dext.Entity.Migrations.Serializers.Json</a>
+<a href="Dext.Entity.Naming.html" class="nav-item">Dext.Entity.Naming</a>
+<a href="Dext.Entity.Prototype.html" class="nav-item">Dext.Entity.Prototype</a>
+<a href="Dext.Entity.ProxyFactory.html" class="nav-item">Dext.Entity.ProxyFactory</a>
+<a href="Dext.Entity.Query.html" class="nav-item">Dext.Entity.Query</a>
+<a href="Dext.Entity.Scaffolding.html" class="nav-item">Dext.Entity.Scaffolding</a>
+<a href="Dext.Entity.Setup.html" class="nav-item">Dext.Entity.Setup</a>
+<a href="Dext.Entity.Tenancy.html" class="nav-item">Dext.Entity.Tenancy</a>
+<a href="Dext.Entity.TypeConverters.html" class="nav-item">Dext.Entity.TypeConverters</a>
+<a href="Dext.Entity.TypeSystem.html" class="nav-item">Dext.Entity.TypeSystem</a>
+<a href="Dext.Entity.Validator.html" class="nav-item">Dext.Entity.Validator</a>
+<a href="Dext.Events.html" class="nav-item">Dext.Events</a>
+<a href="Dext.Events.Behaviors.html" class="nav-item">Dext.Events.Behaviors</a>
+<a href="Dext.Events.Bus.html" class="nav-item">Dext.Events.Bus</a>
+<a href="Dext.Events.Extensions.html" class="nav-item">Dext.Events.Extensions</a>
+<a href="Dext.Events.Interfaces.html" class="nav-item">Dext.Events.Interfaces</a>
+<a href="Dext.Events.Lifecycle.html" class="nav-item">Dext.Events.Lifecycle</a>
+<a href="Dext.Events.Testing.html" class="nav-item">Dext.Events.Testing</a>
+<a href="Dext.Filters.html" class="nav-item">Dext.Filters</a>
+<a href="Dext.Filters.BuiltIn.html" class="nav-item">Dext.Filters.BuiltIn</a>
+<a href="Dext.HealthChecks.html" class="nav-item">Dext.HealthChecks</a>
+<a href="Dext.Hosting.html" class="nav-item">Dext.Hosting</a>
+<a href="Dext.Hosting.ApplicationLifetime.html" class="nav-item">Dext.Hosting.ApplicationLifetime</a>
+<a href="Dext.Hosting.AppState.html" class="nav-item">Dext.Hosting.AppState</a>
+<a href="Dext.Hosting.BackgroundService.html" class="nav-item">Dext.Hosting.BackgroundService</a>
+<a href="Dext.Hosting.CLI.html" class="nav-item">Dext.Hosting.CLI</a>
+<a href="Dext.Hosting.CLI.Args.html" class="nav-item">Dext.Hosting.CLI.Args</a>
+<a href="Dext.Hosting.CLI.Config.html" class="nav-item">Dext.Hosting.CLI.Config</a>
+<a href="Dext.Hosting.CLI.Logger.html" class="nav-item">Dext.Hosting.CLI.Logger</a>
+<a href="Dext.Hosting.CLI.Registry.html" class="nav-item">Dext.Hosting.CLI.Registry</a>
+<a href="Dext.Hosting.CLI.Tools.CodeCoverage.html" class="nav-item">Dext.Hosting.CLI.Tools.CodeCoverage</a>
+<a href="Dext.Hosting.CLI.Tools.FacadeGenerator.html" class="nav-item">Dext.Hosting.CLI.Tools.FacadeGenerator</a>
+<a href="Dext.Hosting.CLI.Tools.Sonar.html" class="nav-item">Dext.Hosting.CLI.Tools.Sonar</a>
+<a href="Dext.Http.Executor.html" class="nav-item">Dext.Http.Executor</a>
+<a href="Dext.Http.Parser.html" class="nav-item">Dext.Http.Parser</a>
+<a href="Dext.Http.Request.html" class="nav-item">Dext.Http.Request</a>
+<a href="Dext.Http.StatusCodes.html" class="nav-item">Dext.Http.StatusCodes</a>
+<a href="Dext.Hubs.html" class="nav-item">Dext.Hubs</a>
+<a href="Dext.Interception.html" class="nav-item">Dext.Interception</a>
+<a href="Dext.Interception.ClassProxy.html" class="nav-item">Dext.Interception.ClassProxy</a>
+<a href="Dext.Interception.Proxy.html" class="nav-item">Dext.Interception.Proxy</a>
+<a href="Dext.Json.html" class="nav-item">Dext.Json</a>
+<a href="Dext.Json.Driver.DextJsonDataObjects.html" class="nav-item">Dext.Json.Driver.DextJsonDataObjects</a>
+<a href="Dext.Json.Driver.SystemJson.html" class="nav-item">Dext.Json.Driver.SystemJson</a>
+<a href="Dext.Json.Types.html" class="nav-item">Dext.Json.Types</a>
+<a href="Dext.Json.Utf8.html" class="nav-item">Dext.Json.Utf8</a>
+<a href="Dext.Json.Utf8.Serializer.html" class="nav-item">Dext.Json.Utf8.Serializer</a>
+<a href="Dext.Logging.html" class="nav-item">Dext.Logging</a>
+<a href="Dext.Logging.Async.html" class="nav-item">Dext.Logging.Async</a>
+<a href="Dext.Logging.Console.html" class="nav-item">Dext.Logging.Console</a>
+<a href="Dext.Logging.Extensions.html" class="nav-item">Dext.Logging.Extensions</a>
+<a href="Dext.Logging.Global.html" class="nav-item">Dext.Logging.Global</a>
+<a href="Dext.Logging.RingBuffer.html" class="nav-item">Dext.Logging.RingBuffer</a>
+<a href="Dext.Logging.Sinks.html" class="nav-item">Dext.Logging.Sinks</a>
+<a href="Dext.Logging.Sinks.Sidecar.html" class="nav-item">Dext.Logging.Sinks.Sidecar</a>
+<a href="Dext.Mapper.html" class="nav-item">Dext.Mapper</a>
+<a href="Dext.MM.html" class="nav-item">Dext.MM</a>
+<a href="Dext.Mocks.html" class="nav-item">Dext.Mocks</a>
+<a href="Dext.Mocks.Auto.html" class="nav-item">Dext.Mocks.Auto</a>
+<a href="Dext.Mocks.Interceptor.html" class="nav-item">Dext.Mocks.Interceptor</a>
+<a href="Dext.Mocks.Matching.html" class="nav-item">Dext.Mocks.Matching</a>
+<a href="Dext.MultiTenancy.html" class="nav-item">Dext.MultiTenancy</a>
+<a href="Dext.Net.Authentication.html" class="nav-item">Dext.Net.Authentication</a>
+<a href="Dext.Net.ConnectionPool.html" class="nav-item">Dext.Net.ConnectionPool</a>
+<a href="Dext.Net.RestClient.html" class="nav-item">Dext.Net.RestClient</a>
+<a href="Dext.Net.RestRequest.html" class="nav-item">Dext.Net.RestRequest</a>
+<a href="Dext.OpenAPI.Attributes.html" class="nav-item">Dext.OpenAPI.Attributes</a>
+<a href="Dext.OpenAPI.Extensions.html" class="nav-item">Dext.OpenAPI.Extensions</a>
+<a href="Dext.OpenAPI.Fluent.html" class="nav-item">Dext.OpenAPI.Fluent</a>
+<a href="Dext.OpenAPI.Generator.html" class="nav-item">Dext.OpenAPI.Generator</a>
+<a href="Dext.OpenAPI.Types.html" class="nav-item">Dext.OpenAPI.Types</a>
+<a href="Dext.Options.html" class="nav-item">Dext.Options</a>
+<a href="Dext.Options.Extensions.html" class="nav-item">Dext.Options.Extensions</a>
+<a href="Dext.RateLimiting.html" class="nav-item">Dext.RateLimiting</a>
+<a href="Dext.RateLimiting.Core.html" class="nav-item">Dext.RateLimiting.Core</a>
+<a href="Dext.RateLimiting.Limiters.html" class="nav-item">Dext.RateLimiting.Limiters</a>
+<a href="Dext.RateLimiting.Policy.html" class="nav-item">Dext.RateLimiting.Policy</a>
+<a href="Dext.Specifications.Base.html" class="nav-item">Dext.Specifications.Base</a>
+<a href="Dext.Specifications.Evaluator.html" class="nav-item">Dext.Specifications.Evaluator</a>
+<a href="Dext.Specifications.Fluent.html" class="nav-item">Dext.Specifications.Fluent</a>
+<a href="Dext.Specifications.Interfaces.html" class="nav-item">Dext.Specifications.Interfaces</a>
+<a href="Dext.Specifications.OrderBy.html" class="nav-item">Dext.Specifications.OrderBy</a>
+<a href="Dext.Specifications.Parser.html" class="nav-item">Dext.Specifications.Parser</a>
+<a href="Dext.Specifications.SQL.Generator.html" class="nav-item">Dext.Specifications.SQL.Generator</a>
+<a href="Dext.Specifications.Types.html" class="nav-item">Dext.Specifications.Types</a>
+<a href="Dext.Swagger.Middleware.html" class="nav-item">Dext.Swagger.Middleware</a>
+<a href="Dext.Telemetry.Context.html" class="nav-item">Dext.Telemetry.Context</a>
+<a href="Dext.Testing.html" class="nav-item">Dext.Testing</a>
+<a href="Dext.Testing.Attributes.html" class="nav-item">Dext.Testing.Attributes</a>
+<a href="Dext.Testing.Console.html" class="nav-item">Dext.Testing.Console</a>
+<a href="Dext.Testing.Dashboard.html" class="nav-item">Dext.Testing.Dashboard</a>
+<a href="Dext.Testing.DI.html" class="nav-item">Dext.Testing.DI</a>
+<a href="Dext.Testing.Fluent.html" class="nav-item">Dext.Testing.Fluent</a>
+<a href="Dext.Testing.History.html" class="nav-item">Dext.Testing.History</a>
+<a href="Dext.Testing.Host.html" class="nav-item">Dext.Testing.Host</a>
+<a href="Dext.Testing.Listeners.Telemetry.html" class="nav-item">Dext.Testing.Listeners.Telemetry</a>
+<a href="Dext.Testing.Report.html" class="nav-item">Dext.Testing.Report</a>
+<a href="Dext.Testing.Runner.html" class="nav-item">Dext.Testing.Runner</a>
+<a href="Dext.Testing.TestInsight.html" class="nav-item">Dext.Testing.TestInsight</a>
+<a href="Dext.Threading.Async.html" class="nav-item">Dext.Threading.Async</a>
+<a href="Dext.Threading.CancellationToken.html" class="nav-item">Dext.Threading.CancellationToken</a>
+<a href="Dext.Types.Lazy.html" class="nav-item">Dext.Types.Lazy</a>
+<a href="Dext.Types.Nullable.html" class="nav-item">Dext.Types.Nullable</a>
+<a href="Dext.Types.UUID.html" class="nav-item">Dext.Types.UUID</a>
+<a href="Dext.UI.html" class="nav-item">Dext.UI</a>
+<a href="Dext.UI.Attributes.html" class="nav-item">Dext.UI.Attributes</a>
+<a href="Dext.UI.Binder.html" class="nav-item">Dext.UI.Binder</a>
+<a href="Dext.UI.Message.html" class="nav-item">Dext.UI.Message</a>
+<a href="Dext.UI.Module.html" class="nav-item">Dext.UI.Module</a>
+<a href="Dext.UI.Navigator.html" class="nav-item">Dext.UI.Navigator</a>
+<a href="Dext.UI.Navigator.Adapters.html" class="nav-item">Dext.UI.Navigator.Adapters</a>
+<a href="Dext.UI.Navigator.Interfaces.html" class="nav-item">Dext.UI.Navigator.Interfaces</a>
+<a href="Dext.UI.Navigator.Middlewares.html" class="nav-item">Dext.UI.Navigator.Middlewares</a>
+<a href="Dext.UI.Navigator.Types.html" class="nav-item">Dext.UI.Navigator.Types</a>
+<a href="Dext.UI.State.html" class="nav-item">Dext.UI.State</a>
+<a href="Dext.Utils.html" class="nav-item">Dext.Utils</a>
+<a href="Dext.Validation.html" class="nav-item">Dext.Validation</a>
+<a href="Dext.Web.html" class="nav-item">Dext.Web</a>
+<a href="Dext.Web.ApplicationBuilder.Extensions.html" class="nav-item">Dext.Web.ApplicationBuilder.Extensions</a>
+<a href="Dext.Web.Controllers.html" class="nav-item">Dext.Web.Controllers</a>
+<a href="Dext.Web.ControllerScanner.html" class="nav-item">Dext.Web.ControllerScanner</a>
+<a href="Dext.Web.Core.html" class="nav-item">Dext.Web.Core</a>
+<a href="Dext.Web.Cors.html" class="nav-item">Dext.Web.Cors</a>
+<a href="Dext.Web.DataApi.html" class="nav-item">Dext.Web.DataApi</a>
+<a href="Dext.Web.DataApi.Resolver.html" class="nav-item">Dext.Web.DataApi.Resolver</a>
+<a href="Dext.Web.DCS.html" class="nav-item">Dext.Web.DCS</a>
+<a href="Dext.Web.Extensions.html" class="nav-item">Dext.Web.Extensions</a>
+<a href="Dext.Web.Formatters.Interfaces.html" class="nav-item">Dext.Web.Formatters.Interfaces</a>
+<a href="Dext.Web.Formatters.Json.html" class="nav-item">Dext.Web.Formatters.Json</a>
+<a href="Dext.Web.Formatters.Selector.html" class="nav-item">Dext.Web.Formatters.Selector</a>
+<a href="Dext.Web.HandlerInvoker.html" class="nav-item">Dext.Web.HandlerInvoker</a>
+<a href="Dext.Web.Hubs.html" class="nav-item">Dext.Web.Hubs</a>
+<a href="Dext.Web.Hubs.Clients.html" class="nav-item">Dext.Web.Hubs.Clients</a>
+<a href="Dext.Web.Hubs.Connections.html" class="nav-item">Dext.Web.Hubs.Connections</a>
+<a href="Dext.Web.Hubs.Context.html" class="nav-item">Dext.Web.Hubs.Context</a>
+<a href="Dext.Web.Hubs.Extensions.html" class="nav-item">Dext.Web.Hubs.Extensions</a>
+<a href="Dext.Web.Hubs.Hub.html" class="nav-item">Dext.Web.Hubs.Hub</a>
+<a href="Dext.Web.Hubs.Interfaces.html" class="nav-item">Dext.Web.Hubs.Interfaces</a>
+<a href="Dext.Web.Hubs.Middleware.html" class="nav-item">Dext.Web.Hubs.Middleware</a>
+<a href="Dext.Web.Hubs.Protocol.Json.html" class="nav-item">Dext.Web.Hubs.Protocol.Json</a>
+<a href="Dext.Web.Hubs.Transport.SSE.html" class="nav-item">Dext.Web.Hubs.Transport.SSE</a>
+<a href="Dext.Web.Hubs.Types.html" class="nav-item">Dext.Web.Hubs.Types</a>
+<a href="Dext.Web.Indy.html" class="nav-item">Dext.Web.Indy</a>
+<a href="Dext.Web.Indy.Server.html" class="nav-item">Dext.Web.Indy.Server</a>
+<a href="Dext.Web.Indy.SSL.Interfaces.html" class="nav-item">Dext.Web.Indy.SSL.Interfaces</a>
+<a href="Dext.Web.Indy.SSL.OpenSSL.html" class="nav-item">Dext.Web.Indy.SSL.OpenSSL</a>
+<a href="Dext.Web.Indy.SSL.Taurus.html" class="nav-item">Dext.Web.Indy.SSL.Taurus</a>
+<a href="Dext.Web.Indy.Types.html" class="nav-item">Dext.Web.Indy.Types</a>
+<a href="Dext.Web.Injection.html" class="nav-item">Dext.Web.Injection</a>
+<a href="Dext.Web.Interfaces.html" class="nav-item">Dext.Web.Interfaces</a>
+<a href="Dext.Web.Middleware.html" class="nav-item">Dext.Web.Middleware</a>
+<a href="Dext.Web.Middleware.Compression.html" class="nav-item">Dext.Web.Middleware.Compression</a>
+<a href="Dext.Web.Middleware.Extensions.html" class="nav-item">Dext.Web.Middleware.Extensions</a>
+<a href="Dext.Web.Middleware.Logging.html" class="nav-item">Dext.Web.Middleware.Logging</a>
+<a href="Dext.Web.Middleware.StartupLock.html" class="nav-item">Dext.Web.Middleware.StartupLock</a>
+<a href="Dext.Web.ModelBinding.html" class="nav-item">Dext.Web.ModelBinding</a>
+<a href="Dext.Web.ModelBinding.Extensions.html" class="nav-item">Dext.Web.ModelBinding.Extensions</a>
+<a href="Dext.Web.MultiTenancy.html" class="nav-item">Dext.Web.MultiTenancy</a>
+<a href="Dext.Web.Pipeline.html" class="nav-item">Dext.Web.Pipeline</a>
+<a href="Dext.Web.ResponseHelper.html" class="nav-item">Dext.Web.ResponseHelper</a>
+<a href="Dext.Web.Results.html" class="nav-item">Dext.Web.Results</a>
+<a href="Dext.Web.Routing.html" class="nav-item">Dext.Web.Routing</a>
+<a href="Dext.Web.Routing.Attributes.html" class="nav-item">Dext.Web.Routing.Attributes</a>
+<a href="Dext.Web.RoutingMiddleware.html" class="nav-item">Dext.Web.RoutingMiddleware</a>
+<a href="Dext.Web.StaticFiles.html" class="nav-item">Dext.Web.StaticFiles</a>
+<a href="Dext.Web.Versioning.html" class="nav-item">Dext.Web.Versioning</a>
+<a href="Dext.Web.View.html" class="nav-item">Dext.Web.View</a>
+<a href="Dext.Web.View.WebStencils.html" class="nav-item">Dext.Web.View.WebStencils</a>
+<a href="Dext.Web.WebApplication.html" class="nav-item">Dext.Web.WebApplication</a>
+<a href="Dext.WebHost.html" class="nav-item">Dext.WebHost</a>
+<a href="Dext.Yaml.html" class="nav-item">Dext.Yaml</a>
+<a href="DextJsonDataObjects.html" class="nav-item">DextJsonDataObjects</a>
+
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-actions">
+            <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">&#x1F313;</button>
+        </div>
+        
+        <div id="contentArea">
+            <!-- Main Documentation Content Injected Here -->
+            <h1>Unit Dext.Entity.DataSet</h1><h2>Classes</h2>
+<details class="mermaid-details" open>
+<summary>Class Diagram <span class="collapse-text">(Click to collapse)</span><span class="expand-text">(Click to expand)</span></summary>
+<div class="mermaid-container">
+<div class="mermaid">
+classDiagram
+class TEntityRecordHeader {}
+class EEntityDataSetException {}
+Exception <|-- EEntityDataSetException
+class TEntityDataSet {    +ClearResolvedEntityMetadata()
+    +EnsureEntityMapResolved()
+    +GetProperty()
+    +ResolveEntityClassFromProvider()
+    +SetItems()
+    +SetDataProvider()
+    +StringToFieldType()
+    +SetEntityClassName()
+    +SetIndexFieldNames()
+    +ApplyFilterAndSort()
+    +SyncMasterDetail()
+    +GetMasterSource()
+    +SetMasterSource()
+    +SetMasterFields()
+    +CompareObjectsInternal()
+    +ApplyAttributesToField()
+    +ApplyMapMetadataToFields()
+    +SetMasterInheritance()
+    +IsActiveStored()
+    +ReadFieldValue()
+    +CreateNewEntity()
+    +Notification()
+    +InternalHandleException()
+    +IsCursorOpen()
+    +SetFiltered()
+    +SetFilterText()
+    +SetFilterOptions()
+    +InternalOpen()
+    +InternalClose()
+    +InternalInitFieldDefs()
+    +Loaded()
+    +SetActive()
+    +SyncDetailData()
+    +CreateNestedDataSet()
+    +AllocRecordBuffer()
+    +FreeRecordBuffer()
+    +InternalInitRecord()
+    +CalculateFields()
+    +GetBookmarkData()
+    +SetBookmarkData()
+    +GetBookmarkFlag()
+    +SetBookmarkFlag()
+    +InternalSetToRecord()
+    +InternalGotoBookmark()
+    +GetRecordSize()
+    +GetRecordCount()
+    +GetRecNo()
+    +GetRecord()
+    +SetRecNo()
+    +InternalAddRecord()
+    +InternalDelete()
+    +InternalPost()
+    +InternalCancel()
+    +InternalEdit()
+    +InternalInsert()
+    +InternalFirst()
+    +InternalLast()
+    +DoBeforeScroll()
+    +DoAfterScroll()
+    +DoBeforeInsert()
+    +DoBeforeDelete()
+    +Create()
+    +Destroy()
+    +GetFieldData()
+    +SetFieldData()
+    +Locate()
+    +BookmarkValid()
+    +Load()
+    +Load~T~()
+    +LoadFromJson()
+    +LoadFromJson~T~()
+    +AsJsonArray()
+    +AsJsonObject()
+    +LoadFromUtf8Json()
+    +LoadFromUtf8Json~T~()
+    +Refresh()
+    +BuildFieldDefs()
+    +GenerateFields()
+    +CreateBlobStream()
+    +GetCurrentObject()
+    +Items
+    +DbContext
+    +TableName
+    +OnPrepareField
+    +DataProvider
+    +EntityClassName
+    +Active
+    +Filter
+    +Filtered
+    +FilterOptions
+    +IncludeShadowProperties
+    +IndexFieldNames
+    +MasterSource
+    +MasterFields
+    +ReadOnly
+    +AfterCancel
+    +AfterClose
+    +AfterDelete
+    +AfterEdit
+    +AfterInsert
+    +AfterOpen
+    +AfterPost
+    +AfterRefresh
+    +AfterScroll
+    +BeforeCancel
+    +BeforeClose
+    +BeforeDelete
+    +BeforeEdit
+    +BeforeInsert
+    +BeforeOpen
+    +BeforePost
+    +BeforeRefresh
+    +BeforeScroll
+    +OnCalcFields
+    +OnDeleteError
+    +OnEditError
+    +OnFilterRecord
+    +OnNewRecord
+    +OnPostError
+}
+TDataSet <|-- TEntityDataSet
+class TEntityMasterDataLink {    +ActiveChanged()
+    +RecordChanged()
+    +Create()
+}
+TMasterDataLink <|-- TEntityMasterDataLink
+</div>
+</div>
+</details>
+<h2>API Details</h2>
+<div class="class-header">
+<h3>record TEntityRecordHeader</h3><a name="TEntityRecordHeader"></a></div>
+<hr>
+<div class="class-header">
+<h3>class EEntityDataSetException</h3><a name="EEntityDataSetException"></a><div class="ancestor">Inherits from: Exception</div></div>
+<hr>
+<div class="class-header">
+<h3>class TEntityDataSet</h3><a name="TEntityDataSet"></a><div class="ancestor">Inherits from: TDataSet</div></div>
+<div class="visibility-group"><h5>PUBLISHED</h5><div class="api-item">
+<div class="api-signature">property TableName: </div></div>
+<div class="api-item">
+<div class="api-signature">property OnPrepareField: </div></div>
+<div class="api-item">
+<div class="api-signature">property DataProvider: </div></div>
+<div class="api-item">
+<div class="api-signature">property EntityClassName: </div></div>
+<div class="api-item">
+<div class="api-signature">property Active: </div></div>
+<div class="api-item">
+<div class="api-signature">property Filter: </div></div>
+<div class="api-item">
+<div class="api-signature">property Filtered: </div></div>
+<div class="api-item">
+<div class="api-signature">property FilterOptions: </div></div>
+<div class="api-item">
+<div class="api-signature">property IncludeShadowProperties: </div></div>
+<div class="api-item">
+<div class="api-signature">property IndexFieldNames: </div></div>
+<div class="api-item">
+<div class="api-signature">property MasterSource: </div></div>
+<div class="api-item">
+<div class="api-signature">property MasterFields: </div></div>
+<div class="api-item">
+<div class="api-signature">property ReadOnly: </div></div>
+<div class="api-item">
+<div class="api-signature">property AfterCancel: </div></div>
+<div class="api-item">
+<div class="api-signature">property AfterClose: </div></div>
+<div class="api-item">
+<div class="api-signature">property AfterDelete: </div></div>
+<div class="api-item">
+<div class="api-signature">property AfterEdit: </div></div>
+<div class="api-item">
+<div class="api-signature">property AfterInsert: </div></div>
+<div class="api-item">
+<div class="api-signature">property AfterOpen: </div></div>
+<div class="api-item">
+<div class="api-signature">property AfterPost: </div></div>
+<div class="api-item">
+<div class="api-signature">property AfterRefresh: </div></div>
+<div class="api-item">
+<div class="api-signature">property AfterScroll: </div></div>
+<div class="api-item">
+<div class="api-signature">property BeforeCancel: </div></div>
+<div class="api-item">
+<div class="api-signature">property BeforeClose: </div></div>
+<div class="api-item">
+<div class="api-signature">property BeforeDelete: </div></div>
+<div class="api-item">
+<div class="api-signature">property BeforeEdit: </div></div>
+<div class="api-item">
+<div class="api-signature">property BeforeInsert: </div></div>
+<div class="api-item">
+<div class="api-signature">property BeforeOpen: </div></div>
+<div class="api-item">
+<div class="api-signature">property BeforePost: </div></div>
+<div class="api-item">
+<div class="api-signature">property BeforeRefresh: </div></div>
+<div class="api-item">
+<div class="api-signature">property BeforeScroll: </div></div>
+<div class="api-item">
+<div class="api-signature">property OnCalcFields: </div></div>
+<div class="api-item">
+<div class="api-signature">property OnDeleteError: </div></div>
+<div class="api-item">
+<div class="api-signature">property OnEditError: </div></div>
+<div class="api-item">
+<div class="api-signature">property OnFilterRecord: </div></div>
+<div class="api-item">
+<div class="api-signature">property OnNewRecord: </div></div>
+<div class="api-item">
+<div class="api-signature">property OnPostError: </div></div>
+</div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">constructor Create(AOwner: TComponent)</div></div>
+<div class="api-item">
+<div class="api-signature">destructor Destroy</div></div>
+<div class="api-item">
+<div class="api-signature">function GetFieldData(Field: TField; var var: TValueBuffer): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function GetFieldData(Field: TField; Buffer: Pointer): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetFieldData(Field: TField; Buffer: TValueBuffer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetFieldData(Field: TField; Buffer: Pointer)</div></div>
+<div class="api-item">
+<div class="api-signature">function Locate(const const: string; const const: Variant; Options: TLocateOptions): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function BookmarkValid(Bookmark: TBookmark): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Load(const const: IObjectList; AClass: TClass; AOwns: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Load(const const: TArray; AClass: TClass)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Load&lt;T&gt;(const const: IList; AOwns: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Load&lt;T&gt;(const const: IList; AClass: TClass; AOwns: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Load&lt;T&gt;(const const: TArray)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure LoadFromJson(const const: string; AClass: TClass)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure LoadFromJson&lt;T&gt;(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">function AsJsonArray: string</div></div>
+<div class="api-item">
+<div class="api-signature">function AsJsonObject: string</div></div>
+<div class="api-item">
+<div class="api-signature">procedure LoadFromUtf8Json(const const: TByteSpan; AClass: TClass)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure LoadFromUtf8Json&lt;T&gt;(const const: TByteSpan)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Refresh</div></div>
+<div class="api-item">
+<div class="api-signature">procedure BuildFieldDefs</div></div>
+<div class="api-item">
+<div class="api-signature">procedure GenerateFields(AWipeAll: Boolean; ARemoveOrphans: Boolean; AUpdateExisting: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream</div></div>
+<div class="api-item">
+<div class="api-signature">function GetCurrentObject: TObject</div></div>
+<div class="api-item">
+<div class="api-signature">property Items: </div></div>
+<div class="api-item">
+<div class="api-signature">property DbContext: </div></div>
+</div>
+<div class="visibility-group"><h5>PROTECTED</h5><div class="api-item">
+<div class="api-signature">procedure Notification(AComponent: TComponent; Operation: TOperation)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalHandleException</div></div>
+<div class="api-item">
+<div class="api-signature">function IsCursorOpen: Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetFiltered(Value: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetFilterText(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetFilterOptions(Value: TFilterOptions)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalOpen</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalClose</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalInitFieldDefs</div></div>
+<div class="api-item">
+<div class="api-signature">procedure Loaded</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetActive(Value: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SyncDetailData(const const: string; ADetailDataSet: TDataSet)</div></div>
+<div class="api-item">
+<div class="api-signature">function CreateNestedDataSet(DataSetField: TDataSetField): TDataSet</div></div>
+<div class="api-item">
+<div class="api-signature">function AllocRecordBuffer: TRecordBuffer</div></div>
+<div class="api-item">
+<div class="api-signature">procedure FreeRecordBuffer(var var: TRecordBuffer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalInitRecord(Buffer: TRecBuf)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure CalculateFields(Buffer: TRecBuf)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure GetBookmarkData(Buffer: TRecBuf; Data: TBookmark)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetBookmarkData(Buffer: TRecBuf; Data: TBookmark)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetBookmarkFlag(Buffer: TRecBuf): TBookmarkFlag</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetBookmarkFlag(Buffer: TRecBuf; Value: TBookmarkFlag)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalSetToRecord(Buffer: TRecBuf)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalGotoBookmark(Bookmark: TBookmark)</div></div>
+<div class="api-item">
+<div class="api-signature">function GetRecordSize: Word</div></div>
+<div class="api-item">
+<div class="api-signature">function GetRecordCount: Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function GetRecNo: Integer</div></div>
+<div class="api-item">
+<div class="api-signature">function GetRecord(Buffer: TRecBuf; GetMode: TGetMode; DoCheck: Boolean): TGetResult</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetRecNo(Value: Integer)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalAddRecord(Buffer: TRecBuf; Append: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalDelete</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalPost</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalCancel</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalEdit</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalInsert</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalFirst</div></div>
+<div class="api-item">
+<div class="api-signature">procedure InternalLast</div></div>
+<div class="api-item">
+<div class="api-signature">procedure DoBeforeScroll</div></div>
+<div class="api-item">
+<div class="api-signature">procedure DoAfterScroll</div></div>
+<div class="api-item">
+<div class="api-signature">procedure DoBeforeInsert</div></div>
+<div class="api-item">
+<div class="api-signature">procedure DoBeforeDelete</div></div>
+</div>
+<div class="visibility-group"><h5>PRIVATE</h5><div class="api-item">
+<div class="api-signature">procedure ClearResolvedEntityMetadata</div></div>
+<div class="api-item">
+<div class="api-signature">procedure EnsureEntityMapResolved</div></div>
+<div class="api-item">
+<div class="api-signature">function GetProperty(const const: string): TRttiProperty</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ResolveEntityClassFromProvider</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetItems(const const: IObjectList)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetDataProvider(const const: TEntityDataProvider)</div></div>
+<div class="api-item">
+<div class="api-signature">function StringToFieldType(const const: string): TFieldType</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetEntityClassName(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetIndexFieldNames(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ApplyFilterAndSort</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ApplyFilterAndSort(AFiltered: Boolean)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ApplyFilterAndSort(AFiltered: Boolean; ATrackObj: TObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SyncMasterDetail</div></div>
+<div class="api-item">
+<div class="api-signature">function GetMasterSource: TDataSource</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetMasterSource(Value: TDataSource)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetMasterFields(const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">function CompareObjectsInternal(A: TObject; B: TObject; const const: TArray; RttiType: TRttiType): Integer</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ApplyAttributesToField(AField: TField; AContainer: TRttiObject)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure ApplyMapMetadataToFields</div></div>
+<div class="api-item">
+<div class="api-signature">procedure SetMasterInheritance(AEntity: TObject)</div></div>
+<div class="api-item">
+<div class="api-signature">function IsActiveStored: Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function ReadFieldValue(Field: TField; out out: Variant): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function ReadFieldValue(Field: TField; ABuffer: TRecBuf; out out: Variant): Boolean</div></div>
+<div class="api-item">
+<div class="api-signature">function CreateNewEntity: TObject</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>class TEntityMasterDataLink</h3><a name="TEntityMasterDataLink"></a><div class="ancestor">Inherits from: TMasterDataLink</div><div class="description">Specialized internal data link for master-detail synchronization.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">constructor Create(ADataSet: TEntityDataSet)</div></div>
+</div>
+<div class="visibility-group"><h5>PROTECTED</h5><div class="api-item">
+<div class="api-signature">procedure ActiveChanged</div></div>
+<div class="api-item">
+<div class="api-signature">procedure RecordChanged(Field: TField)</div></div>
+</div>
+<hr>
+<h2>Types</h2>
+<div class="visibility-group"><div class="api-item">
+<div class="api-signature">type PBytes = pointer</div></div>
+<div class="api-item">
+<div class="api-signature">type PObject = pointer</div></div>
+<div class="api-item">
+<div class="api-signature">type PEntityRecordHeader = pointer</div><div class="description">Record header for TEntityDataSet's internal buffer. Stores row state metadata, bookmarks, and modification masks.</div></div>
+<div class="api-item">
+<div class="api-signature">type TPrepareFieldEvent = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TEntityMasterDataLink = Type</div></div>
+</div>
+
+        </div>
+    </div>
+
+    <script src="viewer.js"></script>
+</body>
+</html>

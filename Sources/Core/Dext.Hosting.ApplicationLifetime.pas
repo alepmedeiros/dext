@@ -33,19 +33,19 @@ uses
   Dext.Threading.CancellationToken;
 
 type
-  /// <summary>Permite que serviços e componentes sejam notificados sobre eventos de ciclo de vida da aplicação.</summary>
+  /// <summary>Allows services and components to be notified about application lifecycle events.</summary>
   IHostApplicationLifetime = interface
     ['{DA4C3B2A-1E5F-4D8C-9B0A-2F3E4D5C6B7A}']
-    /// <summary>Acionado quando o host da aplicação está totalmente iniciado.</summary>
+    /// <summary>Triggered when the application host is fully started.</summary>
     function GetApplicationStarted: ICancellationToken;
     
-    /// <summary>Acionado quando o host está iniciando o encerramento gracioso. Requisições ainda podem estar em processamento.</summary>
+    /// <summary>Triggered when the host is starting a graceful shutdown. Requests may still be processing.</summary>
     function GetApplicationStopping: ICancellationToken;
     
-    /// <summary>Acionado quando o host completou o encerramento. A aplicação finalizará em breve.</summary>
+    /// <summary>Triggered when the host has completed shutting down. The application will terminate shortly.</summary>
     function GetApplicationStopped: ICancellationToken;
 
-    /// <summary>Solicita o encerramento imediato da aplicação atual.</summary>
+    /// <summary>Requests the immediate termination of the current application.</summary>
     procedure StopApplication;
 
     property ApplicationStarted: ICancellationToken read GetApplicationStarted;

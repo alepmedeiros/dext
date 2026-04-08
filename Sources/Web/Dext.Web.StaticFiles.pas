@@ -38,7 +38,7 @@ uses
 
 type
   /// <summary>
-  ///   Provedor de tipos MIME baseado em extensões de arquivos.
+  ///   MIME type provider based on file extensions.
   /// </summary>
   TContentTypeProvider = class
   private
@@ -50,7 +50,7 @@ type
   end;
 
   /// <summary>
-  ///   Opções de configuração para o servidor de arquivos estáticos.
+  ///   Configuration options for the static file server.
   /// </summary>
   TStaticFileOptions = record
     RootPath: string;
@@ -62,7 +62,7 @@ type
   end;
 
   /// <summary>
-  ///   Middleware responsável por servir arquivos físicos do sistema de arquivos.
+  ///   Middleware responsible for serving physical files from the file system.
   /// </summary>
   TStaticFileMiddleware = class(TMiddleware)
   private
