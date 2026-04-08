@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -36,18 +36,12 @@ uses
   Dext.Web.Formatters.Interfaces;
 
 type
-  /// <summary>
-  ///   Represents a media type value with its respective quality weight (q-factor).
-  /// </summary>
   TMediaTypeHeaderValue = record
     MediaType: string;
     Quality: Double;
     class function ParseList(const AHeaderValue: string): TArray<TMediaTypeHeaderValue>; static;
   end;
 
-  /// <summary>
-  ///   Default selector responsible for choosing the best output formatter based on the 'Accept' header of the request.
-  /// </summary>
   TDefaultOutputFormatterSelector = class(TInterfacedObject, IOutputFormatterSelector)
   public
     function SelectFormatter(const Context: IOutputFormatterContext; const Formatters: TArray<IOutputFormatter>): IOutputFormatter;

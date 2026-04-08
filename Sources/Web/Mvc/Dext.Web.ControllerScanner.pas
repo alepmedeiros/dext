@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -117,7 +117,7 @@ begin
 
     for RttiType in Types do
     begin
-      // FILTER: Records or Classes
+      // ✅ FILTRAR: Records ou Classes
       if (RttiType.TypeKind in [tkRecord, tkClass]) then
       begin
         // Verificar se tem métodos com atributos de rota
@@ -129,7 +129,7 @@ begin
 
           for Method in Methods do
           begin
-            // ONLY STATIC METHODS (for records) or PUBLIC METHODS (for classes)
+            // ✅ APENAS MÉTODOS ESTÁTICOS (para records) ou PÚBLICOS (para classes)
             if (RttiType.TypeKind = tkRecord) and (not Method.IsStatic) then
               Continue;
 
@@ -147,7 +147,7 @@ begin
             SetLength(VerbAttrs, Length(Attributes));
             SetLength(PathAttrs, Length(Attributes));
 
-            // Separate Attributes without dynamic object allocation (TCollections.CreateList)
+            // ✅ Separar Atributos sem alocação de objetos dinâmica (TCollections.CreateList)
             for Attr in Attributes do
             begin
               if Attr is RouteAttribute then
@@ -168,7 +168,7 @@ begin
 
             var Combined := False;
 
-            // COMBINE: HttpGet (Verb without Path) + Route (Path without Verb)
+            // ✅ COMBINAR: HttpGet (Verbo sem Path) + Route('/... available') (Path sem Verbo)
             for J := 0 to VCount - 1 do
             begin
               var V := VerbAttrs[J];
@@ -188,7 +188,7 @@ begin
               end;
             end;
 
-            // If nothing was combined (e.g. independent routes), add individually
+            // ✅ Se não combinou nada (ex: rotas independentes), adiciona individualmente
             if not Combined then
             begin
               for Attr in Attributes do
@@ -207,14 +207,14 @@ begin
             end;
           end;
 
-          // IF ROUTE METHODS EXIST, ADD AS CONTROLLER
+          // ✅ SE TEM MÉTODOS DE ROTA, ADICIONAR COMO CONTROLLER
           if HasRouteMethods then
           begin
             SafeWriteLn('    🎉 ADDING CONTROLLER: ' + RttiType.Name);
             ControllerInfo.RttiType := RttiType;
             ControllerInfo.Methods := MethodsList.ToArray;
 
-            // CHECK [ApiController] ATTRIBUTE FOR PREFIX
+            // ✅ VERIFICAR ATRIBUTO [ApiController] PARA PREFIXO
             ControllerInfo.ControllerAttribute := nil;
             var TypeAttributes := RttiType.GetAttributes;
             for Attr in TypeAttributes do
@@ -287,10 +287,10 @@ begin
 
   SafeWriteLn('🔍 ' + Format('Found %d controllers:', [Length(Controllers)]));
 
-  // METHOD CACHE TO AVOID RTTI REFERENCE ISSUES
+  // ✅ CACHE DE MÉTODOS PARA EVITAR PROBLEMAS DE REFERÊNCIA RTTI
   for Controller in Controllers do
   begin
-    // CALCULATE CONTROLLER PREFIX
+    // ✅ CALCULAR PREFIXO DO CONTROLLER
     var Prefix := '';
     if Assigned(Controller.ControllerAttribute) then
       Prefix := Controller.ControllerAttribute.Prefix;
@@ -313,7 +313,7 @@ begin
 
     for ControllerMethod in Controller.Methods do
     begin
-      // BUILD FULL PATH: Prefix + MethodPath
+      // ✅ CONSTRUIR PATH COMPLETO: Prefix + MethodPath
       FullPath := Prefix + ControllerMethod.Path;
 
       SafeWriteLn(Format('    %s %s -> %s', [ControllerMethod.HttpMethod, FullPath, ControllerMethod.Method.Name]));
@@ -384,10 +384,10 @@ begin
 
       FCachedMethods.Add(CachedMethod);
 
-      // REGISTER ROUTE USING CACHE
+      // ✅ REGISTRAR ROTA USANDO CACHE (EVITA PROBLEMAS DE REFERÊNCIA RTTI)
       AppBuilder.MapEndpoint(ControllerMethod.HttpMethod, FullPath, CreateHandler(CachedMethod));
 
-      // UPDATE ROUTE METADATA (Security, Anonymous, etc.)
+      // ✅ ATUALIZAR METADADOS DA ROTA (Security, Anonymous, etc.)
       var Routes := AppBuilder.GetRoutes;
       if Length(Routes) > 0 then
       begin
@@ -409,7 +409,7 @@ begin
           MetadataUpdated := True;
         end;
 
-        // 1. Controller [SwaggerTag]
+        // 1. [SwaggerTag] do Controller
         for var TypeAttr in Controller.RttiType.GetAttributes do
         begin
           if TypeAttr is SwaggerTagAttribute then
@@ -424,7 +424,7 @@ begin
           end;
         end;
 
-        // 2. Extract RequestType from method parameters (for POST/PUT/PATCH)
+        // 2. Extrair RequestType dos parâmetros do método (para POST/PUT/PATCH)
         if (ControllerMethod.HttpMethod = 'POST') or
            (ControllerMethod.HttpMethod = 'PUT') or
            (ControllerMethod.HttpMethod = 'PATCH') then
@@ -435,7 +435,7 @@ begin
             var ParamType := Param.ParamType;
             if (ParamType <> nil) and (ParamType.TypeKind in [tkRecord, tkMRecord]) then
             begin
-              // Ignore IHttpContext and basic types
+              // Ignorar IHttpContext e tipos básicos
               if not SameText(ParamType.Name, 'IHttpContext') then
               begin
                 Metadata.RequestType := ParamType.Handle;
@@ -447,7 +447,7 @@ begin
           end;
         end;
 
-        // 3. Method [SwaggerOperation]
+        // 3. [SwaggerOperation] do método
         for var Attr in ControllerMethod.Method.GetAttributes do
         begin
           if Attr is SwaggerOperationAttribute then
@@ -460,7 +460,7 @@ begin
           end;
         end;
 
-        // 4. Method [SwaggerResponse] -> populate Responses array
+        // 4. [SwaggerResponse] do método -> popular array Responses
         var ResponsesList: TArray<TOpenAPIResponseMetadata>;
         SetLength(ResponsesList, 0);
         for var Attr in ControllerMethod.Method.GetAttributes do
@@ -534,7 +534,7 @@ begin
 
   // Use the scanner's FCtx instead of creating a new TRttiContext per request.
   // This avoids creating/freeing RTTI pool references on every request.
-    // RE-ACQUIRE TYPE AT RUNTIME
+    // ✅ RE-OBTER O TIPO EM TEMPO DE EXECUÇÃO
     ControllerType := FCtx.FindType(CachedMethod.TypeName);
     if ControllerType = nil then
     begin
@@ -543,7 +543,7 @@ begin
       Exit;
     end;
 
-    // FIND METHOD AT RUNTIME
+    // ✅ ENCONTRAR O MÉTODO EM TEMPO DE EXECUÇÃO
     Method := nil;
     for var M in ControllerType.GetMethods do
     begin
@@ -605,11 +605,11 @@ begin
       end;
     end;
 
-    // EXECUTE CONTROLLER METHOD
+    // ✅ EXECUTAR O MÉTODO DO CONTROLLER
     try
       if CachedMethod.IsClass then
       begin
-        // RESOLVE INSTANCE VIA DI
+        // ✅ RESOLVER INSTÂNCIA VIA DI
         ControllerInstance := Context.GetServices.GetService(
           TServiceType.FromClass(ControllerType.AsInstance.MetaclassType));
 
@@ -636,7 +636,7 @@ begin
       end
       else
       begin
-        // STATIC RECORDS
+        // ✅ RECORDS ESTÁTICOS
         var Binder: IModelBinder := TModelBinder.Create;
         var Invoker := THandlerInvoker.Create(Context, Binder);
         try

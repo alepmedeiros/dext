@@ -57,9 +57,6 @@ type
   /// <summary>
   ///   Abstracts database-specific SQL syntax differences.
   /// </summary>
-  /// <summary>
-  ///   Abstraction of SQL syntax differences across different databases.
-  /// </summary>
   ISQLDialect = interface
     ['{20000000-0000-0000-0000-000000000001}']
     function QuoteIdentifier(const AName: string): string;
@@ -105,9 +102,6 @@ type
 
   /// <summary>
   ///   Factory for creating ISQLDialect instances from TDatabaseDialect enum.
-  /// </summary>
-  /// <summary>
-  ///   Factory for creating and automatically detecting SQL dialects based on the connection driver.
   /// </summary>
   TDialectFactory = class
   public
@@ -164,9 +158,6 @@ type
   /// <summary>
   ///   SQLite Dialect implementation.
   /// </summary>
-  /// <summary>
-  ///   SQL dialect implementation for SQLite.
-  /// </summary>
   TSQLiteDialect = class(TBaseDialect)
   public
     function QuoteIdentifier(const AName: string): string; override;
@@ -181,9 +172,6 @@ type
 
   /// <summary>
   ///   PostgreSQL Dialect implementation.
-  /// </summary>
-  /// <summary>
-  ///   SQL dialect implementation for PostgreSQL, with support for JSONB and native UUID.
   /// </summary>
   TPostgreSQLDialect = class(TBaseDialect)
   public

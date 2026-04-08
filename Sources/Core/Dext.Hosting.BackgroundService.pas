@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -35,24 +35,17 @@ uses
   Dext.Threading.CancellationToken; // ✅ Added
 
 type
-  /// <summary>Defines the contract for services managed by the application host.</summary>
   IHostedService = interface
     ['{8D4F5E6A-1B2C-4D3E-9F0A-7B8C9D0E1F2A}']
-    /// <summary>Starts service execution.</summary>
     procedure Start;
-    /// <summary>Requests graceful service shutdown.</summary>
     procedure Stop;
   end;
 
   // ✅ Interface for THostedServiceManager to enable ARC management
-  /// <summary>Orchestrator responsible for managing startup and shutdown of all hosted services.</summary>
   IHostedServiceManager = interface
     ['{F1E2D3C4-B5A6-7890-1234-567890ABCDEF}']
-    /// <summary>Registers a new service to be managed.</summary>
     procedure RegisterService(Service: IHostedService);
-    /// <summary>Starts all registered services asynchronously.</summary>
     procedure StartAsync(Token: ICancellationToken = nil);
-    /// <summary>Stops all registered services, respecting graceful shutdown.</summary>
     procedure StopAsync(Token: ICancellationToken = nil);
   end;
 
@@ -69,23 +62,16 @@ type
   end;
 
   /// <summary>
-  ///   Base class for implementing long-running services (Workers).
-  ///   Automatically manages thread creation and cancellation signal (CancellationToken).
+  ///   Base class for implementing a long running IHostedService.
   /// </summary>
   TBackgroundService = class(TInterfacedObject, IHostedService)
   private
     FThread: TBackgroundServiceThread;
     FCancellationTokenSource: TCancellationTokenSource;
   protected
-    /// <summary>
-    ///   Abstract method where worker logic should be implemented. 
-    ///   Must monitor <paramref name="Token"/> to terminate execution loop.
-    /// </summary>
     procedure Execute(Token: ICancellationToken); virtual; abstract;
   public
-    /// <summary>Starts the background thread and cancellation management.</summary>
     procedure Start; virtual;
-    /// <summary>Triggers the cancellation signal and waits for the thread to terminate (Graceful Shutdown).</summary>
     procedure Stop; virtual;
   end;
 
@@ -104,16 +90,13 @@ type
     procedure StopAsync(Token: ICancellationToken = nil);
   end;
 
-  /// <summary>Builder used to register Background Services in the Dependency Injection container.</summary>
   TBackgroundServiceBuilder = record
   private
     FServices: IServiceCollection;
     FHostedServices: IList<TClass>;
   public
     constructor Create(Services: IServiceCollection);
-    /// <summary>Registers a class inheriting from TBackgroundService as a hosted service.</summary>
     function AddHostedService<T: class, constructor>: TBackgroundServiceBuilder;
-    /// <summary>Consolidates registrations and injects the Service Manager into the DI container.</summary>
     procedure Build;
   end;
 

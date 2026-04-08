@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -33,7 +33,7 @@ uses
   Dext.Web.Interfaces, Dext.DI.Interfaces, Dext.Web.Indy.SSL.Interfaces, Dext.Hosting.ApplicationLifetime;
 
 type
-  TDextIndyWebServer = class(TInterfacedObject, IWebHost)
+  TIndyWebServer = class(TInterfacedObject, IWebHost)
   private
     FHTTPServer: TIdHTTPServer;
     FPipeline: TRequestDelegate;
@@ -95,9 +95,9 @@ begin
 end;
 {$ENDIF}
 
-{ TDextIndyWebServer }
+{ TIndyWebServer }
 
-constructor TDextIndyWebServer.Create(APort: Integer; APipeline: TRequestDelegate;
+constructor TIndyWebServer.Create(APort: Integer; APipeline: TRequestDelegate;
   const AServices: IServiceProvider; const ASSLHandler: IIndySSLHandler);
 begin
   inherited Create;
@@ -122,7 +122,7 @@ begin
     ConfigureSecureServer;
 end;
 
-procedure TDextIndyWebServer.ConfigureSecureServer;
+procedure TIndyWebServer.ConfigureSecureServer;
 var
   SSLIOHandler: TIdServerIOHandler;
 begin
@@ -148,7 +148,7 @@ begin
   end;
 end;
 
-procedure TDextIndyWebServer.HandleParseAuthentication(AContext: TIdContext;
+procedure TIndyWebServer.HandleParseAuthentication(AContext: TIdContext;
   const AAuthType, AAuthData: string; var VUsername, VPassword: string; var Handled: Boolean);
 begin
   // Ignorar autenticação do Indy para permitir que o Middleware do Dext trate (ex: Bearer Token)
@@ -156,7 +156,7 @@ begin
   Handled := True;
 end;
 
-destructor TDextIndyWebServer.Destroy;
+destructor TIndyWebServer.Destroy;
 begin
   Stop;
   FHTTPServer.Free;
@@ -165,14 +165,14 @@ begin
   inherited Destroy;
 end;
 
-procedure TDextIndyWebServer.HandleCommandGet(AContext: TIdContext;
+procedure TIndyWebServer.HandleCommandGet(AContext: TIdContext;
   ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
   DextContext: IHttpContext;
 begin
   try
     // Criar contexto Dext a partir do request Indy
-    DextContext := TDextIndyHttpContext.Create(AContext, ARequestInfo, AResponseInfo, FServices);
+    DextContext := TIndyHttpContext.Create(AContext, ARequestInfo, AResponseInfo, FServices);
 
     // Executar pipeline Dext
     FPipeline(DextContext);
@@ -188,7 +188,7 @@ begin
   end;
 end;
 
-procedure TDextIndyWebServer.Start;
+procedure TIndyWebServer.Start;
 var
   Protocol: string;
 begin
@@ -206,7 +206,7 @@ begin
   end;
 end;
 
-procedure TDextIndyWebServer.Run;
+procedure TIndyWebServer.Run;
 begin
   Start;
 
@@ -256,7 +256,7 @@ begin
   end;
 end;
 
-procedure TDextIndyWebServer.Stop;
+procedure TIndyWebServer.Stop;
 var
   LContexts: TList;
   i: Integer;

@@ -63,7 +63,7 @@ type
   end;
 
   /// <summary>
-  ///   Fluent implementation for building and registering routes in the Navigator.
+  /// Route builder implementation for fluent configuration
   /// </summary>
   TRouteBuilder = class(TInterfacedObject, IRouteBuilder)
   private
@@ -84,8 +84,7 @@ type
   end;
 
   /// <summary>
-  ///   Main Navigator implementation for Dext UI.
-  ///   Manages the history stack, middleware pipeline execution, and View lifecycles.
+  /// Main Navigator implementation
   /// </summary>
   TNavigator = class(TInterfacedObject, INavigator)
   private

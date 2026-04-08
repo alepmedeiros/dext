@@ -1,4 +1,4 @@
-unit Dext.Web.Indy.Types;
+﻿unit Dext.Web.Indy.Types;
 
 interface
 
@@ -7,7 +7,7 @@ uses
   Dext.Web.Interfaces;
 
 type
-  TDextIndyFormFile = class(TInterfacedObject, IFormFile)
+  TIndyFormFile = class(TInterfacedObject, IFormFile)
   private
     FFileName: string;
     FName: string;
@@ -25,9 +25,9 @@ type
 
 implementation
 
-{ TDextIndyFormFile }
+{ TIndyFormFile }
 
-constructor TDextIndyFormFile.Create(const AName, AFileName, AContentType: string; AStream: TStream);
+constructor TIndyFormFile.Create(const AName, AFileName, AContentType: string; AStream: TStream);
 begin
   inherited Create;
   FName := AName;
@@ -36,16 +36,16 @@ begin
   FStream := AStream;
 end;
 
-destructor TDextIndyFormFile.Destroy;
+destructor TIndyFormFile.Destroy;
 begin
   FStream.Free;
-  inherited Destroy;
+  inherited;
 end;
 
-function TDextIndyFormFile.GetFileName: string; begin Result := FFileName; end;
-function TDextIndyFormFile.GetName: string; begin Result := FName; end;
-function TDextIndyFormFile.GetContentType: string; begin Result := FContentType; end;
-function TDextIndyFormFile.GetLength: Int64; begin Result := FStream.Size; end;
-function TDextIndyFormFile.GetStream: TStream; begin Result := FStream; end;
+function TIndyFormFile.GetFileName: string; begin Result := FFileName; end;
+function TIndyFormFile.GetName: string; begin Result := FName; end;
+function TIndyFormFile.GetContentType: string; begin Result := FContentType; end;
+function TIndyFormFile.GetLength: Int64; begin Result := FStream.Size; end;
+function TIndyFormFile.GetStream: TStream; begin Result := FStream; end;
 
 end.

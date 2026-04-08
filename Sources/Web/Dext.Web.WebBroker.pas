@@ -43,9 +43,6 @@ type
   // -------------------------------------------------------------------------
   // TDextWebBrokerRequest — IHttpRequest backed by TWebRequest
   // -------------------------------------------------------------------------
-  /// <summary>
-  ///   Implementation of <see cref="IHttpRequest"/> for the Delphi WebBroker pattern.
-  /// </summary>
   TDextWebBrokerRequest = class(TInterfacedObject, IHttpRequest)
   private
     FWebRequest: TWebRequest;
@@ -93,9 +90,6 @@ type
   // -------------------------------------------------------------------------
   // TDextWebBrokerResponse — IHttpResponse backed by TWebResponse (buffered)
   // -------------------------------------------------------------------------
-  /// <summary>
-  ///   Implementation of <see cref="IHttpResponse"/> for the Delphi WebBroker pattern.
-  /// </summary>
   TDextWebBrokerResponse = class(TInterfacedObject, IHttpResponse)
   private
     FWebResponse: TWebResponse;
@@ -176,9 +170,6 @@ type
   // -------------------------------------------------------------------------
   // TDextWebBrokerApp — global coordinator for DLL/CGI lifecycle
   // -------------------------------------------------------------------------
-  /// <summary>
-  ///   Global coordinator for the lifecycle of Dext applications running under WebBroker (DLL/CGI).
-  /// </summary>
   TDextWebBrokerApp = class
   strict private
     class var FPipeline: TRequestDelegate;
@@ -191,8 +182,8 @@ type
     /// </summary>
     class procedure Configure(Startup: IStartup);
     /// <summary>
-    ///   Dispatches a single WebBroker request through the Dext pipeline.
-    ///   Should be called from the OnBeforeDispatch event of a WebBroker DataModule (e.g., TDextWebModule).
+    ///   Dispatch a single WebBroker request through the Dext pipeline.
+    ///   Call from TDextWebModule.OnBeforeDispatch.
     /// </summary>
     class procedure HandleRequest(Req: TWebRequest; Resp: TWebResponse);
     /// <summary>
@@ -204,9 +195,6 @@ type
   // -------------------------------------------------------------------------
   // TDextWebModule — TWebModule wired to TDextWebBrokerApp
   // -------------------------------------------------------------------------
-  /// <summary>
-  ///   Specialized TWebModule to facilitate the bridge between WebBroker and Dext routes.
-  /// </summary>
   TDextWebModule = class(TWebModule)
   public
     constructor Create(AOwner: TComponent); override;

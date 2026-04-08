@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -33,14 +33,11 @@ uses
   System.NetEncoding;
 
 type
-  /// <summary>Base interface for HTTP authentication providers.</summary>
   IAuthenticationProvider = interface
     ['{E1D2C3B4-A5B6-4C7D-8E9F-0A1B2C3D4E5F}']
-    /// <summary>Returns the formatted value to be used in the Authorization header.</summary>
     function GetHeaderValue: string;
   end;
 
-  /// <summary>Bearer Token authentication provider (RFC 6750), common in JWT.</summary>
   TBearerAuthProvider = class(TInterfacedObject, IAuthenticationProvider)
   private
     FToken: string;
@@ -49,7 +46,6 @@ type
     function GetHeaderValue: string;
   end;
 
-  /// <summary>Basic authentication provider (RFC 7617) using Username and Password with Base64.</summary>
   TBasicAuthProvider = class(TInterfacedObject, IAuthenticationProvider)
   private
     FUsername: string;

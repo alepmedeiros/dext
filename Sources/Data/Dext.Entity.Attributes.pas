@@ -37,9 +37,6 @@ type
   TInheritanceStrategy = (None, TablePerHierarchy, TablePerType);
 
 type
-  /// <summary>
-  ///   Specifies the table name and schema in the database for the entity.
-  /// </summary>
   TableAttribute = class(TCustomAttribute)
   private
     FName: string;
@@ -52,9 +49,6 @@ type
     property Schema: string read FSchema;
   end;
 
-  /// <summary>
-  ///   Specifies the column name in the database for the property.
-  /// </summary>
   ColumnAttribute = class(TCustomAttribute)
   private
     FName: string;

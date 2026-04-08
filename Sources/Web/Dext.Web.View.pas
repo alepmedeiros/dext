@@ -126,9 +126,6 @@ type
     procedure Execute(AContext: IHttpContext);
   end;
 
-  /// <summary>
-  ///   Global configuration options for the view system.
-  /// </summary>
   TViewOptions = class
   private
     FTemplateRoot: string;
@@ -145,9 +142,6 @@ type
     property WhitelistEntities: Boolean read FWhitelistEntities write FWhitelistEntities;
   end;
 
-  /// <summary>
-  ///   Fluent builder for configuring template directories and security rules (Whitelist).
-  /// </summary>
   TViewOptionsBuilder = record
   private
     FTemplateRoot: string;
@@ -465,13 +459,13 @@ end;
 
 destructor TStreamingListWrapper<T>.Destroy;
 var
-  Enum: IInterface;
+  LEnum: IInterface;
 begin
   if Assigned(FEnumerator) then
   begin
-    Enum := FEnumerator;
+    LEnum := FEnumerator;
     FEnumerator := nil;
-    Enum := nil;
+    LEnum := nil;
   end;
   inherited;
 end;

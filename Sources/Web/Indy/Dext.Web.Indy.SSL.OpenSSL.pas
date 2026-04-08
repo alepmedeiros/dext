@@ -1,4 +1,4 @@
-unit Dext.Web.Indy.SSL.OpenSSL;
+﻿unit Dext.Web.Indy.SSL.OpenSSL;
 {$I ..\..\Dext.inc}
 
 interface
@@ -12,9 +12,9 @@ uses
   Dext.Web.Indy.SSL.Interfaces;
 
 type
-  { TDextIndyOpenSSLHandler
+  { TIndyOpenSSLHandler
     Standard implementation using Indy's IdSSLOpenSSL (OpenSSL 1.0.x/1.1.x). }
-  TDextIndyOpenSSLHandler = class(TInterfacedObject, IIndySSLHandler)
+  TIndyOpenSSLHandler = class(TInterfacedObject, IIndySSLHandler)
   private
     FCertFile: string;
     FKeyFile: string;
@@ -31,9 +31,9 @@ uses
   Dext.Utils;
 {$ENDIF}
 
-{ TDextIndyOpenSSLHandler }
+{ TIndyOpenSSLHandler }
 
-constructor TDextIndyOpenSSLHandler.Create(const ACertFile, AKeyFile, ARootFile: string);
+constructor TIndyOpenSSLHandler.Create(const ACertFile, AKeyFile, ARootFile: string);
 begin
   inherited Create;
   FCertFile := ACertFile;
@@ -41,7 +41,7 @@ begin
   FRootFile := ARootFile;
 end;
 
-function TDextIndyOpenSSLHandler.CreateIOHandler(AServer: TIdCustomHTTPServer): TIdServerIOHandler;
+function TIndyOpenSSLHandler.CreateIOHandler(AServer: TIdCustomHTTPServer): TIdServerIOHandler;
 {$IFDEF DEXT_ENABLE_SSL}
 var
   LIOHandler: TIdServerIOHandlerSSLOpenSSL;

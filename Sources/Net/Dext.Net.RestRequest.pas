@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -42,8 +42,8 @@ type
   IRestRequestData = interface;
 
   /// <summary>
-  ///   Fluent builder for constructing complex REST operations.
-  ///   Uses an internal interface for safe state management and asynchronous support.
+  /// Fluent Request Builder for complex REST operations.
+  /// Uses a record for fluent API and an internal ref-counted class for state memory safety.
   /// </summary>
   TRestRequest = record
   private
@@ -53,26 +53,17 @@ type
   public
     constructor Create(AClient: TRestClient; AMethod: TDextHttpMethod; const AEndpoint: string);
 
-    // Configuração
-    /// <summary>Adds a custom HTTP header to the request.</summary>
+    // Configuration
     function Header(const AName, AValue: string): TRestRequest;
-    /// <summary>Adds a query parameter (Query String) to the URL.</summary>
     function QueryParam(const AName, AValue: string): TRestRequest;
-    /// <summary>Defines the request body from a Stream.</summary>
     function Body(ABody: TStream; AOwns: Boolean = False): TRestRequest; overload;
-    /// <summary>Defines the request body by serializing the object T to JSON.</summary>
     function Body<T: class>(const ABody: T): TRestRequest; overload;
-    /// <summary>Defines a raw JSON string as the request body.</summary>
     function JsonBody(const AJson: string): TRestRequest;
-    /// <summary>Associates a cancellation token with the execution of this request.</summary>
     function Cancellation(AToken: ICancellationToken): TRestRequest;
 
-    // Execução
-    /// <summary>Executes the request asynchronously and returns the raw response.</summary>
+    // Execution
     function Execute: TAsyncBuilder<IRestResponse>; overload;
-    /// <summary>Executes the request and deserializes the JSON result to type T.</summary>
     function Execute<T: class>: TAsyncBuilder<T>; overload;
-    /// <summary>Executes the request and returns the body content as a string.</summary>
     function ExecuteAsString: TAsyncBuilder<string>;
   end;
 

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -34,7 +34,7 @@ uses
 
 type
   /// <summary>
-  ///   Contract that defines the basic identity of a user (Name, Authentication Type).
+  ///   Represents the identity of a user.
   /// </summary>
   IIdentity = interface
     ['{F8E9D2C3-4A5B-6C7D-8E9F-0A1B2C3D4E5F}']
@@ -48,7 +48,7 @@ type
   end;
 
   /// <summary>
-  ///   Contract for a Claims-based Principal, allowing for Role validation and access to user metadata.
+  ///   Represents a user principal with claims.
   /// </summary>
   IClaimsPrincipal = interface
     ['{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}']
@@ -120,7 +120,7 @@ type
   end;
 
   /// <summary>
-  ///   Fluent builder to facilitate the assembly of Claims sets (Identifiers, Roles, Profile).
+  ///   Fluent builder for creating claims arrays (interface).
   /// </summary>
   IClaimsBuilder = interface
     ['{B2C3D4E5-F6A7-8B9C-0D1E-2F3A4B5C6D7E}']
@@ -136,7 +136,7 @@ type
   end;
 
   /// <summary>
-  ///   Default implementation of the Claims builder.
+  ///   Fluent builder for creating claims arrays.
   /// </summary>
   TClaimsBuilder = class(TInterfacedObject, IClaimsBuilder)
   private

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -40,21 +40,13 @@ uses
   Dext.Web.ControllerScanner;
 
 type
-  /// <summary>
-  ///   Helper methods for registering core web services into the DI container.
-  /// </summary>
   TWebDIHelpers = class
   public
-    /// <summary>Registers output formatters and content negotiation services.</summary>
     class procedure AddContentNegotiation(Services: IServiceCollection);
   end;
 
-  /// <summary>
-  ///   Helper methods for configuring route metadata and behaviors.
-  /// </summary>
   TWebRouteHelpers = class
   public
-    /// <summary>Associates an API version with the last registered endpoint.</summary>
     class procedure HasApiVersion(Builder: IApplicationBuilder; const Version: string);
   end;
 

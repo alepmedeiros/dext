@@ -52,7 +52,7 @@ type
   IRelationshipBuilder<T: class> = interface;
 
   /// <summary>
-  ///   Fluent interface for programmatic configuration of an entity (Code-First).
+  ///   Fluent interface to configure an entity.
   /// </summary>
   IEntityTypeBuilder<T: class> = interface
     ['{6DC34AF2-B40E-428F-85B6-94D77209476F}']
@@ -90,7 +90,7 @@ type
   end;
 
   /// <summary>
-  ///   Fluent interface for detailed configuration of properties and columns.
+  ///   Fluent interface to configure a property.
   /// </summary>
   IPropertyBuilder<T: class> = interface
     ['{31A85F1F-53AD-4130-85DC-AC6FCC062AE2}']
@@ -191,9 +191,6 @@ type
     constructor Create(const APropName: string);
   end;
 
-  /// <summary>
-  ///   Represents the final mapping model of an entity, consolidating attributes and fluent configurations.
-  /// </summary>
   TEntityMap = class
   private
     FEntityType: PTypeInfo;
@@ -364,7 +361,7 @@ type
   end;
 
   /// <summary>
-  ///   Central model builder that stores all framework mapping definitions.
+  ///   Central registry for mappings.
   /// </summary>
   TModelBuilder = class
   private

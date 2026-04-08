@@ -63,9 +63,6 @@ type
   // -------------------------------------------------------------------------
   // TDextDCSFormFile — IFormFile backed by a DCS TFormField
   // -------------------------------------------------------------------------
-  /// <summary>
-  ///   Implementation of <see cref="IFormFile"/> for the DCS adapter.
-  /// </summary>
   TDextDCSFormFile = class(TInterfacedObject, IFormFile)
   private
     FName: string;
@@ -90,9 +87,6 @@ type
   // -------------------------------------------------------------------------
   // TDextDCSRequest — IHttpRequest backed by ICrossHttpRequest
   // -------------------------------------------------------------------------
-  /// <summary>
-  ///   Implementation of <see cref="IHttpRequest"/> for the DCS (CrossSockets) server.
-  /// </summary>
   TDextDCSRequest = class(TInterfacedObject, IHttpRequest)
   private
     FRequest: ICrossHttpRequest;
@@ -138,10 +132,6 @@ type
   // -------------------------------------------------------------------------
   // TDextDCSResponse — IHttpResponse backed by ICrossHttpResponse (buffered)
   // -------------------------------------------------------------------------
-  /// <summary>
-  ///   Implementation of <see cref="IHttpResponse"/> for the DCS (CrossSockets) server.
-  ///   Uses an internal buffer to optimize data transmission.
-  /// </summary>
   TDextDCSResponse = class(TInterfacedObject, IHttpResponse)
   private
     FResponse: ICrossHttpResponse;
@@ -182,9 +172,6 @@ type
   // -------------------------------------------------------------------------
   // TDextDCSContext — IHttpContext for a single DCS request
   // -------------------------------------------------------------------------
-  /// <summary>
-  ///   HTTP context specific to the DCS adapter.
-  /// </summary>
   TDextDCSContext = class(TInterfacedObject, IHttpContext)
   private
     FRequest: IHttpRequest;
@@ -216,10 +203,6 @@ type
   // -------------------------------------------------------------------------
   // TDextDCSServer — IWebHost backed by ICrossHttpServer (DCS)
   // -------------------------------------------------------------------------
-  /// <summary>
-  ///   Web Server based on the DCS (Delphi-Cross-Socket) library.
-  ///   Designed for high performance and I/O scalability.
-  /// </summary>
   TDextDCSServer = class(TInterfacedObject, IWebHost)
   private
     FHttpServer: ICrossHttpServer;

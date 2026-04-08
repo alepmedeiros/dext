@@ -32,21 +32,15 @@ uses
   Dext.Collections, Dext.Collections.Dict,
   Dext.Web.Core,
   Dext.Web.Interfaces,
-  Dext.Web.Routing;  // For IRouteMatcher
+  Dext.Web.Routing;  // ? Para IRouteMatcher
 
 type
-  /// <summary>
-  ///   Middleware responsible for matching incoming requests to registered routes.
-  ///   Injects route parameters and enforces basic authorization rules based on endpoint metadata.
-  /// </summary>
   TRoutingMiddleware = class(TMiddleware)
   private
-    FRouteMatcher: IRouteMatcher;  // Interface - no circular dependency
+    FRouteMatcher: IRouteMatcher;  // ? Interface - sem reference circular!
   public
-    /// <summary>Initializes the routing middleware with a specific route matcher.</summary>
     constructor Create(const ARouteMatcher: IRouteMatcher);
     destructor Destroy; override;
-    /// <summary>Executes the routing logic and passes the request to the matching handler.</summary>
     procedure Invoke(AContext: IHttpContext; ANext: TRequestDelegate); override;
   end;
 
@@ -60,7 +54,7 @@ uses
 constructor TRoutingMiddleware.Create(const ARouteMatcher: IRouteMatcher);
 begin
   inherited Create;
-  FRouteMatcher := ARouteMatcher;  // Interface manages lifecycle
+  FRouteMatcher := ARouteMatcher;  // ? Interface gerencia ciclo de vida
 end;
 
 destructor TRoutingMiddleware.Destroy;
@@ -73,19 +67,19 @@ var
   Handler: TRequestDelegate;
   RouteParams: TRouteValueDictionary;
   Metadata: TEndpointMetadata;
-  IndyContext: TDextIndyHttpContext;
+  IndyContext: TIndyHttpContext;
 begin
   var Path := AContext.Request.Path;
   var Method := AContext.Request.Method;
 
-  // Use RouteMatcher via interface with Method support
+  // ? USAR RouteMatcher via interface com suporte a Método
   if FRouteMatcher.FindMatchingRoute(AContext, Handler, RouteParams, Metadata) then
   begin
     try
-      // Inject route parameters if found
-      if (RouteParams.Count > 0) and (AContext is TDextIndyHttpContext) then
+      // ? INJETAR parâmetros de rota se encontrados
+      if (RouteParams.Count > 0) and (AContext is TIndyHttpContext) then
       begin
-        IndyContext := TDextIndyHttpContext(AContext);
+        IndyContext := TIndyHttpContext(AContext);
         IndyContext.SetRouteParams(RouteParams);
       end;
 
@@ -119,7 +113,7 @@ begin
   end
   else
   begin
-    // No matching route found - call next (404 handler)
+    // Nenhuma rota encontrada - chamar next (404 handler)
     ANext(AContext);
   end;
 end;

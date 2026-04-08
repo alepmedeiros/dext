@@ -1,4 +1,4 @@
-unit Dext.Web.Indy.SSL.Taurus;
+﻿unit Dext.Web.Indy.SSL.Taurus;
 {$I ..\..\Dext.inc}
 
 interface
@@ -12,9 +12,9 @@ uses
   Dext.Web.Indy.SSL.Interfaces;
 
 type
-  { TDextIndyTaurusSSLHandler
+  { TIndyTaurusSSLHandler
     Implementation using Taurus TLS (OpenSSL 1.1.x / 3.x support for Indy). }
-  TDextIndyTaurusSSLHandler = class(TInterfacedObject, IIndySSLHandler)
+  TIndyTaurusSSLHandler = class(TInterfacedObject, IIndySSLHandler)
   private
     FCertFile: string;
     FKeyFile: string;
@@ -31,9 +31,9 @@ uses
   Dext.Utils;
 {$ENDIF}
 
-{ TDextIndyTaurusSSLHandler }
+{ TIndyTaurusSSLHandler }
 
-constructor TDextIndyTaurusSSLHandler.Create(const ACertFile, AKeyFile, ARootFile: string);
+constructor TIndyTaurusSSLHandler.Create(const ACertFile, AKeyFile, ARootFile: string);
 begin
   inherited Create;
   FCertFile := ACertFile;
@@ -41,7 +41,7 @@ begin
   FRootFile := ARootFile;
 end;
 
-function TDextIndyTaurusSSLHandler.CreateIOHandler(AServer: TIdCustomHTTPServer): TIdServerIOHandler;
+function TIndyTaurusSSLHandler.CreateIOHandler(AServer: TIdCustomHTTPServer): TIdServerIOHandler;
 {$IFDEF DEXT_ENABLE_TAURUS_TLS}
 var
   LIOHandler: TTaurusTLSServerIOHandler;

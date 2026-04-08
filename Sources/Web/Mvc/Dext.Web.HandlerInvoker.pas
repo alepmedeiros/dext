@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -38,8 +38,8 @@ uses
   Dext.Utils;
 
 type
-  { Basic Invoker - PHASE 1.1 }
-  // Generic handler type definitions
+  { Invoker básico - FASE 1.1 }
+  // Definição de tipos de handlers genéricos
   THandlerProc<T> = reference to procedure(Arg1: T);
   THandlerProc<T1, T2> = reference to procedure(Arg1: T1; Arg2: T2);
   THandlerProc<T1, T2, T3> = reference to procedure(Arg1: T1; Arg2: T2; Arg3: T3);
@@ -62,48 +62,53 @@ type
   THandlerProcWithContext<T1, T2> = reference to procedure(Arg1: T1; Arg2: T2; Ctx: IHttpContext);
   THandlerFuncWithContext<T, TResult> = reference to function(Arg1: T; Ctx: IHttpContext): TResult;
 
-  /// <summary>
-  ///   Engine responsible for orchestrating handler invocation (Minimal API and Controllers).
-  ///   Manages argument resolution via Model Binding, validation execution,
-  ///   and the lifecycle of objects created during the request.
-  /// </summary>
   THandlerInvoker = class
   private
     FModelBinder: IModelBinder;
     FContext: IHttpContext;
-    FBoundObjects: TArray<TObject>;  // Tracks objects created by Model Binding for automatic cleanup
+    FBoundObjects: TArray<TObject>;  // Track objects created by Model Binding for cleanup
     function Validate(const AValue: TValue): Boolean;
-    /// <summary>Resolves and binds an individual argument based on its type.</summary>
+    // Helper to resolve argument
     function ResolveArgument<T>: T;
-    /// <summary>Frees all objects instantiated by binding that are not managed elsewhere.</summary>
-    procedure CleanupBoundObjects;
+    procedure CleanupBoundObjects;  // Free all objects created by Model Binding
   public
     constructor Create(AContext: IHttpContext; AModelBinder: IModelBinder);
 
-    /// <summary>Invokes a simple static handler.</summary>
+    // Invocação estática (legado/simples)
+    /// <summary>
+    ///   Invokes a static handler (procedure(Ctx: IHttpContext)).
+    /// </summary>
     function Invoke(AHandler: TStaticHandler): Boolean; overload;
 
     /// <summary>
     ///   Invokes a generic handler with 1 argument.
-    ///   Performs automatic binding: Context, Records (Hybrid), Classes (Body/Query), Services, or Primitives.
+    ///   Performs automatic binding based on argument type:
+    ///   - IHttpContext: Injected directly.
+    ///   - Record/Class: Bound from Body (POST/PUT) or Query (GET/DELETE).
+    ///   - Interface: Bound from Services (DI).
+    ///   - Primitive: Bound from Route (if available) or Query.
     /// </summary>
     function Invoke<T>(AHandler: THandlerProc<T>): Boolean; overload;
 
-    /// <summary>Invokes a generic handler with 2 arguments.</summary>
+    /// <summary>
+    ///   Invokes a generic handler with 2 arguments.
+    /// </summary>
     function Invoke<T1, T2>(AHandler: THandlerProc<T1, T2>): Boolean; overload;
     
-    /// <summary>Invokes a generic handler with 3 arguments.</summary>
+    /// <summary>
+    ///   Invokes a generic handler with 3 arguments.
+    /// </summary>
     function Invoke<T1, T2, T3>(AHandler: THandlerProc<T1, T2, T3>): Boolean; overload;
 
-    // Methods for handlers returning IResult
+    // Invoke for handlers returning IResult
     function Invoke<TResult>(AHandler: THandlerResultFunc<TResult>): Boolean; overload;
     function Invoke<T, TResult>(AHandler: THandlerResultFunc<T, TResult>): Boolean; overload;
     function Invoke<T1, T2, TResult>(AHandler: THandlerResultFunc<T1, T2, TResult>): Boolean; overload;
     function Invoke<T1, T2, T3, TResult>(AHandler: THandlerResultFunc<T1, T2, T3, TResult>): Boolean; overload;
 
     /// <summary>
-    ///   Dynamically invokes a controller action method using RTTI.
-    ///   Supports parameter injection, auto-validation, and automatic result serialization.
+    ///   Invokes a controller action method dynamically using RTTI.
+    ///   Uses convention: First param is IHttpContext, rest are route params as strings.
     /// </summary>
     function InvokeAction(AInstance: TObject; AMethod: TRttiMethod): Boolean;
   end;

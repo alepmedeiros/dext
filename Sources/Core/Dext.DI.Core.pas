@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -38,8 +38,10 @@ type
   TDextServiceScope = class;
 
   /// <summary>
-  ///   Service Provider (Dext DI Container). Resolves registered instances respecting the lifecycle.
-  ///   Manages hybrid storage to ensure correct cleanup of Objects (Free) and Interfaces (ARC).
+  ///   The service provider (DI container) that resolves service instances.
+  ///   Manages two separate storage mechanisms:
+  ///   - FSingletons/FScopedInstances: For class-based services (explicit Free)
+  ///   - FSingletonInterfaces/FScopedInterfaces: For interface-based services (ARC)
   /// </summary>
   TDextServiceProvider = class(TInterfacedObject, IServiceProvider)
   private
@@ -62,23 +64,15 @@ type
     function FindDescriptor(const AServiceType: TServiceType): TServiceDescriptor;
   public
     constructor Create(const ADescriptors: IList<TServiceDescriptor>); overload;
-    /// <summary>Creates a provider with an isolated scope, inheriting registrations from the parent provider for 'Scoped' instances.</summary>
     constructor CreateScoped(AParent: IServiceProvider; const ADescriptors: IList<TServiceDescriptor>); overload;
     destructor Destroy; override;
 
-    /// <summary>Resolves an instance of the requested service. Returns nil if the service is not registered.</summary>
     function GetService(const AServiceType: TServiceType): TObject;
-    /// <summary>Resolves an instance and returns it as an interface (requires ARC support on the resolved object).</summary>
     function GetServiceAsInterface(const AServiceType: TServiceType): IInterface;
-    /// <summary>Resolves an instance of the service. Raises an EServiceNotFound exception if the service is not registered.</summary>
     function GetRequiredService(const AServiceType: TServiceType): TObject;
-    /// <summary>Starts a new isolation scope (e.g., for a new HTTP request or background task).</summary>
     function CreateScope: IServiceScope;
   end;
 
-  /// <summary>
-  ///   Service scope. Ensures that services registered as 'Scoped' are freed at the end of the lifecycle (e.g., end of an HTTP request).
-  /// </summary>
   TDextServiceScope = class(TInterfacedObject, IServiceScope)
   private
     FServiceProvider: IServiceProvider;
@@ -87,9 +81,6 @@ type
     function GetServiceProvider: IServiceProvider;
   end;
 
-  /// <summary>
-  ///   Collection of service registrations. Allows configuring the DI container following the Builder pattern.
-  /// </summary>
   TDextServiceCollection = class(TInterfacedObject, IServiceCollection)
   private
     FDescriptors: IList<TServiceDescriptor>;
@@ -99,27 +90,22 @@ type
     destructor Destroy; override;
 
     function GetDescriptors: IList<TServiceDescriptor>;
-    /// <summary>Registers a persistent service for the entire application lifetime (Shared/Static).</summary>
     function AddSingleton(const AServiceType: TServiceType;
                          const AImplementationClass: TClass;
                          const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection; overload;
     
-    /// <summary>Registers a pre-existing instance as a Singleton (the container assumes ownership).</summary>
     function AddSingleton(const AServiceType: TServiceType;
                          AInstance: TObject): IServiceCollection; overload;
 
-    /// <summary>Registers a service that will be recreated on each resolution request.</summary>
     function AddTransient(const AServiceType: TServiceType;
                           const AImplementationClass: TClass;
                           const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection;
 
-    /// <summary>Registers a service whose instance is kept alive only within the current scope (e.g., IServiceScope).</summary>
     function AddScoped(const AServiceType: TServiceType;
                        const AImplementationClass: TClass;
                        const AFactory: TFunc<IServiceProvider, TObject> = nil): IServiceCollection;
 
     procedure AddRange(const AOther: IServiceCollection);
-    /// <summary>Finalizes configurations and materializes the service provider (Container) for use.</summary>
     function BuildServiceProvider: IServiceProvider;
   end;
 

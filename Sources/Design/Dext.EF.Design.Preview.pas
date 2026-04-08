@@ -28,7 +28,6 @@ uses
   Dext.Entity.Core;
 
 type
-  /// <summary>Data preview window for entities.</summary>
   TPreviewForm = class(TForm)
   private
     FGrid: TDBGrid;
@@ -39,11 +38,9 @@ type
     procedure MemoFieldGetText(Sender: TField; var Text: string; DisplayText: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
-    /// <summary>Configures the preview query for the specified DataSet.</summary>
     procedure Preview(ADataSet: TEntityDataSet);
   end;
 
-  /// <summary>Displays a modal window with a data preview of the entity bound to the DataSet.</summary>
 procedure ShowEntityPreview(ADataSet: TEntityDataSet);
 
 implementation

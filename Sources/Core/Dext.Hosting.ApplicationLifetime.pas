@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -33,19 +33,31 @@ uses
   Dext.Threading.CancellationToken;
 
 type
-  /// <summary>Allows services and components to be notified about application lifecycle events.</summary>
+  /// <summary>
+  ///   Allows consumers to be notified of application lifetime events.
+  /// </summary>
   IHostApplicationLifetime = interface
     ['{DA4C3B2A-1E5F-4D8C-9B0A-2F3E4D5C6B7A}']
-    /// <summary>Triggered when the application host is fully started.</summary>
+    /// <summary>
+    ///   Triggered when the application host has fully started.
+    /// </summary>
     function GetApplicationStarted: ICancellationToken;
     
-    /// <summary>Triggered when the host is starting a graceful shutdown. Requests may still be processing.</summary>
+    /// <summary>
+    ///   Triggered when the application host is starting a graceful shutdown.
+    ///   Requests may still be in flight.
+    /// </summary>
     function GetApplicationStopping: ICancellationToken;
     
-    /// <summary>Triggered when the host has completed shutting down. The application will terminate shortly.</summary>
+    /// <summary>
+    ///   Triggered when the application host has completed a graceful shutdown.
+    ///   The application will exit shortly after this.
+    /// </summary>
     function GetApplicationStopped: ICancellationToken;
 
-    /// <summary>Requests the immediate termination of the current application.</summary>
+    /// <summary>
+    ///   Requests termination of the current application.
+    /// </summary>
     procedure StopApplication;
 
     property ApplicationStarted: ICancellationToken read GetApplicationStarted;

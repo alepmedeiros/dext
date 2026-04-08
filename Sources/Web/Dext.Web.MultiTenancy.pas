@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -21,25 +21,16 @@ uses
   Dext.Web.Core, Dext.MultiTenancy;
 
 type
-  /// <summary>
-  ///   Strategy to resolve the tenant ID from the HTTP context (e.g. Host, Header, Query).
-  /// </summary>
   ITenantResolutionStrategy = interface
     ['{C8E9D0A1-B2F3-4C5D-6E7F-8A9B0C1D2E3F}']
     function Resolve(const AContext: IHttpContext): string;
   end;
 
-  /// <summary>
-  ///   Tenant metadata repository.
-  /// </summary>
   ITenantStore = interface
     ['{631320AF-1279-4684-9075-C66946D58AEB}']
     function GetTenant(const AId: string): ITenant;
   end;
 
-  /// <summary>
-  ///   Middleware responsible for identifying the current tenant and injecting it into the pipeline and DI container.
-  /// </summary>
   TMultiTenancyMiddleware = class(TMiddleware)
   private
     FStrategy: ITenantResolutionStrategy;

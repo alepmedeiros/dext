@@ -52,10 +52,6 @@ type
     Text: string;
   end;
 
-  /// <summary>
-  ///   Represents a compiled route pattern. Analyzes and stores literal segments
-  ///   and parameter names extracted from the route definition (e.g., /users/{id}).
-  /// </summary>
   TRoutePattern = class
   private
     FPattern: string;
@@ -64,20 +60,11 @@ type
     procedure ParseSegments(const APattern: string);
   public
     constructor Create(const APattern: string);
-    /// <summary>
-    ///   Tries to match a real path against this pattern.
-    ///   Extracts the resulting parameters into the AParams dictionary on success.
-    /// </summary>
     function Match(const APath: string; out AParams: TRouteValueDictionary): Boolean;
-    /// <summary>Original route pattern (e.g., /api/{controller}/{id}).</summary>
     property Pattern: string read FPattern;
-    /// <summary>Parameter names found in the pattern.</summary>
     property ParameterNames: TArray<string> read FParameterNames;
   end;
 
-  /// <summary>
-  ///   Represents a single route definition linked to a handler and metadata.
-  /// </summary>
   TRouteDefinition = class
   private
     FMethod: string;
@@ -95,9 +82,6 @@ type
     property Metadata: TEndpointMetadata read FMetadata write FMetadata;
   end;
 
-  /// <summary>
-  ///   Interface for the engine that finds routes matching a request.
-  /// </summary>
   IRouteMatcher = interface
     ['{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}']
     function FindMatchingRoute(const AContext: IHttpContext;
@@ -106,23 +90,14 @@ type
       out AMetadata: TEndpointMetadata): Boolean;
   end;
 
-  /// <summary>
-  ///   Default implementation of the route matcher.
-  ///   Manages API versioning and prioritizes literal (exact) routes over parameterized routes.
-  /// </summary>
   TRouteMatcher = class(TInterfacedObject, IRouteMatcher)
   private
     FRoutes: IList<TRouteDefinition>;
     function GetRequestedApiVersion(const AContext: IHttpContext): string;
     function IsVersionMatch(const RequestedVersion: string; const SupportedVersions: TArray<string>): Boolean;
   public
-    /// <summary>Creates a matcher from a list of route definitions.</summary>
     constructor Create(const ARoutes: IList<TRouteDefinition>);
     destructor Destroy; override;
-    /// <summary>
-    ///   Finds the matching route for the current context.
-    ///   Matching order: HTTP Verb -> API Version -> Path (Literal > Parameter).
-    /// </summary>
     function FindMatchingRoute(const AContext: IHttpContext;
       out AHandler: TRequestDelegate;
       out ARouteParams: TRouteValueDictionary;

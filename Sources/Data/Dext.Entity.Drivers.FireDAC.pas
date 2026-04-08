@@ -60,9 +60,6 @@ uses
 type
   TFireDACConnection = class;
 
-  /// <summary>
-  ///   FireDAC transaction manager. Ensures all session commands share the same transaction.
-  /// </summary>
   TFireDACTransaction = class(TInterfacedObject, IDbTransaction)
   private
     FTransaction: TFDTransaction;
@@ -91,9 +88,6 @@ type
     procedure Close;
   end;
 
-  /// <summary>
-  ///   FireDAC SQL command. Supports execution of queries, non-queries, scalars, and batch operations (Batch DML).
-  /// </summary>
   TFireDACCommand = class(TInterfacedObject, IDbCommand)
   private
     FQuery: TFDQuery;
@@ -125,9 +119,6 @@ type
     procedure ExecuteBatch(const ATimes: Integer; const AOffset: Integer = 0);
   end;
 
-  /// <summary>
-  ///   Physical FireDAC connection. Manages connection pooling and automatic dialect detection.
-  /// </summary>
   TFireDACConnection = class(TInterfacedObject, IDbConnection)
   private
     FConnection: TFDConnection;

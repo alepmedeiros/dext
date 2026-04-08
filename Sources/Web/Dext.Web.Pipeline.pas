@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -34,21 +34,15 @@ uses
   Dext.Web.Interfaces, Dext.Web.Routing;
 
 type
-  /// <summary>
-  ///   Base contract for the Dext execution pipeline, responsible for orchestrating the processing of an HTTP request.
-  /// </summary>
   IDextPipeline = interface
     ['{A3B4C5D6-E7F8-4A9B-8C0D-1E2F3A4B5C6D}']
     procedure Execute(AContext: IHttpContext);
   end;
 
-  /// <summary>
-  ///   Default implementation of the Dext pipeline that stores the complete chain of middlewares and routes.
-  /// </summary>
   TDextPipeline = class(TInterfacedObject, IDextPipeline)
   private
-    FMappedRoutes: IDictionary<string, TRequestDelegate>;       // Fixed routes
-    FRoutePatterns: IDictionary<TRoutePattern, TRequestDelegate>; // Generic route patterns with parameters
+    FMappedRoutes: IDictionary<string, TRequestDelegate>;       // Rotas fixas
+    FRoutePatterns: IDictionary<TRoutePattern, TRequestDelegate>; // ? NOVO: Padrões com parâmetros
     FMiddlewarePipeline: TRequestDelegate;
 
 //    function FindMatchingRoute(const APath: string;
@@ -56,7 +50,7 @@ type
 //      out ARouteParams: IDictionary<string, string>): Boolean;
   public
     constructor Create(AMappedRoutes: IDictionary<string, TRequestDelegate>;
-      ARoutePatterns: IDictionary<TRoutePattern, TRequestDelegate>; // Receive patterns
+      ARoutePatterns: IDictionary<TRoutePattern, TRequestDelegate>; // ? NOVO: Receber padrões
       APipeline: TRequestDelegate);
     destructor Destroy; override;
     procedure Execute(AContext: IHttpContext);
@@ -79,7 +73,7 @@ var
 begin
   inherited Create;
 
-  // Clone fixed routes
+  // ? Clonar rotas fixas
   FMappedRoutes := TCollections.CreateDictionary<string, TRequestDelegate>;
   for Path in AMappedRoutes.Keys do
   begin
@@ -87,7 +81,7 @@ begin
       FMappedRoutes.Add(Path, Handler);
   end;
 
-  // Clone route patterns
+  // ? NOVO: Clonar padrões de rota
   FRoutePatterns := TCollections.CreateDictionary<TRoutePattern, TRequestDelegate>;
   for RoutePattern in ARoutePatterns.Keys do
   begin
@@ -108,7 +102,7 @@ var
 begin
   FMappedRoutes := nil;
 
-  // Release route patterns
+  // ? NOVO: Liberar padrões de rota
   for RoutePattern in FRoutePatterns.Keys do
     RoutePattern.Free;
   FRoutePatterns := nil;
@@ -143,7 +137,7 @@ end;
 
 procedure TDextPipeline.Execute(AContext: IHttpContext);
 begin
-  // Just execute the complete pipeline
+  // ? Apenas executa o pipeline completo
   // O roteamento agora está DENTRO do pipeline como um middleware
   FMiddlewarePipeline(AContext);
 end;
@@ -152,7 +146,7 @@ end;
 //var
 //  Handler: TRequestDelegate;
 //  RouteParams: IDictionary<string, string>;
-//  IndyContext: TDextIndyHttpContext;
+//  IndyContext: TIndyHttpContext;
 //begin
 //  var Path := AContext.Request.Path;
 //
@@ -161,9 +155,9 @@ end;
 //  begin
 //    try
 //      // ? INJETAR parâmetros de rota se encontrados
-//      if Assigned(RouteParams) and (AContext is TDextIndyHttpContext) then
+//      if Assigned(RouteParams) and (AContext is TIndyHttpContext) then
 //      begin
-//        IndyContext := TDextIndyHttpContext(AContext);
+//        IndyContext := TIndyHttpContext(AContext);
 //        IndyContext.SetRouteParams(RouteParams);
 //      end;
 //

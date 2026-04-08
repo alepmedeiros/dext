@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -32,9 +32,6 @@ uses
   Dext.Web.Interfaces;
 
 type
-  /// <summary>
-  ///   Holds the state needed by formatters to write the output.
-  /// </summary>
   IOutputFormatterContext = interface
     ['{AA11BB22-CC33-44DD-EE55-FF6677889900}']
     function GetHttpContext: IHttpContext;
@@ -72,14 +69,9 @@ type
     function SelectFormatter(const Context: IOutputFormatterContext; const Formatters: TArray<IOutputFormatter>): IOutputFormatter;
   end;
 
-  /// <summary>
-  ///   Registry for managing available output formatters in the framework.
-  /// </summary>
   IOutputFormatterRegistry = interface
     ['{DD44EE55-FF66-7700-8811-99AABBCCDDEE}']
-    /// <summary>Registers a new output formatter.</summary>
     procedure Add(Formatter: IOutputFormatter);
-    /// <summary>Returns all registered formatters.</summary>
     function GetAll: TArray<IOutputFormatter>;
   end;
 

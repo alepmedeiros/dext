@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -63,7 +63,7 @@ type
   end;
 
   /// <summary>
-  ///   JWT token handler contract, allowing for generation and validation.
+  ///   JWT token generator and validator interface.
   /// </summary>
   IJwtTokenHandler = interface
     ['{A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D}']
@@ -87,7 +87,7 @@ type
   end;
 
   /// <summary>
-  ///   JWT configuration options (Secret, Issuer, Audience).
+  ///   JWT authentication configuration options.
   /// </summary>
   TJwtOptions = record
   public
@@ -118,7 +118,10 @@ type
   end;
 
   /// <summary>
-  ///   Fluent builder for creating <see cref="TJwtOptions"/> objects.
+  ///   Fluent builder for creating JWT options.
+  /// </summary>
+  /// <summary>
+  ///   Fluent builder for creating JWT options.
   /// </summary>
   TJwtOptionsBuilder = record
   private
@@ -172,7 +175,7 @@ type
   end;
 
   /// <summary>
-  ///   Default implementation of the JWT token handler using HS256.
+  ///   JWT token generator and validator.
   /// </summary>
   TJwtTokenHandler = class(TInterfacedObject, IJwtTokenHandler)
   private

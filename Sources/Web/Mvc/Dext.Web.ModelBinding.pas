@@ -64,17 +64,20 @@ type
     FSource: TBindingSource;
   public
     constructor Create(ASource: TBindingSource);
-    /// <summary>Data source (Body, Query, Route, Header, etc.).</summary>
     property Source: TBindingSource read FSource;
   end;
 
-  /// <summary>Attribute to bind a parameter from the request body (JSON).</summary>
+  /// <summary>
+  ///   Specifies that a parameter or property should be bound using the request body.
+  /// </summary>
   FromBodyAttribute = class(BindingAttribute)
   public
     constructor Create; overload;
   end;
 
-  /// <summary>Attribute to bind a parameter from the query string.</summary>
+  /// <summary>
+  ///   Specifies that a parameter or property should be bound using the request query string.
+  /// </summary>
   FromQueryAttribute = class(BindingAttribute)
   private
     FName: string;
@@ -84,7 +87,9 @@ type
     property Name: string read FName;
   end;
 
-  /// <summary>Attribute to bind a parameter from route data ({id}).</summary>
+  /// <summary>
+  ///   Specifies that a parameter or property should be bound using route data.
+  /// </summary>
   FromRouteAttribute = class(BindingAttribute)
   private
     FName: string;
@@ -94,7 +99,9 @@ type
     property Name: string read FName;
   end;
 
-  /// <summary>Attribute to bind a parameter from HTTP headers.</summary>
+  /// <summary>
+  ///   Specifies that a parameter or property should be bound using the request headers.
+  /// </summary>
   FromHeaderAttribute = class(BindingAttribute)
   private
     FName: string;
@@ -104,7 +111,9 @@ type
     property Name: string read FName;
   end;
 
-  /// <summary>Attribute to inject a service directly from the DI container into the handler parameter.</summary>
+  /// <summary>
+  ///   Specifies that a parameter should be bound using the dependency injection container.
+  /// </summary>
   FromServicesAttribute = class(BindingAttribute)
   public
     constructor Create; overload;
@@ -115,41 +124,54 @@ type
   /// </summary>
   IModelBinder = interface
     ['{6CDDAA4C-EB6B-42F0-A138-614FFBA931A5}']
-    /// <summary>Binds a model from the request body (JSON).</summary>
+    /// <summary>
+    ///   Binds a model from the request body.
+    /// </summary>
     function BindBody(AType: PTypeInfo; Context: IHttpContext): TValue;
     
-    /// <summary>Binds a model from the query string.</summary>
+    /// <summary>
+    ///   Binds a model from the query string.
+    /// </summary>
     function BindQuery(AType: PTypeInfo; Context: IHttpContext): TValue;
     
-    /// <summary>Binds a model from route parameters.</summary>
+    /// <summary>
+    ///   Binds a model from route data.
+    /// </summary>
     function BindRoute(AType: PTypeInfo; Context: IHttpContext): TValue;
     
-    /// <summary>Binds a model from HTTP headers.</summary>
+    /// <summary>
+    ///   Binds a model from request headers.
+    /// </summary>
     function BindHeader(AType: PTypeInfo; Context: IHttpContext): TValue;
     
-    /// <summary>Injects a dependency from the service container.</summary>
+    /// <summary>
+    ///   Binds a model from the service provider.
+    /// </summary>
     function BindServices(AType: PTypeInfo; Context: IHttpContext): TValue;
 
-    /// <summary>Binds all parameters of a controller/handler method.</summary>
+    /// <summary>
+    ///   Binds all parameters of a method.
+    /// </summary>
     function BindMethodParameters(AMethod: TRttiMethod; AContext: IHttpContext): TArray<TValue>;
     
-    /// <summary>Binds a single parameter, applying inference rules if necessary.</summary>
+    /// <summary>
+    ///   Binds a single parameter.
+    /// </summary>
     function BindParameter(AParam: TRttiParameter; AContext: IHttpContext): TValue;
 
     /// <summary>
-    ///   Performs hybrid binding of a Record. 
-    ///   Fields can come from different sources based on meta-informative attributes.
+    ///   Binds a record from multiple sources (header, query, route, body, services)
+    ///   based on field attributes. This is the preferred method for Minimal API
+    ///   where records may have fields from different sources.
     /// </summary>
     function BindRecordHybrid(AType: PTypeInfo; Context: IHttpContext): TValue;
 
-    /// <summary>Converts a raw string value to the specified native type via RTTI.</summary>
+    /// <summary>
+    ///   Binds a raw string value to a specific type using internal conversion rules.
+    /// </summary>
     function BindValue(const AValue: string; AType: PTypeInfo): TValue;
   end;
 
-  /// <summary>
-  ///   Dext Model Binding mechanism.
-  ///   Converts data from various HTTP sources to native Delphi types using RTTI.
-  /// </summary>
   TModelBinder = class(TInterfacedObject, IModelBinder)
   private
     function ConvertStringToType(const AValue: string; AType: PTypeInfo): TValue;
@@ -165,20 +187,17 @@ type
     function BindHeader(AType: PTypeInfo; Context: IHttpContext): TValue;
     function BindServices(AType: PTypeInfo; Context: IHttpContext): TValue;
 
-    // Helper methods with generics
-    /// <summary>Binds and deserializes the request body to type T.</summary>
+    // Helper methods com genéricos
     function BindBody<T>(Context: IHttpContext): T; overload;
-    /// <summary>Binds the query string to type T (record or class).</summary>
     function BindQuery<T>(Context: IHttpContext): T; overload;
-    /// <summary>Binds route parameters to type T.</summary>
     function BindRoute<T>(Context: IHttpContext): T; overload;
 
     function BindMethodParameters(AMethod: TRttiMethod; AContext: IHttpContext): TArray<TValue>;
     function BindParameter(AParam: TRttiParameter; AContext: IHttpContext): TValue;
 
     /// <summary>
-    ///   Performs hybrid binding: record properties can come from different sources 
-    ///   based on attributes (Header, Query, Route, Body).
+    ///   Binds a record from multiple sources based on field attributes.
+    ///   Supports [FromHeader], [FromQuery], [FromRoute], [FromServices] and implicit [FromBody].
     /// </summary>
     function BindRecordHybrid(AType: PTypeInfo; Context: IHttpContext): TValue;
 
@@ -192,7 +211,7 @@ type
     class function BindRoute<T>(ABinder: IModelBinder; Context: IHttpContext): T; static;
   end;
 
-  // BINDING PROVIDER
+  // ✅ BINDING PROVIDER
   IBindingSourceProvider = interface
     ['{8D4F3A7C-1E4A-4B8D-B0E7-9F3A8C5D2B1E}']
     function GetBindingSource(Param: TRttiParameter): TBindingSource;
@@ -601,11 +620,11 @@ begin
         // Obter nome do campo (com suporte a atributos [FromHeader])
         FieldName := SourceProvider.GetBindingName(Field);
 
-        // Get header value (case-insensitive via GetHeader)
+        // Buscar valor do header (case-insensitive via GetHeader)
         FieldValue := Context.Request.GetHeader(FieldName);
         if FieldValue <> '' then
         begin
-          // USE ROBUST CONVERSION
+          // ✅ USAR CONVERSÃO ROBUSTA
           try
             var Val := ConvertStringToType(FieldValue, Field.FieldType.Handle);
             Field.SetValue(Result.GetReferenceToRawData, Val);
@@ -827,7 +846,7 @@ begin
           raise EBindingException.CreateFmt('Service not found for class type: %s. Ensure it is registered in DI.', [String(AType.Name)]);
     end;
 
-    // NEW: Direct support for interfaces
+    // ✅ NOVO: Suporte direto a interfaces
     if AType.Kind = tkInterface then
     begin
       var InterfaceType := ContextRtti.GetType(AType) as TRttiInterfaceType;
@@ -845,11 +864,11 @@ begin
 
     TValue.Make(nil, AType, Result);
     RttiType := ContextRtti.GetType(AType);
-    // Services already initialized above
+    // Services já inicializado acima
 
     for Field in RttiType.GetFields do
     begin
-      // Check if field has [FromServices] attribute
+      // Verificar se o campo tem atributo [FromServices]
       var HasServicesAttr := False;
       for var Attr in Field.GetAttributes do
       begin
@@ -866,28 +885,28 @@ begin
           case Field.FieldType.TypeKind of
             tkInterface:
               begin
-                // For interfaces, use GUID
+                // Para interfaces, usar o GUID
                 var InterfaceType := Field.FieldType as TRttiInterfaceType;
                 ServiceType := TServiceType.FromInterface(InterfaceType.GUID);
 
-                // Get service from DI container as interface
+                // Obter serviço do container DI como interface
                 var InterfaceInstance := Services.GetServiceAsInterface(ServiceType);
                 if Assigned(InterfaceInstance) then
                 begin
-                  // FIX: Create TValue of specific interface type
+                  // ✅ CORREÇÃO: Criar TValue do tipo específico da interface
                   TValue.Make(@InterfaceInstance, Field.FieldType.Handle, ServiceInstance);
                   Field.SetValue(Result.GetReferenceToRawData, ServiceInstance);
                 end
                 else
                 begin
-                  // Service not found - could it be optional or required?
-                  // For now, leave field as nil
+                  // Serviço não encontrado - pode ser opcional ou requerido?
+                  // Por enquanto, deixamos o campo como nil
                 end;
               end;
 
             tkClass:
               begin
-                // FIX: Use RTTI to get class correctly
+                // ✅ CORREÇÃO: Usar o RTTI para obter a classe corretamente
                 var ClassType := (Field.FieldType as TRttiInstanceType).MetaclassType;
                 ServiceType := TServiceType.FromClass(ClassType);
 
@@ -1350,7 +1369,7 @@ begin
       Exit(BindingAttribute(Attr).Source);
   end;
 
-  // Default: FromBody for complex types, FromQuery for simple types
+  // Default: FromBody para tipos complexos, FromQuery para simples
   if Param.ParamType.TypeKind in [tkRecord, tkClass] then
     Result := bsBody
   else

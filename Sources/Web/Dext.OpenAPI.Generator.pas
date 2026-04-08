@@ -1,4 +1,4 @@
-unit Dext.OpenAPI.Generator;
+﻿unit Dext.OpenAPI.Generator;
 
 interface
 

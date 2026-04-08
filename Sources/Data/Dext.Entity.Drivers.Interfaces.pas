@@ -44,9 +44,6 @@ type
   /// <summary>
   ///   Represents a database connection.
   /// </summary>
-  /// <summary>
-  ///   Represents a connection with the database.
-  /// </summary>
   IDbConnection = interface
     ['{20000000-0000-0000-0000-000000000002}']
     procedure Connect;
@@ -89,9 +86,6 @@ type
   /// <summary>
   ///   Represents a command to execute against the database.
   /// </summary>
-  /// <summary>
-  ///   Representa um comando SQL a ser executado contra o banco de dados.
-  /// </summary>
   IDbCommand = interface
     ['{20000000-0000-0000-0000-000000000004}']
     procedure SetSQL(const ASQL: string);
@@ -123,9 +117,6 @@ type
 
   /// <summary>
   ///   Represents a forward-only stream of rows from a data source.
-  /// </summary>
-  /// <summary>
-  ///   Representa um fluxo de dados unidirecional vindo do banco de dados (Cursor).
   /// </summary>
   IDbReader = interface
     ['{20000000-0000-0000-0000-000000000005}']

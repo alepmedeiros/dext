@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -37,10 +37,10 @@ type
     procedure HandleRequest(AContext: IHttpContext);
   end;
 
-  // For Approach 1: Static Records
-  // TStaticHandler moved to Dext.Web.Interfaces
+  // Para Approach 1: Records estáticos
+  // TStaticHandler movido para Dext.Web.Interfaces
 
-  // For Approach 2: Classes with DI
+  // Para Approach 2: Classes com DI
   TControllerClass = class of TController;
 
   TController = class abstract(TInterfacedObject, IHttpHandler)

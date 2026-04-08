@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -35,13 +35,13 @@ uses
   Dext.Web.ModelBinding;
 
 type
-  // ? FINAL INTERFACE (without generics)
+  // ? INTERFACE FINAL (sem genéricos)
   IApplicationBuilderWithModelBinding = interface
     ['{8A3B7C5D-2E4F-4A9D-B1C6-9F7E5D3A2B1C}']
     function Build: IApplicationBuilder;
   end;
 
-  // ? CONCRETE BUILDER (with generics)
+  // ? BUILDER CONCRETO (com genéricos)
   TApplicationBuilderWithModelBinding = class(TInterfacedObject, IApplicationBuilderWithModelBinding)
   private
     FBuilder: TApplicationBuilder;
@@ -49,15 +49,15 @@ type
   public
     constructor Create(ABuilder: TApplicationBuilder);
 
-    // ? GENERIC METHODS (class only)
+    // ? MÉTODOS GENÉRICOS (apenas na classe)
     function MapPost<T>(const Path: string; Handler: TProc<T>): TApplicationBuilderWithModelBinding;
     function MapGet<T>(const Path: string; Handler: TProc<T>): TApplicationBuilderWithModelBinding;
 
-    // ? FINAL METHOD (returns interface)
+    // ? MÉTODO FINAL (retorna interface)
     function Build: IApplicationBuilder;
   end;
 
-  // ? FACTORY for creating the builder
+  // ? FACTORY para criar o builder
   TApplicationBuilderModelBindingExtensions = class
   public
     class function WithModelBinding(AppBuilder: IApplicationBuilder): TApplicationBuilderWithModelBinding; static;

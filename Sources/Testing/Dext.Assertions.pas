@@ -54,26 +54,38 @@ type
   /// </summary>
   EAssertionFailed = class(Exception);
 
-  /// <summary>Static utilities for assertions and test failure control.</summary>
+  /// <summary>
+  ///   Static class for assertion utilities.
+  /// </summary>
   Assert = record
   public
     /// <summary>
-    ///   Executes a block of assertions in "soft" mode (Soft Assert).
-    ///   Catches all failures within the block and reports them together at the end, instead of stopping at the first failure.
+    ///   Executes assertions in a "soft" mode, collecting all failures instead of stopping at the first one.
     /// </summary>
     class procedure Multiple(const Action: TProc); static;
     
-    /// <summary>Interrupts the test immediately with a custom failure message.</summary>
+    /// <summary>
+    ///   Fails the test with the given message.
+    /// </summary>
     class procedure Fail(const Message: string); static;
 
-    /// <summary>Internal use. Registers a failure respecting the Assert.Multiple context.</summary>
+    /// <summary>
+    ///   Internal use only. Registers a failure respecting soft assert mode.
+    /// </summary>
     class procedure RegisterFailure(const Message, Reason: string); static;
 
-    /// <summary>Verifies if the execution of the procedure throws an exception of the specified class.</summary>
+    /// <summary>
+    ///   Verifies that the given action raises an exception of the specified class.
+    /// </summary>
+    /// <summary>
+    ///   Verifies that the given action raises an exception of the specified class.
+    /// </summary>
     class procedure WillRaise(const Action: TProc; ExceptionClass: ExceptClass = nil; const MessagePart: string = ''); static;
   end;
 
-  /// <summary>Fluent assertions for TDateTime types.</summary>
+  /// <summary>
+  ///   Fluent assertions for DateTime.
+  /// </summary>
   ShouldDateTime = record
   private
     FValue: TDateTime;
@@ -81,23 +93,18 @@ type
     procedure Fail(const Message: string);
   public
     constructor Create(Value: TDateTime);
-    /// <summary>Verifies if the date/time is exactly equal to the expected.</summary>
     function Be(Expected: TDateTime): ShouldDateTime;
-    /// <summary>Verifies if the date/time is within a tolerance margin (default 1s).</summary>
     function BeCloseTo(Expected: TDateTime; PrecisionMS: Int64 = 1000): ShouldDateTime;
-    /// <summary>Verifies if the value is after the referenced date.</summary>
     function BeAfter(Expected: TDateTime): ShouldDateTime;
-    /// <summary>Verifies if the value is before the referenced date.</summary>
     function BeBefore(Expected: TDateTime): ShouldDateTime;
-    /// <summary>Verifies if the date is the same day, ignoring the time part.</summary>
-    function BeSameDateAs(Expected: TDateTime): ShouldDateTime;
-    /// <summary>Verifies if the value corresponds to the current system date.</summary>
+    function BeSameDateAs(Expected: TDateTime): ShouldDateTime; // Ignores time
     function BeToday: ShouldDateTime;
-    /// <summary>Adds a friendly explanation for the assertion (displayed on error).</summary>
     function Because(const Reason: string): ShouldDateTime;
   end;
 
-  /// <summary>Fluent assertions for strings.</summary>
+  /// <summary>
+  ///   String-specific Should assertions.
+  /// </summary>
   ShouldString = record
   private
     FValue: string;
@@ -106,15 +113,11 @@ type
   public
     constructor Create(const Value: string);
     
-    /// <summary>Verifies exact equality (case-sensitive).</summary>
     function Be(const Expected: string): ShouldString;
-    /// <summary>Verifies inequality.</summary>
     function NotBe(const Unexpected: string): ShouldString;
-    /// <summary>Verifies equality ignoring case.</summary>
     function BeEquivalentTo(const Expected: string): ShouldString;
     function BeEmpty: ShouldString;
     function NotBeEmpty: ShouldString;
-    /// <summary>Verifies if the string contains the specified substring.</summary>
     function Contain(const Substring: string): ShouldString;
     function NotContain(const Substring: string): ShouldString;
     function StartWith(const Prefix: string): ShouldString;
@@ -122,21 +125,16 @@ type
     function HaveLength(Expected: Integer): ShouldString;
     function HaveLengthGreaterThan(Expected: Integer): ShouldString;
     function HaveLengthLessThan(Expected: Integer): ShouldString;
-    /// <summary>Validates the string against a regular expression.</summary>
     function MatchRegex(const Pattern: string): ShouldString;
     function BeUpperCase: ShouldString;
     function BeLowerCase: ShouldString;
     function BeOneOf(const Values: TArray<string>): ShouldString;
-    /// <summary>
-    ///   Compares the current value with a snapshot file saved on disk. 
-    ///   Useful for large JSON payloads or complex outputs that change rarely.
-    /// </summary>
     function MatchSnapshot(const SnapshotName: string): ShouldString;
     function Satisfy(const Predicate: TPredicate<string>): ShouldString;
     function Because(const Reason: string): ShouldString;
     // Chaining
     function &And: ShouldString;
-    function AndAlso: ShouldString; // Alias for fluent chaining
+    function AndAlso: ShouldString; // Fluent alias for And
   end;
 
   /// <summary>
@@ -187,7 +185,9 @@ type
     function AndAlso: ShouldBoolean;
   end;
 
-  /// <summary>Fluent assertions for code execution and exception handling.</summary>
+  /// <summary>
+  ///   Action-specific Should assertions for exceptions.
+  /// </summary>
   ShouldAction = record
   private
     FAction: TProc;
@@ -198,15 +198,10 @@ type
   public
     constructor Create(const Action: TProc);
     
-    /// <summary>Verifies if the procedure throws an exception of generic type E.</summary>
     function Throw<E: Exception>: ShouldAction; overload;
-    /// <summary>Verifies if the procedure throws an exception of the specified class.</summary>
     function Throw(AExceptionClass: ExceptClass): ShouldAction; overload;
-    /// <summary>Validates if the message of the thrown exception is exactly equal to the expected one.</summary>
     function ThrowWithMessage(const ExpectedMessage: string): ShouldAction;
-    /// <summary>Validates if the exception message contains the specified substring.</summary>
     function ThrowWithMessageContaining(const Substring: string): ShouldAction;
-    /// <summary>Verifies if the procedure executes without throwing any exceptions.</summary>
     function NotThrow: ShouldAction;
     function Because(const Reason: string): ShouldAction;
     function &And: ShouldAction;

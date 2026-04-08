@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -34,7 +34,6 @@ uses
 type
   /// <summary>
   ///   Marks a handler as requiring authentication.
-  ///   Optionally allows filtering by Roles and Authentication Scheme.
   /// </summary>
   AuthorizeAttribute = class(TCustomAttribute)
   private

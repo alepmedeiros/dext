@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -33,13 +33,8 @@ uses
   Dext.Web.Interfaces, Dext.DI.Interfaces;
 
 type
-  /// <summary>
-  ///   Provides specialized injection for Minimal API handlers.
-  ///   Automatically resolves IHttpContext and additional services from the DI container.
-  /// </summary>
   THandlerInjector = class
   public
-    /// <summary>Analyzes the handler signature and executes it injecting required dependencies.</summary>
     class procedure ExecuteHandler(AHandler: TValue; AContext: IHttpContext; AServiceProvider: IServiceProvider);
   end;
 
@@ -56,16 +51,16 @@ var
 begin
   Context := TRttiContext.Create;
   try
-    // Get the anonymous method's 'Invoke' method via RTTI
+    // Obter método do anonymous method via RTTI
     Method := Context.GetType(AHandler.TypeInfo).GetMethod('Invoke');
 
     Parameters := Method.GetParameters;
     SetLength(Arguments, Length(Parameters));
 
-    // The first parameter is always IHttpContext
+    // Primeiro parâmetro é sempre IHttpContext
     Arguments[0] := TValue.From<IHttpContext>(AContext);
 
-    // Resolve additional parameters from the DI container
+    // Resolver demais parâmetros do container DI
     for I := 1 to High(Parameters) do
     begin
       var ParamType := Parameters[I].ParamType;
@@ -78,7 +73,7 @@ begin
       end;
     end;
 
-    // Execute the handler
+    // Executar handler
     Method.Invoke(AHandler, Arguments);
 
   finally

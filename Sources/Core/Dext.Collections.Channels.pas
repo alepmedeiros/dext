@@ -1,4 +1,4 @@
-unit Dext.Collections.Channels;
+﻿unit Dext.Collections.Channels;
 
 interface
 
@@ -9,21 +9,12 @@ uses
   Dext.Collections.Memory;
 
 type
-  /// <summary>
-  ///   Represents a concurrent communication channel for passing data between threads.
-  /// </summary>
   IChannel<T> = interface
-    /// <summary>Attempts to write an item to the channel without blocking. Returns true if successful.</summary>
     function TryWrite(const Value: T): Boolean;
-    /// <summary>Attempts to read an item from the channel without blocking. Returns true if an item was read.</summary>
     function TryRead(out Value: T): Boolean;
-    /// <summary>Writes an item to the channel. Blocks if the channel is bounded and full.</summary>
-    procedure Write(const Value: T);
-    /// <summary>Reads an item from the channel. Blocks until an item becomes available.</summary>
-    function Read: T;
-    /// <summary>Closes the channel, preventing further writes.</summary>
+    procedure Write(const Value: T); // Blocks if bounded and full
+    function Read: T;                // Blocks until an item is available
     procedure Close;
-    /// <summary>Indicates whether the channel has been closed.</summary>
     function IsClosed: Boolean;
   end;
 
@@ -77,14 +68,9 @@ type
     function IsClosed: Boolean;
   end;
 
-  /// <summary>
-  ///   Factory for creating concurrent communication channels.
-  /// </summary>
   TChannel<T> = class
   public
-    /// <summary>Creates a channel with a fixed maximum capacity.</summary>
     class function CreateBounded(Capacity: Integer): IChannel<T>;
-    /// <summary>Creates a channel with virtually unlimited capacity.</summary>
     class function CreateUnbounded: IChannel<T>;
   end;
 

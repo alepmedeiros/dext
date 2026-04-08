@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -35,7 +35,8 @@ uses
   Dext.Web.Interfaces;
 
 /// <summary>
-///   Writes a JSON response with a specific HTTP status code.
+///   Writes JSON response with a specific HTTP status code.
+///   Usage: RespondJson(Ctx, HttpStatus.OK, '{"id": 1}');
 /// </summary>
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AJson: string); overload;
 
@@ -46,7 +47,8 @@ procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const 
 procedure RespondJson(const AContext: IHttpContext; AStatusCode: Integer; const AFormat: string; const AArgs: array of const); overload;
 
 /// <summary>
-///   Writes a formatted JSON error response with a specific status code.
+///   Writes JSON error response with a specific HTTP status code.
+///   Usage: RespondError(Ctx, HttpStatus.NotFound, 'Resource not found');
 /// </summary>
 procedure RespondError(const AContext: IHttpContext; AStatusCode: Integer; const AMessage: string);
 

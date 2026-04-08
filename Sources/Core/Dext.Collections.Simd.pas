@@ -1,4 +1,4 @@
-unit Dext.Collections.Simd;
+﻿unit Dext.Collections.Simd;
 
 interface
 
@@ -6,26 +6,16 @@ uses
   System.SysUtils;
 
 type
-  /// <summary>
-  ///   Enumerates the SIMD capabilities detected on the current CPU.
-  /// </summary>
   TSimdCapability = (scNone, scSSE2, scSSE42, scAVX2, scNEON);
 
-  /// <summary>
-  ///   Provides high-performance vector-accelerated operations using SIMD instructions (SSE2, SSE4.2, AVX2).
-  ///   Automatically falls back to pure Pascal implementations if SIMD is not supported.
-  /// </summary>
   TDextSimd = class
   private
     class var FCapability: TSimdCapability;
     class constructor Create;
   public
-    /// <summary>The highest SIMD instruction set supported by the current CPU.</summary>
     class property Capability: TSimdCapability read FCapability;
     
-    /// <summary>Finds the index of an Int32 value in a memory block using SIMD acceleration.</summary>
     class function IndexOfInt32(Data: Pointer; Count: Integer; Value: Integer): Integer;
-    /// <summary>Finds the index of a Byte value in a memory block using SIMD acceleration.</summary>
     class function IndexOfByte(Data: Pointer; Count: Integer; Value: Byte): Integer;
   end;
 

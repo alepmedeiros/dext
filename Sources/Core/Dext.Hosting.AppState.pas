@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -32,27 +32,24 @@ uses
   System.SyncObjs;
 
 type
-  /// <summary>Defines the high-level application lifecycle states.</summary>
+  /// <summary>
+  ///   Defines the high-level state of the application.
+  /// </summary>
   TApplicationState = (
-    /// <summary>Application in startup phase and loading DI.</summary>
-    asStarting,
-    /// <summary>Executing pending database migrations.</summary>
-    asMigrating,
-    /// <summary>Populating initial data (seeding).</summary>
-    asSeeding,
-    /// <summary>Ready to process requests.</summary>
-    asRunning,
-    /// <summary>In process of graceful shutdown.</summary>
-    asStopping,
-    /// <summary>Application completely stopped.</summary>
-    asStopped
+    asStarting,   // App is initializing
+    asMigrating,  // App is applying database migrations
+    asSeeding,    // App is seeding initial data
+    asRunning,    // App is ready to serve accept requests
+    asStopping,   // App is shutting down
+    asStopped     // App has stopped
   );
 
-  /// <summary>Read-only interface for observing current application state.</summary>
+  /// <summary>
+  ///   Grants read-only access to the current application state.
+  /// </summary>
   IAppStateObserver = interface
     ['{8A9B1C2D-3E4F-5A6B-7C8D-9E0F1A2B3C4D}']
     function GetState: TApplicationState;
-    /// <summary>Returns True if the application is in the asRunning state.</summary>
     function IsReady: Boolean;
     property State: TApplicationState read GetState;
   end;

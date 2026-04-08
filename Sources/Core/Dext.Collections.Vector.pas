@@ -13,10 +13,7 @@ const
   SVO_BUFFER_SIZE = 64; // Bytes reservados na Stack
 
 type
-  /// <summary>
-  ///   A high-performance, stack-allocated vector with Small Vector Optimization (SVO).
-  ///   Stores elements in a fixed stack buffer until capacity is exceeded, then transitions to heap allocation.
-  /// </summary>
+  { A fast, array-like collection that stores items in the stack buffer until capacity is exceeded }
   TVector<T> = record
   private
     FCount: NativeInt;
@@ -43,37 +40,24 @@ type
     class operator Finalize(var Dest: TVector<T>);
     class operator Assign(var Dest: TVector<T>; const [ref] Src: TVector<T>);
 
-    /// <summary>Adds an item to the vector. Grows to heap if stack buffer is full.</summary>
     procedure Add(const Value: T); inline;
-    /// <summary>Alias for Add.</summary>
-    procedure Push(const Value: T); inline; 
-    /// <summary>Removes the last item and decrements count.</summary>
+    procedure Push(const Value: T); inline; // Alias for Add
     procedure Pop;
-    /// <summary>Removes all items. Does not deallocate heap memory immediately.</summary>
     procedure Clear;
     
-    /// <summary>Finds the index of a value using the default equality comparer.</summary>
     function IndexOf(const Value: T): NativeInt;
-    /// <summary>Removes the first occurrence of a value.</summary>
     procedure Remove(const Value: T);
-    /// <summary>Removes the item at the specified index and shifts subsequent items.</summary>
     procedure RemoveAt(Index: NativeInt);
     
     // Sub-segmentation
-    /// <summary>Exposes the vector's memory as a mutable Span.</summary>
     function AsSpan: TSpan<T>;
-    /// <summary>Exposes the vector's memory as a Read-Only Span.</summary>
     function AsReadOnlySpan: TReadOnlySpan<T>;
-    /// <summary>Copies elements to a new or existing array.</summary>
     procedure ToArray(out DestArray: TArray<T>); overload;
-    /// <summary>Returns a new array containing the vector's elements.</summary>
     function ToArray: TArray<T>; overload;
     
     // Iteration
-    /// <summary>Enables 'for..in' iteration using Spans.</summary>
     function GetEnumerator: TSpanEnumerator<T>; inline;
     
-    /// <summary>Sorts the vector elements using the provided comparer.</summary>
     procedure Sort(const AComparer: IComparer<T>);
     
     property Items[Index: NativeInt]: T read GetItem write SetItem; default;

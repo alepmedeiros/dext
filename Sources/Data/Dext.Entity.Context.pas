@@ -73,7 +73,6 @@ type
     property ModifiedProperties: IDictionary<string, Boolean> read FModifiedProperties;
   end;
 
-  /// <summary>Manages the tracking of entity changes within the context.</summary>
   TChangeTracker = class(TInterfacedObject, IChangeTracker)
   private
     FTrackedEntities: IDictionary<TObject, TEntityState>;
@@ -81,22 +80,15 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    /// <summary>Starts tracking an entity with a specific state.</summary>
     procedure Track(const AEntity: TObject; AState: TEntityState);
-    /// <summary>Removes the entity from tracking.</summary>
     procedure Remove(const AEntity: TObject);
-    /// <summary>Gets the current state (Added, Modified, Deleted, Unchanged) of the entity.</summary>
     function GetState(const AEntity: TObject): TEntityState;
-    /// <summary>Checks if there are pending changes in the context.</summary>
     function HasChanges: Boolean;
-    /// <summary>Accepts all pending changes and synchronizes the tracker with the database.</summary>
     procedure AcceptAllChanges;
-    /// <summary>Clears all tracked entities.</summary>
     procedure Clear;
     function GetTrackedEntities: IDictionary<TObject, TEntityState>;
     
     // Shadow Property Methods
-    /// <summary>Gets the values of "Shadow Properties" (infrastructure properties that do not exist in the class).</summary>
     function GetShadowState(const AEntity: TObject): TEntityShadowState;
   end;
 
@@ -148,15 +140,19 @@ type
 
 
   /// <summary>
-  ///   TDbContext is the heart of the Dext ORM, implementing the Unit of Work pattern.
-  ///   It manages the database connection, transactions, change tracking, and 
-  ///   repository exposure (DbSets).
+  ///   Concrete implementation of DbContext.
+  ///   Manages database connection, transactions, and entity sets.
+  ///   
+  ///   Note: This class implements IDbContext but disables reference counting.
+  ///   You must manage its lifecycle manually (Free).
   /// </summary>
-  /// <remarks>
-  ///   This class disables reference counting (RefCounting) to facilitate integration 
-  ///   with Dependency Injection and avoid destruction conflicts. The lifecycle should be 
-  ///   managed by the DI Container or manually via Free/Destroy.
-  /// </remarks>
+  /// <summary>
+  ///   Concrete implementation of DbContext.
+  ///   Manages database connection, transactions, and entity sets.
+  ///   
+  ///   Note: This class implements IDbContext but disables reference counting.
+  ///   You must manage its lifecycle manually (Free).
+  /// </summary>
   TDbContext = class(TObject, IDbContext)
   private
     FConnection: IDbConnection;
@@ -183,13 +179,13 @@ type
     function _Release: Integer; stdcall;
     
     /// <summary>
-    ///   Override this method to configure fluent mapping (Fluent API).
+    ///   Override this method to configure the model (Fluent Mapping).
     /// </summary>
     procedure OnModelCreating(Builder: TModelBuilder); virtual;
     
     /// <summary>
-    ///   Override to configure context options (Connection String, Dialects, etc.) 
-    ///   at runtime.
+    ///   Override this method to configure the database context (e.g. Connection String, Naming Strategy).
+    ///   This is called during constructor execution.
     /// </summary>
     procedure OnConfiguring(Options: TDbContextOptions); virtual;
     function CreateDynamicDbSet(AEntityType: PTypeInfo): IDbSet; virtual;
@@ -199,65 +195,55 @@ type
     class var FCriticalSection: TObject; // For thread safety
     
     constructor Create(const AConnection: IDbConnection; const ADialect: ISQLDialect = nil; const ANamingStrategy: INamingStrategy = nil; const ATenantProvider: ITenantProvider = nil); overload;
-    /// <summary>Initializes the context based on a configurable options object.</summary>
     constructor Create(const AOptions: TDbContextOptions; const ATenantProvider: ITenantProvider = nil); overload;
     destructor Destroy; override;
     
     class constructor Create;
     class destructor Destroy;
     
-    /// <summary>Returns the current database connection.</summary>
     function Connection: IDbConnection;
-    /// <summary>Returns the configured SQL dialect (PostgreSQL, SQL Server, etc.).</summary>
     function Dialect: ISQLDialect;
     function NamingStrategy: INamingStrategy;
     function ModelBuilder: TModelBuilder; // Expose ModelBuilder
     function GetTenantProvider: ITenantProvider;
     
-    /// <summary>Starts an explicit transaction on the current connection.</summary>
     procedure BeginTransaction;
-    /// <summary>Commits the changes of the current transaction.</summary>
     procedure Commit;
-    /// <summary>Discards the changes of the current transaction.</summary>
     procedure Rollback;
     function InTransaction: Boolean;
     
-    /// <summary>Gets the weakly typed interface of a DbSet for the provided entity type.</summary>
+    /// <summary>
+    ///   Access the DbSet for a specific entity type.
+    /// </summary>
     function DataSet(AEntityType: PTypeInfo): IDbSet;
 
-    /// <summary>Preloads the DbSet cache to optimize future resolutions.</summary>
+    /// <summary>
+    /// Preload the DBSets cache to avoid having to manually call Entities<T> for
+    ///  each type which are already exposed as properties on the current TDBContext
+    ///  implementation.
+    /// </summary>
     procedure PreloadDbSets;
-    /// <summary>Ensures that the database and tables exist (Code-First Evolution).</summary>
     function EnsureCreated: Boolean;
     procedure ExecuteSchemaSetup;
     
-    /// <summary>
-    ///   Synchronizes all changes in tracked entities (Added, Modified, Deleted) 
-    ///   with the database in an atomic transaction.
-    /// </summary>
-    /// <returns>The number of affected rows in the database.</returns>
     function SaveChanges: Integer;
-    /// <summary>Asynchronous version of SaveChanges for non-blocking operations.</summary>
     function SaveChangesAsync: TAsyncBuilder<Integer>;
-    /// <summary>Clears the tracker and the context's local cache.</summary>
     procedure Clear;
-    /// <summary>Unbinds all entities from change tracking.</summary>
     procedure DetachAll;
     procedure Detach(const AEntity: TObject);
     procedure ExecuteProcedure(const ADto: TObject);
-    /// <summary>Access to the context's Change Tracker.</summary>
     function ChangeTracker: IChangeTracker;
     
     function GetMapping(AType: PTypeInfo): TObject;
     
-    /// <summary>Gets the typed repository (DbSet) for the entity class T.</summary>
+    /// <summary>
+    ///   Access the DbSet for a specific entity type.
+    /// </summary>
     function Entities<T: class>: IDbSet<T>;
     
-    /// <summary>Provides access to metadata and state control for a specific instance.</summary>
     function Entry(const AEntity: TObject): IEntityEntry;
     procedure TrackProxy(const AProxy: TObject);
     
-    /// <summary>Event to intercept and log SQL and internal commands (Observability).</summary>
     property OnLog: TProc<string> read GetOnLog write SetOnLog;
   end;
 

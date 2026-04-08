@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -41,10 +41,6 @@ uses
 
 type
   {$IFDEF DEXT_ENABLE_WEB_STENCILS}
-  /// <summary>
-  ///   View Engine based on Embarcadero's WebStencils (Delphi 12.2+).
-  ///   Provides deep integration with the Dext ecosystem (Entities, SmartProps).
-  /// </summary>
   TWebStencilsViewEngine = class(TInterfacedObject, IViewEngine)
   private
     FEngine: TWebStencilsEngine;
@@ -57,9 +53,6 @@ type
     function Render(AContext: IHttpContext; const AViewName: string; AViewData: IViewData): string;
   end;
 
-  /// <summary>
-  ///   Render context that maps the <see cref="IViewData"/> to WebStencils variables.
-  /// </summary>
   TWebStencilsRenderContext = class
   private
     FViewData: IViewData;
@@ -225,10 +218,10 @@ begin
   RenderCtx := TWebStencilsRenderContext.Create(AViewData);
   try
     Processor.Engine := FEngine;
-    // OnValue event is our fallback for unknown variables or loops
+    // O evento OnValue é nosso fallback para variáveis desconhecidas ou loops
     Processor.OnValue := RenderCtx.OnValue;
     
-    // Configure initial variables with LookupHandler to intercept properties
+    // Configuramos as variáveis iniciais com o LookupHandler para interceptar propriedades
     RenderCtx.SetupProcessor(Processor);
     
     Processor.InputFileName := ViewPath;

@@ -1,0 +1,19 @@
+{
+  "_comment": "Exemplo de configuração para Claude Desktop (~/.config/claude/claude_desktop_config.json)",
+  "_comment2": "Para transport SSE: o executável roda como servidor HTTP independente.",
+  "_comment3": "Para transport Stdio: o Claude Desktop gerencia o processo diretamente.",
+
+  "mcpServers": {
+    "hotel-server-sse": {
+      "_comment": "Opção 1: SSE transport — inicie MCP.HotelServer.exe antes e aponte para ele",
+      "url": "http://localhost:3031/sse"
+    },
+
+    "hotel-server-stdio": {
+      "_comment": "Opção 2: Stdio transport — Claude Desktop inicia o processo automaticamente",
+      "command": "C:\\MeuProjeto\\MCP.HotelServer.exe",
+      "args": ["--stdio"],
+      "env": {}
+    }
+  }
+}

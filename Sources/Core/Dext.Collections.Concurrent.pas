@@ -9,29 +9,17 @@ uses
   Dext.Collections.Dict;
 
 type
-  /// <summary>Interface for thread-safe dictionaries optimized for high concurrency.</summary>
   IDextConcurrentDictionary<K, V> = interface
-    /// <summary>Gets the value if it exists or creates it using a factory (ValueFactory) atomically.</summary>
     function GetOrAdd(const Key: K; const ValueFactory: TFunc<K, V>): V;
-    /// <summary>Attempts to add a key-value pair. Returns False if the key already exists.</summary>
     function TryAdd(const Key: K; const Value: V): Boolean;
-    /// <summary>Attempts to safely get the value associated with a key.</summary>
     function TryGetValue(const Key: K; out Value: V): Boolean;
-    /// <summary>Attempts to remove a key and returns its value.</summary>
     function TryRemove(const Key: K; out Value: V): Boolean;
-    /// <summary>Compares the current value with ComparisonValue and, if equal, updates it to NewValue (Atomic CAS).</summary>
     function TryUpdate(const Key: K; const NewValue, ComparisonValue: V): Boolean;
-    /// <summary>Clears all items from all lock stripes.</summary>
     procedure Clear;
     function GetCount: Integer;
     property Count: Integer read GetCount;
   end;
 
-  /// <summary>
-  ///   High-performance concurrent dictionary using Lock Striping technique.
-  ///   Divides storage into multiple stripes, each with its own SpinLock,
-  ///   allowing multiple write operations to occur simultaneously in different stripes.
-  /// </summary>
   TConcurrentDictionary<K, V> = class(TInterfacedObject, IDextConcurrentDictionary<K, V>)
   private
     const DEFAULT_CONCURRENCY_LEVEL = 32;
@@ -46,7 +34,6 @@ type
     FComparer: IEqualityComparer<K>;
     function GetStripeIndex(const Key: K): Integer; inline;
   public
-    /// <summary>Creates the concurrent dictionary with the specified parallelism level.</summary>
     constructor Create(ConcurrencyLevel: Integer = DEFAULT_CONCURRENCY_LEVEL);
     
     function GetOrAdd(const Key: K; const ValueFactory: TFunc<K, V>): V;
@@ -56,7 +43,6 @@ type
     function TryUpdate(const Key: K; const NewValue, ComparisonValue: V): Boolean;
     procedure Clear;
     function GetCount: Integer;
-    /// <summary>Returns the total sum of items across all lock stripes.</summary>
     property Count: Integer read GetCount;
   end;
 

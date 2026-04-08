@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -38,7 +38,7 @@ uses
 
 type
   /// <summary>
-  ///   Advanced rate limiting middleware with support for multiple algorithms and partition strategies.
+  ///   Advanced rate limiting middleware with multiple algorithms and partition strategies.
   /// </summary>
   TRateLimitMiddleware = class(TMiddleware)
   private
@@ -58,7 +58,7 @@ type
   end;
 
   /// <summary>
-  ///   Extension methods to facilitate Rate Limiting configuration in <see cref="IApplicationBuilder"/>.
+  ///   Extension methods for IApplicationBuilder.
   /// </summary>
   TApplicationBuilderRateLimitExtensions = class
   public

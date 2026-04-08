@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -38,7 +38,7 @@ uses
 
 type
   /// <summary>
-  ///   Configuration options for Basic Authentication (Realm, Anonymous access).
+  ///   Configuration options for Basic Authentication.
   /// </summary>
   TBasicAuthOptions = record
     /// <summary>The realm name shown in the browser's authentication dialog</summary>
@@ -68,7 +68,6 @@ type
   
   /// <summary>
   ///   Middleware that implements HTTP Basic Authentication (RFC 7617).
-  ///   Validates credentials from the 'Authorization' header and populates the user context.
   /// </summary>
   TBasicAuthMiddleware = class(TInterfacedObject, IMiddleware)
   private
@@ -90,7 +89,16 @@ type
   end;
   
   /// <summary>
-  ///   Extension methods to facilitate enabling Basic Authentication in the Builder pipeline.
+  ///   Extension methods for adding Basic Authentication to the application pipeline.
+  /// </summary>
+  /// <summary>
+  ///   Extension methods for adding Basic Authentication to the application pipeline.
+  /// </summary>
+  /// <summary>
+  ///   Extension methods for adding Basic Authentication to the application pipeline.
+  /// </summary>
+  /// <summary>
+  ///   Extension methods for adding Basic Authentication to the application pipeline.
   /// </summary>
   TApplicationBuilderBasicAuthExtensions = class
   public

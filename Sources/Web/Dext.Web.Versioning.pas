@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -33,17 +33,11 @@ uses
   Dext.Web.Interfaces;
 
 type
-  /// <summary>
-  ///   Contract for reading the API version from an HTTP request.
-  /// </summary>
   IApiVersionReader = interface
     ['{12312312-1234-1234-1234-1234567890AA}']
     function Read(const Context: IHttpContext): string;
   end;
 
-  /// <summary>
-  ///   Version reader via Query String (e.g. ?api-version=1.0).
-  /// </summary>
   TQueryStringApiVersionReader = class(TInterfacedObject, IApiVersionReader)
   private
     FParameterName: string;
@@ -52,9 +46,6 @@ type
     function Read(const Context: IHttpContext): string;
   end;
 
-  /// <summary>
-  ///   Version reader via HTTP Header (e.g. X-Version: 1.0).
-  /// </summary>
   THeaderApiVersionReader = class(TInterfacedObject, IApiVersionReader)
   private
     FHeaderName: string;
@@ -65,9 +56,6 @@ type
 
   /// <summary>
   ///   Combines multiple readers (e.g. check Header, then QueryString).
-  /// </summary>
-  /// <summary>
-  ///   Composite reader that attempts to extract the version from multiple sources in sequence.
   /// </summary>
   TCompositeApiVersionReader = class(TInterfacedObject, IApiVersionReader)
   private

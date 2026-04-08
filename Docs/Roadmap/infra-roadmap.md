@@ -1,25 +1,20 @@
 # 🏗️ Dext Infrastructure - Roadmap
 
-Este documento centraliza o desenvolvimento da infraestrutura de baixo nível do framework, com foco em **Performance Extrema**.
+Este documento centraliza o desenvolvimento da infraestrutura de baixo nível do framework, com foco em **Performance Extrema** e **Eficiência de Recursos**.
 
-> **Visão:** Prover uma fundação sólida, "Metal-to-the-Pedal", que permita ao Dext competir em performance com frameworks Go, Rust e .NET.
+> **Visão:** Prover uma fundação sólida, "Metal-to-the-Pedal", que permita ao Dext competir em performance com frameworks Go, Rust e .NET (Kestrel).
 
 ---
 
-## 📊 Status Atual: **Release Candidate 1.0** 🚀
-
-A infraestrutura base está estabilizada, com drivers plugáveis para alta performance e suporte a zero-allocation parsing.
-
-*Última atualização: 07 de Abril de 2026*
-
-## 🚀 High Performance HTTP Server
+## 🚀 High Performance HTTP Server (Clean Room Implementation)
 
 Estratégia de servidores plugáveis (`Server Adapters`) para permitir estabilidade imediata e performance extrema futura, sem quebrar a API pública.
 
 ### 1. V1: Driver Indy (Estabilidade) - ✅ Concluído
-- [x] **TDextIndyWrapper**: Wrapper para compatibilidade Indy. Renomeado para clareza de licenciamento.
-- [x] **Lazy Evaluation**: Headers e Query String processados sob demanda.
-- [x] **Stream Wrapping**: Encapsulamento de buffers sem cópia de memória.
+
+- [x] **Indy Wrapper**: Implementação baseada em `TIdHTTPServer` para compatibilidade máxima e estabilidade inicial.
+- [x] **Lazy Evaluation**: Refatoração de `IHttpRequest` para leitura de Headers e Query String sob demanda (evitar alocação de Dictionaries desnecessários).
+- [x] **Stream Wrapping**: Encapsulamento do `InputBuffer` do Indy para evitar cópia de memória no Body.
 
 ### 2. V2: Enterprise Driver (Kestrel NativeAOT) - 📅 Planejado
 

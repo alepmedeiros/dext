@@ -37,23 +37,24 @@ uses
   Dext.DI.Attributes;
 
 type
-  /// <summary>
-  ///   Central activation and dynamic instantiation service for Dext.
-  ///   Manages object creation through RTTI, supporting dependency injection via constructor,
-  ///   properties, and fields. Implements the "Greedy" strategy for constructor selection.
-  /// </summary>
   TActivator = class
   public
-    /// <summary>Instantiates a class using only positional manual arguments.</summary>
+    // 1. Manual Instantiation (No DI)
+    // Uses only provided arguments. Must match exactly.
     class function CreateInstance(AClass: TClass; const AArgs: array of TValue): TObject; overload;
 
-    /// <summary>Instantiates a class resolving ALL constructor dependencies via DI (Greedy Strategy - highest number of resolvable parameters).</summary>
+    // 2. Pure DI Instantiation (No Manual Args)
+    // Uses DI container to resolve all dependencies.
+    // Uses "Greedy" strategy: prefers constructor with MOST resolvable parameters.
     class function CreateInstance(AProvider: IServiceProvider; AClass: TClass): TObject; overload;
 
-    /// <summary>Instantiates a class combining manual (positional) arguments and automatic DI resolution for the remaining parameters.</summary>
+    // 3. Hybrid Instantiation (Manual Args + DI)
+    // Uses provided arguments for the first N parameters, then DI for the rest.
     class function CreateInstance(AProvider: IServiceProvider; AClass: TClass; const AArgs: array of TValue): TObject; overload;
 
-    /// <summary>Instantiates a type (Class or Interface) based on PTypeInfo. Supports auto-instantiation of IList, IEnumerable, and IDictionary.</summary>
+    // 4. Full Metadata Instantiation (Supports Class and Interface)
+    // If it's a class, works like Pure DI.
+    // If it's an interface, tries to resolve from DI, with fallback for IList/IEnumerable.
     class function CreateInstance(AProvider: IServiceProvider; AType: PTypeInfo): TValue; overload;
 
     class function CreateInstance<T: class>(const AArgs: array of TValue): T; overload;
@@ -63,16 +64,11 @@ type
     class procedure RegisterDefault(AInterface: PTypeInfo; AImpl: TClass); overload;
     class procedure RegisterDefault<TService: IInterface; TImplementation: class>; overload;
     class function ResolveImplementation(AClass: TClass): TClass;
-    /// <summary>Detects if a PTypeInfo represents a list type (IList, TList, IEnumerable, etc.).</summary>
-    class function IsListType(AType: PTypeInfo): Boolean;
-    /// <summary>Gets the inner element type of a list (e.g., T from IList of T).</summary>
-    class function GetListElementType(AType: PTypeInfo): PTypeInfo;
-    /// <summary>Detects if a type represents a dictionary (IDictionary or TDictionary).</summary>
-    class function IsDictionaryType(AType: PTypeInfo): Boolean;
-    /// <summary>Gets the Key type of a dictionary.</summary>
-    class function GetDictionaryKeyType(AType: PTypeInfo): PTypeInfo;
-    /// <summary>Gets the Value type of a dictionary.</summary>
     class function GetDictionaryValueType(AType: PTypeInfo): PTypeInfo;
+    class function IsListType(AType: PTypeInfo): Boolean;
+    class function GetListElementType(AType: PTypeInfo): PTypeInfo;
+    class function IsDictionaryType(AType: PTypeInfo): Boolean;
+    class function GetDictionaryKeyType(AType: PTypeInfo): PTypeInfo;
   private
     class var FDefaultImplementations: IDictionary<TClass, TClass>;
     class var FInterfaceDefaultImpl: IDictionary<PTypeInfo, TClass>;

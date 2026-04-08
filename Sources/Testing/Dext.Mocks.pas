@@ -34,26 +34,18 @@ type
 
   TMockBehavior = (Loose, Strict);
 
-  /// <summary>Defines call count expectations for a mocked member.</summary>
   Times = record
   private
     FMin: Integer;
     FMax: Integer;
     FDescription: string;
   public
-    /// <summary>Expects the method to never be called.</summary>
     class function Never: Times; static;
-    /// <summary>Expects the method to be called exactly once.</summary>
     class function Once: Times; static;
-    /// <summary>Expects at least one call.</summary>
     class function AtLeastOnce: Times; static;
-    /// <summary>Expects at least N calls.</summary>
     class function AtLeast(Count: Integer): Times; static;
-    /// <summary>Expects at most N calls.</summary>
     class function AtMost(Count: Integer): Times; static;
-    /// <summary>Expects exactly N calls.</summary>
     class function Exactly(Count: Integer): Times; static;
-    /// <summary>Expects the number of calls to be between the Min and Max range.</summary>
     class function Between(Min, Max: Integer): Times; static;
     function Matches(Count: Integer): Boolean;
     function ToString(ActualCount: Integer): string;
@@ -73,25 +65,21 @@ type
     procedure Reset;
   end;
 
-  /// <summary>Generic interface that controls the instance and behavior of a Mock.</summary>
+  /// <summary>
+  ///   Generic mock interface.
+  /// </summary>
   IMock<T> = interface(IMock)
     ['{D7E8F9A0-1B2C-3D4E-5F6A-7B8C9D0E1F2A}']
     function GetInstance: T;
     function GetBehavior: TMockBehavior;
     procedure SetBehavior(Value: TMockBehavior);
-    /// <summary>Initiates the configuration of a behavior (Setup/Returns/Throws).</summary>
     function Setup: ISetup<T>;
-    /// <summary>Verifies if the member was received (called).</summary>
     function Received: T; overload;
-    /// <summary>Verifies if the member was received a specific number of times.</summary>
     function Received(const ATimes: Times): T; overload;
-    /// <summary>Verifies if the member was NOT called.</summary>
     function DidNotReceive: T;
     procedure SetCallBase(Value: Boolean);
 
-    /// <summary>The mocked instance (Proxy) that implements T.</summary>
     property Instance: T read GetInstance;
-    /// <summary>Defines if the Mock is Loose (returns default) or Strict (errors if not configured).</summary>
     property Behavior: TMockBehavior read GetBehavior write SetBehavior;
   end;
 
@@ -112,17 +100,13 @@ type
     function Callback(const Action: TProc<TArray<TValue>>): IWhen<T>;
   end;
 
-  /// <summary>Fluent configuration helper for behavior definitions.</summary>
   MockSetup<T> = record
   private
     FSetup: ISetup<T>;
   public
     constructor Create(const ASetup: ISetup<T>);
-    /// <summary>Defines a fixed generic return value.</summary>
     function Returns(const Value: TValue): IWhen<T>; overload; inline;
-    /// <summary>Defines a fixed typed return value.</summary>
     function Returns<TRet>(const Value: TRet): IWhen<T>; overload; inline;
-    /// <summary>Defines a sequence of values to be returned successively on each call.</summary>
     function ReturnsInSequence(const Values: TArray<TValue>): IWhen<T>; overload; inline;
     function ReturnsInSequence(const Values: TArray<Integer>): IWhen<T>; overload; inline;
     function ReturnsInSequence(const Values: TArray<string>): IWhen<T>; overload; inline;
@@ -132,9 +116,7 @@ type
     function Returns(Value: Boolean): IWhen<T>; overload; inline;
     function Returns(Value: Double): IWhen<T>; overload; inline;
     function Returns(Value: Int64): IWhen<T>; overload; inline;
-    /// <summary>Configures the mock to throw an exception when called.</summary>
     function Throws(ExceptionClass: ExceptClass; const Msg: string = ''): IWhen<T>; inline;
-    /// <summary>Executes a custom procedure when the mocked method is invoked.</summary>
     function Executes(const Action: TProc<IInvocation>): IWhen<T>; inline;
     function Callback(const Action: TProc<TArray<TValue>>): IWhen<T>; inline;
   end;
@@ -144,40 +126,28 @@ type
     function When: T;
   end;
 
-  /// <summary>Main container for creating and managing dynamic Mocks.</summary>
   Mock<T> = record
   private
     FMock: IMock<T>;
     procedure EnsureCreated;
     function GetInstance: T;
   public
-    /// <summary>Creates a new Mock instance with the specified behavior (default Loose).</summary>
     class function Create(Behavior: TMockBehavior = TMockBehavior.Loose): Mock<T>; overload; static;
     class function Create(Interceptor: TObject): Mock<T>; overload; static;
     class function FromInterface(const Intf: IMock<T>): Mock<T>; static;
 
-    /// <summary>The TYPED instance (Proxy) that should be passed to the code under test.</summary>
     property Instance: T read GetInstance;
-    /// <summary>Configures behaviors (Expectations) for the Mock's methods.</summary>
     function Setup: MockSetup<T>;
-    /// <summary>Initiates the verification of expectations in typed mode.</summary>
     function Received: T; overload;
-    /// <summary>Verifies if a method was called N times according to the Times parameter.</summary>
     function Received(const ATimes: Times): T; overload;
-    /// <summary>Shortcut to verify that a method was never called.</summary>
     function DidNotReceive: T;
-    /// <summary>Clears the Mock's expectations and call history.</summary>
     procedure Reset;
-    /// <summary>Formally validates if all Strict expectations were met.</summary>
     procedure Verify; overload;
     function Verify(const ATimes: Times): T; overload;
-    /// <summary>Verifies if there were no other calls besides the explicitly validated ones.</summary>
     procedure VerifyNoOtherCalls;
     function CallsBaseForUnconfiguredMembers: Mock<T>;
 
-    /// <summary>Implicit conversion to type T, allowing the Mock record to be passed directly where T is expected.</summary>
     class operator Implicit(const AMock: Mock<T>): T;
-    /// <summary>Alternative alias for the mocked instance.</summary>
     property Object_: T read GetInstance;
     function ProxyInterface: IMock<T>;
   end;

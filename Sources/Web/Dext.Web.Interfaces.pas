@@ -89,28 +89,19 @@ type
     Value: string;
   end;
 
-  /// <summary>
-  ///   Optimized dictionary for storing route parameters.
-  ///   Uses an internal fixed array to avoid heap allocations during route resolution (Zero-Allocation).
-  /// </summary>
   TRouteValueDictionary = record
   private
     FPairs: array[0..15] of TRouteParamPair;
     FCount: Integer;
     function GetItem(const AKey: string): string;
   public
-    /// <summary>Adds a key/value pair to the dictionary.</summary>
     procedure Add(const AKey, AValue: string);
-    /// <summary>Clears all parameters without deallocating the structure.</summary>
     procedure Clear;
-    /// <summary>Attempts to get a value by key. Returns True if found.</summary>
     function TryGetValue(const AKey: string; out AValue: string): Boolean;
     function ContainsKey(const AKey: string): Boolean;
     function GetKeyByIndex(AIndex: Integer): string;
     function GetValueByIndex(AIndex: Integer): string;
-    /// <summary>Number of parameters currently stored.</summary>
     property Count: Integer read FCount;
-    /// <summary>Indexed access to parameter values.</summary>
     property Items[const AKey: string]: string read GetItem; default;
   end;
 
@@ -140,18 +131,11 @@ type
     property Stream: TStream read GetStream;
   end;
 
-  /// <summary>
-  ///   Represents the result of an HTTP action execution.
-  /// </summary>
   IResult = interface
     ['{D6F5E4A3-9B2C-4D1E-8F7A-6C5B4E3D2F1A}']
     procedure Execute(AContext: IHttpContext);
   end;
 
-  /// <summary>
-  ///   Abstraction of an incoming HTTP request. Provides access to verbs, paths, 
-  ///   query parameters, headers, cookies, and files (multipart).
-  /// </summary>
   IHttpRequest = interface
     ['{C3E8F1A2-4B7D-4A9C-9E2B-8F6D5A1C3E7F}']
     function GetMethod: string;
@@ -164,75 +148,39 @@ type
     function GetHeader(const AName: string): string;
     function GetQueryParam(const AName: string): string;
     function GetCookies: IStringDictionary;
-    // TODO : Implement service scope
-    // function GetServiceScope: IServiceScope; // Optional: Scope management
     function GetFiles: IFormFileCollection;
-    
-    /// <summary>HTTP Verb (GET, POST, etc.).</summary>
     property Method: string read GetMethod;
-    /// <summary>Request path (e.g., /api/v1/users).</summary>
     property Path: string read GetPath;
-    /// <summary>Dictionary of query string parameters.</summary>
     property Query: IStringDictionary read GetQuery;
-    /// <summary>Stream containing the request body.</summary>
     property Body: TStream read GetBody;
-    /// <summary>Parameters extracted from the route (e.g., {id}).</summary>
     property RouteParams: TRouteValueDictionary read GetRouteParams;
-    /// <summary>Dictionary of HTTP headers.</summary>
     property Headers: IStringDictionary read GetHeaders;
-    /// <summary>Dictionary of received cookies.</summary>
     property Cookies: IStringDictionary read GetCookies;
-    /// <summary>Collection of files received via multipart/form-data.</summary>
     property Files: IFormFileCollection read GetFiles;
-    /// <summary>Remote IP address of the client.</summary>
     property RemoteIpAddress: string read GetRemoteIpAddress;
   end;
 
-  /// <summary>
-  ///   Abstraction of an HTTP response to be sent. Allows setting status codes, 
-  ///   headers, cookies, and writing the response body in various formats.
-  /// </summary>
   IHttpResponse = interface
     ['{D4F9E2A1-5B8C-4D3A-8E7B-6F5A2D1C9E8F}']
     function GetStatusCode: Integer;
     function GetContentType: string;
-    
-    /// <summary>Sets the status code fluently and returns the interface itself.</summary>
     function Status(AValue: Integer): IHttpResponse;
     procedure SetStatusCode(AValue: Integer);
     procedure SetContentType(const AValue: string);
     procedure SetContentLength(const AValue: Int64);
-    
-    /// <summary>Writes a string directly to the response body (UTF-8).</summary>
     procedure Write(const AContent: string); overload;
-    /// <summary>Writes a raw byte buffer to the response body.</summary>
     procedure Write(const ABuffer: TBytes); overload;
-    /// <summary>Writes a stream content directly to the transport (Streaming).</summary>
     procedure Write(const AStream: TStream); overload;
-    /// <summary>Sends a formatted JSON string as response (sets Content-Type).</summary>
     procedure Json(const AJson: string); overload;
-    /// <summary>Serializes a TValue (Object, Array, Primitive) to JSON and sends it.</summary>
     procedure Json(const AValue: TValue); overload;
-    
-    /// <summary>Adds a custom HTTP header to the response.</summary>
     procedure AddHeader(const AName, AValue: string);
-    /// <summary>Appends a cookie to the response with advanced options (HttpOnly, Secure, etc.).</summary>
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
     procedure AppendCookie(const AName, AValue: string); overload;
-    /// <summary>Marks a cookie for removal on the client side.</summary>
     procedure DeleteCookie(const AName: string);
-    
-    /// <summary>HTTP status code (e.g., 200, 404, 500).</summary>
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
-    /// <summary>Response MIME type (e.g., application/json).</summary>
     property ContentType: string read GetContentType write SetContentType;
   end;
 
-  /// <summary>
-  ///   Encapsulates all specific information of an individual HTTP request.
-  ///   Allows Middlewares and Controllers to access request data, configure the response,
-  ///   and use services via Scoped Dependency Injection.
-  /// </summary>
   IHttpContext = interface
     ['{E5F8D2C1-9A4E-4B7D-8C3B-6F5A1D2E8C9F}']
     function GetRequest: IHttpRequest;
@@ -243,16 +191,10 @@ type
     function GetUser: IClaimsPrincipal;
     procedure SetUser(const AValue: IClaimsPrincipal);
     function GetItems: IDictionary<string, TValue>;
-    
-    /// <summary>Access to the incoming request data.</summary>
     property Request: IHttpRequest read GetRequest;
-    /// <summary>Access to the outgoing response.</summary>
     property Response: IHttpResponse read GetResponse write SetResponse;
-    /// <summary>Scoped service provider for this request.</summary>
     property Services: IServiceProvider read GetServices write SetServices;
-    /// <summary>Representation of the authenticated user (ClaimsPrincipal).</summary>
     property User: IClaimsPrincipal read GetUser write SetUser;
-    /// <summary>Dictionary of useful items to share state between middlewares.</summary>
     property Items: IDictionary<string, TValue> read GetItems;
   end;
 
@@ -261,9 +203,6 @@ type
     procedure Invoke(AContext: IHttpContext; ANext: TRequestDelegate);
   end;
 
-  /// <summary>
-  ///   Defines a mechanism to configure an application's request pipeline.
-  /// </summary>
   IApplicationBuilder = interface
     ['{A2F8C5D1-8B4E-4A7D-9C3B-6E8F4A2D1C7A}']
     function GetServiceProvider: IServiceProvider;
@@ -335,9 +274,6 @@ type
     procedure Configure(const App: IWebApplication);
   end;
 
-  /// <summary>
-  ///   Represents a hosted web application, allowing fluent configuration of services and routes.
-  /// </summary>
   IWebApplication = interface(IWebHost)
     ['{B6C96B49-0292-42A6-A767-C7EAF52F71FC}']
     function GetServices: TDextServices;
@@ -410,12 +346,12 @@ end;
 
 function TFormFileCollection.GetFile(const AName: string): IFormFile;
 var
-  AFile: IFormFile;
+  LFile: IFormFile;
 begin
-  for AFile in FItems do
+  for LFile in FItems do
   begin
-    if SameText(AFile.Name, AName) then
-      Exit(AFile);
+    if SameText(LFile.Name, AName) then
+      Exit(LFile);
   end;
   Result := nil;
 end;

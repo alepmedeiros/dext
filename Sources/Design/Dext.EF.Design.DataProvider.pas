@@ -20,10 +20,6 @@ uses
   Dext.EF.Design.Metadata;
 
 type
-  /// <summary>
-  ///   Specialized data provider for the Delphi IDE design environment.
-  ///   Orchestrates discovery of entity metadata, detection of SQL dialects, and execution of queries for preview.
-  /// </summary>
   TDesignEntityDataProvider = class(TComponent, IEntityDataProvider)
   private
     FModelUnits: TStrings;
@@ -50,36 +46,24 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    /// <summary>Scans the active project in the IDE looking for .pas units containing entities.</summary>
     function AutoDiscoverModelUnits: Integer;
-    /// <summary>Refreshes all metadata from the units configured in ModelUnits.</summary>
     procedure RefreshMetadata;
-    /// <summary>Reloads metadata from a specific unit, processing the current source code (even if unsaved).</summary>
     procedure RefreshUnit(const AFileName: string);
     function GetEntities: TArray<string>;
     function GetEntityMetadata(const AClassName: string): TEntityClassMetadata;
     function GetEntityUnitName(const AClassName: string): string;
     function ResolveEntityClass(const AClassName: string): TClass;
-    /// <summary>Generates the SELECT SQL command with pagination based on the detected dialect.</summary>
     function BuildPreviewSql(const AClassName: string; AMaxRows: Integer = 50): string;
-    /// <summary>Executes the query and returns a list of entity instances populated with database data.</summary>
     function CreatePreviewItems(const AClassName: string; AMaxRows: Integer = 50): IObjectList;
   published
-    /// <summary>List of .pas files that make up the project's domain model.</summary>
     property ModelUnits: TStrings read FModelUnits write SetModelUnits;
-    /// <summary>FireDAC connection used for data preview and dialect detection.</summary>
     property Connection: TFDConnection read FConnection write SetConnection;
     property FDConnection: TFDConnection read FConnection write SetConnection;
-    /// <summary>Explicit SQL dialect. If "ddUnknown", the system will attempt to detect via Connection.</summary>
     property Dialect: TDatabaseDialect read FDialect write SetDialect default ddUnknown;
-    /// <summary>Friendly name of the SQL dialect in use.</summary>
     property DialectName: string read GetDialectName;
-    /// <summary>Record limit for the data preview.</summary>
     property PreviewMaxRows: Integer read FPreviewMaxRows write FPreviewMaxRows default 50;
     property DebugMode: Boolean read FDebugMode write FDebugMode default False;
-    /// <summary>Total amount of mapped and cached entities.</summary>
     property EntityCount: Integer read GetEntityCount stored False;
-    /// <summary>Descriptive summary of the last metadata refresh operation.</summary>
     property LastRefreshSummary: string read FLastRefreshSummary stored False;
   end;
 

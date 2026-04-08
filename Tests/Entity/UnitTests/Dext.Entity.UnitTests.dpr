@@ -1,8 +1,6 @@
 ﻿program Dext.Entity.UnitTests;
 
-{$IFNDEF TESTINSIGHT}
-  {$APPTYPE CONSOLE}
-{$ENDIF}
+{$APPTYPE CONSOLE}
 
 uses
   Dext.MM,
@@ -11,7 +9,6 @@ uses
   Dext.Testing.Runner,
   Dext.Testing.Attributes,
   Dext.Testing.Fluent,
-  Dext.Testing,
   Dext.Utils,
   Dext.Entity.SmartTypes.Tests in 'Dext.Entity.SmartTypes.Tests.pas',
   Dext.Entity.FluentQuery.Tests in 'Dext.Entity.FluentQuery.Tests.pas',
@@ -30,14 +27,14 @@ uses
 begin
   SetConsoleCharSet();
   try
-    SafeWriteLn;
-    SafeWriteLn('🧪 Dext Entity Unit Tests');
-    SafeWriteLn('=========================');
-    SafeWriteLn;
+    WriteLn;
+    WriteLn('🧪 Dext Entity Unit Tests');
+    WriteLn('=========================');
+    WriteLn;
 
-    RunTests(ConfigureTests
+    var TestResult := TTest
+      .Configure
       .VeryVerbose
-      //.UseTestInsight
       .RegisterFixtures([
         TCalculatedFieldsTests,
         TDataSetSmartTypesTests,
@@ -60,11 +57,13 @@ begin
         TSmartTypesMatrixTests,
         TSmartTypesTests,
         TEntityReportedIssuesTests
-      ]));
+      ]).Run;
+
+    TTest.SetExitCode(TestResult);
   except
     on E: Exception do
     begin
-      SafeWriteLn('FATAL ERROR: ' + E.ClassName + ': ' + E.Message);
+      WriteLn('FATAL ERROR: ', E.ClassName, ': ', E.Message);
       ExitCode := 1;
     end;
   end;

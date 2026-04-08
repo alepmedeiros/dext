@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -37,9 +37,6 @@ uses
   Dext.Web.Core;
 
 type
-  /// <summary>
-  ///   MIME type provider based on file extensions.
-  /// </summary>
   TContentTypeProvider = class
   private
     FMimeTypes: IDictionary<string, string>;
@@ -49,9 +46,6 @@ type
     function TryGetContentType(const AFileName: string; out AContentType: string): Boolean;
   end;
 
-  /// <summary>
-  ///   Configuration options for the static file server.
-  /// </summary>
   TStaticFileOptions = record
     RootPath: string;
     DefaultFile: string;
@@ -61,9 +55,6 @@ type
     class function Create: TStaticFileOptions; static;
   end;
 
-  /// <summary>
-  ///   Middleware responsible for serving physical files from the file system.
-  /// </summary>
   TStaticFileMiddleware = class(TMiddleware)
   private
     FOptions: TStaticFileOptions;

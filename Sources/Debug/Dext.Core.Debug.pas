@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -38,30 +38,18 @@ type
   PDbgInfoStack = ^TDbgInfoStack;
   PExceptionRecord = System.PExceptionRecord;
 
-  /// <summary>
-  ///   Configuration options for the symbol resolver and stack trace capture.
-  /// </summary>
   TDbgOptions = record
-    /// <summary>If True, waits for the .map file to be processed before returning the stack trace.</summary>
-    WaitOnResolve: Boolean;
-    /// <summary>If True, only attempts resolution if the .map file is already loaded (otherwise shows hex).</summary>
-    ResolveOnlyIfLoaded: Boolean;
-    /// <summary>If True, loads the .map file on a background thread.</summary>
+    WaitOnResolve: Boolean;      // Se True, aguarda o .map ser processado para mostrar o stacktrace.
+    ResolveOnlyIfLoaded: Boolean; // Se True, se o .map não estiver carregado, não tenta resolver (mostra hex).
     AsyncLoad: Boolean;
     procedure InitDefaults;
   end;
 
-  /// <summary>
-  ///   Provides tools for capturing stack traces and resolving memory addresses to symbols using MAP files.
-  /// </summary>
   TStackTrace = record
   public
     class var Options: TDbgOptions;
-    /// <summary>Ensures the background loader for the MAP file is started.</summary>
     class procedure EnsureInitialized; static;
-    /// <summary>Captures the current call stack as a formatted string.</summary>
     class function Capture(FramesToSkip: Integer = 2): string; static;
-    /// <summary>Resolves a memory address to a human-readable symbol (Unit.Procedure + Offset).</summary>
     class function ResolveAddress(Address: Pointer): string; static;
   end;
 

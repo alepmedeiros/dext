@@ -68,33 +68,23 @@ type
     property Items[const AKey: string]: string read GetItem write SetItem; default;
   end;
 
-  /// <summary>Generic interface for dictionaries (Hash Maps).</summary>
+  /// <summary>Generic dictionary interface</summary>
   IDictionary<K, V> = interface(Dext.Collections.Base.IEnumerable<TPair<K, V>>)
     ['{A7E3F294-60B1-4C01-B8D5-4E5F3A2C1D70}']
     function GetCount: Integer;
     function GetItem(const Key: K): V;
     procedure SetItem(const Key: K; const Value: V);
 
-    /// <summary>Adds a new key-value pair. Raises an exception if the key already exists.</summary>
     procedure Add(const Key: K; const Value: V);
-    /// <summary>Adds or updates the value associated with a key.</summary>
     procedure AddOrSetValue(const Key: K; const Value: V);
-    /// <summary>Attempts to get the value associated with a key without raising exceptions.</summary>
     function TryGetValue(const Key: K; out Value: V): Boolean;
-    /// <summary>Checks if a key is present in the dictionary.</summary>
     function ContainsKey(const Key: K): Boolean;
-    /// <summary>Removes a key and its value. Returns True if the key existed.</summary>
     function Remove(const Key: K): Boolean;
-    /// <summary>Removes and returns the value associated with a key.</summary>
     function Extract(const Key: K): V;
-    /// <summary>Removes all items from the dictionary.</summary>
     procedure Clear;
 
-    /// <summary>Returns an array containing all keys.</summary>
     function Keys: TArray<K>;
-    /// <summary>Returns an array containing all values.</summary>
     function Values: TArray<V>;
-    /// <summary>Converts the dictionary into an array of TPair.</summary>
     function ToArray: TArray<TPair<K, V>>;
 
     property Count: Integer read GetCount;
@@ -133,10 +123,7 @@ type
     function GetEnumerator: IEnumerator<TPair<K, V>>;
   end;
 
-  /// <summary>
-  ///   High-performance generic dictionary implementation.
-  ///   Uses a TRawDictionary backend to reduce generics bloat and optimize memory usage.
-  /// </summary>
+  /// <summary>Generic dictionary implementation backed by TRawDictionary</summary>
   TDictionary<K, V> = class(TDictionaryBase<K, V>, IDictionary<K, V>)
   private
     type
@@ -152,17 +139,12 @@ type
     function GetInterfaceEnumerator: IEnumerator<TPair<K, V>>; override;
 
     constructor Create; overload;
-    /// <summary>Creates the dictionary with a pre-allocated initial capacity.</summary>
     constructor Create(ACapacity: Integer); overload;
-    /// <summary>Creates the dictionary specifying whether it should own the values (for classes only).</summary>
     constructor Create(AOwnsValues: Boolean; ACapacity: Integer = 0); overload;
-    /// <summary>Creates the dictionary with advanced options for case sensitivity and capacity.</summary>
     constructor Create(AIgnoreCase: Boolean; AOwnsValues: Boolean; ACapacity: Integer); overload;
     destructor Destroy; override;
 
-    /// <summary>Returns a Record-based enumerator for high performance in for-in loops.</summary>
     function GetEnumerator: TDictionaryEnumerator<K, V>; reintroduce; inline;
-    
     procedure Add(const Key: K; const Value: V);
     procedure AddOrSetValue(const Key: K; const Value: V);
     function TryGetValue(const Key: K; out Value: V): Boolean;
@@ -175,11 +157,8 @@ type
     function Values: TArray<V>;
     function ToArray: TArray<TPair<K, V>>;
 
-    /// <summary>Number of elements present in the dictionary.</summary>
     property Count: Integer read GetCount;
-    /// <summary>Direct access to values via key. Raises an exception if the key does not exist on 'read'.</summary>
     property Items[const Key: K]: V read GetItem write SetItem; default;
-    /// <summary>If True, the dictionary will automatically free associated objects (TObject) on Destroy/Clear.</summary>
     property OwnsValues: Boolean read FOwnsValues write FOwnsValues;
   end;
 

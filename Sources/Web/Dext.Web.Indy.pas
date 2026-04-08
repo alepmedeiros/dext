@@ -19,21 +19,9 @@
 {                                                                           }
 {***************************************************************************}
 {                                                                           }
-{  DISCLAIMER:                                                              }
-{  This file is part of the Dext Framework and provides an adapter for the  }
-{  Indy components (Internet Direct) that ship natively with Delphi.        }
-{                                                                           }
-{  Indy (Internet Direct) is dual-licensed under the BSD and MPL licenses.  }
-{  For more information, visit: https://www.indyproject.org/license/        }
-{                                                                           }
-{  The classes in this file (TDextIndy*) are original works of the Dext     }
-{  contributors and do not contain source code copied or derived from the   }
-{  Indy project itself. They serve as wrappers/adapters to integrate Indy   }
-{  with Dext's internal architecture.                                       }
-{                                                                           }
-{***************************************************************************}
 {  Author:  Cesar Romero                                                    }
 {  Created: 2025-12-08                                                      }
+{                                                                           }
 {***************************************************************************}
 unit Dext.Web.Indy;
 
@@ -57,10 +45,7 @@ uses
   Dext.Json;
 
 type
-  /// <summary>
-  ///   <see cref="IHttpResponse"/> implementation for the Indy server.
-  /// </summary>
-  TDextIndyHttpResponse = class(TInterfacedObject, IHttpResponse)
+  TIndyHttpResponse = class(TInterfacedObject, IHttpResponse)
   private
     FResponseInfo: TIdHTTPResponseInfo;
   public
@@ -84,11 +69,7 @@ type
     property ContentType: string read GetContentType write SetContentType;
   end;
 
-  /// <summary>
-  ///   <see cref="IHttpRequest"/> implementation for the Indy server.
-  ///   Includes support for parsing QueryString, Headers, Cookies and Multipart/form-data.
-  /// </summary>
-  TDextIndyHttpRequest = class(TInterfacedObject, IHttpRequest)
+  TIndyHttpRequest = class(TInterfacedObject, IHttpRequest)
   private
     FRequestInfo: TIdHTTPRequestInfo;
     FQuery: IStringDictionary;
@@ -126,11 +107,7 @@ type
     property RemoteIpAddress: string read GetRemoteIpAddress;
   end;
 
-  /// <summary>
-  ///   HTTP execution context for the Indy server.
-  ///   Manages the lifecycle of the service scope (DI) per request.
-  /// </summary>
-  TDextIndyHttpContext = class(TInterfacedObject, IHttpContext)
+  TIndyHttpContext = class(TInterfacedObject, IHttpContext)
   private
     FRequest: IHttpRequest;
     FResponse: IHttpResponse;
@@ -165,9 +142,9 @@ implementation
 uses
   System.DateUtils;
 
-{ TDextIndyHttpRequest }
+{ TIndyHttpRequest }
 
-constructor TDextIndyHttpRequest.Create(ARequestInfo: TIdHTTPRequestInfo);
+constructor TIndyHttpRequest.Create(ARequestInfo: TIdHTTPRequestInfo);
 begin
   inherited Create;
   FRequestInfo := ARequestInfo;
@@ -176,7 +153,7 @@ begin
   // Note: FQuery, FHeaders, FBodyStream, FCookies are NIL and will be lazy loaded
 end;
 
-destructor TDextIndyHttpRequest.Destroy;
+destructor TIndyHttpRequest.Destroy;
 begin
   FQuery := nil;
   FBodyStream.Free;
@@ -186,8 +163,8 @@ begin
   inherited Destroy;
 end;
 
-// NEW: Parse Indy headers to dictionary
-function TDextIndyHttpRequest.ParseHeaders(AHeaderList: TIdHeaderList): IStringDictionary;
+// ? NOVO: Parsear headers do Indy para dicionário
+function TIndyHttpRequest.ParseHeaders(AHeaderList: TIdHeaderList): IStringDictionary;
 var
   I: Integer;
   Name, Value: string;
@@ -206,24 +183,24 @@ begin
   end;
 end;
 
-function TDextIndyHttpRequest.GetHeader(const AName: string): string;
+function TIndyHttpRequest.GetHeader(const AName: string): string;
 begin
   Result := FRequestInfo.RawHeaders.Values[AName];
 end;
 
-function TDextIndyHttpRequest.GetHeaders: IStringDictionary;
+function TIndyHttpRequest.GetHeaders: IStringDictionary;
 begin
   if FHeaders = nil then
     FHeaders := ParseHeaders(FRequestInfo.RawHeaders);
   Result := FHeaders;
 end;
 
-function TDextIndyHttpRequest.GetRemoteIpAddress: string;
+function TIndyHttpRequest.GetRemoteIpAddress: string;
 begin
   Result := FRequestInfo.RemoteIP;
 end;
 
-function TDextIndyHttpRequest.ParseQueryString(const AQuery: string): IStringDictionary;
+function TIndyHttpRequest.ParseQueryString(const AQuery: string): IStringDictionary;
 var
   P, EndP: PChar;
   Key, Value: string;
@@ -261,38 +238,38 @@ begin
   end;
 end;
 
-function TDextIndyHttpRequest.GetMethod: string;
+function TIndyHttpRequest.GetMethod: string;
 begin
   Result := FRequestInfo.Command;
 end;
 
-function TDextIndyHttpRequest.GetPath: string;
+function TIndyHttpRequest.GetPath: string;
 begin
   Result := FRequestInfo.Document;
-  // Ensure empty paths are '/'
+  // Garantir que paths vazios sejam '/'
   if Result = '' then
     Result := '/';
 end;
 
-function TDextIndyHttpRequest.GetQuery: IStringDictionary;
+function TIndyHttpRequest.GetQuery: IStringDictionary;
 begin
   if FQuery = nil then
     FQuery := ParseQueryString(FRequestInfo.QueryParams);
   Result := FQuery;
 end;
 
-function TDextIndyHttpRequest.GetQueryParam(const AName: string): string;
+function TIndyHttpRequest.GetQueryParam(const AName: string): string;
 begin
   if not GetQuery.TryGetValue(AName, Result) then
     Result := '';
 end;
 
-function TDextIndyHttpRequest.GetRouteParams: TRouteValueDictionary;
+function TIndyHttpRequest.GetRouteParams: TRouteValueDictionary;
 begin
   Result := FRouteParams;
 end;
 
-function TDextIndyHttpRequest.GetCookies: IStringDictionary;
+function TIndyHttpRequest.GetCookies: IStringDictionary;
 var
   CookieHeader: string;
   Pairs: TArray<string>;
@@ -319,14 +296,14 @@ begin
   Result := FCookies;
 end;
 
-function TDextIndyHttpRequest.GetFiles: IFormFileCollection;
+function TIndyHttpRequest.GetFiles: IFormFileCollection;
 begin
   if FFiles.Count = 0 then
     ParseMultipart;
   Result := FFiles;
 end;
 
-procedure TDextIndyHttpRequest.ParseMultipart;
+procedure TIndyHttpRequest.ParseMultipart;
 var
   Boundary, ContentTypeStr: string;
   Stream: TStream;
@@ -452,7 +429,7 @@ var
           PartStream.CopyFrom(Stream, ContentSize);
         end;
         PartStream.Position := 0;
-        FFiles.Add(TDextIndyFormFile.Create(PartName, PartFileName, PartContentType, PartStream));
+        FFiles.Add(TIndyFormFile.Create(PartName, PartFileName, PartContentType, PartStream));
       end;
     finally
       HeaderList.Free;
@@ -495,7 +472,7 @@ begin
   end;
 end;
 
-function TDextIndyHttpRequest.GetBody: TStream;
+function TIndyHttpRequest.GetBody: TStream;
 var
   FormData: string;
 begin
@@ -530,21 +507,21 @@ begin
   Result := FBodyStream;
 end;
 
-{ TDextIndyHttpResponse }
+{ TIndyHttpResponse }
 
-constructor TDextIndyHttpResponse.Create(AResponseInfo: TIdHTTPResponseInfo);
+constructor TIndyHttpResponse.Create(AResponseInfo: TIdHTTPResponseInfo);
 begin
   inherited Create;
   FResponseInfo := AResponseInfo;
 end;
 
-// NEW: Add header to response
-procedure TDextIndyHttpResponse.AddHeader(const AName, AValue: string);
+// ? NOVO: Adicionar header à response
+procedure TIndyHttpResponse.AddHeader(const AName, AValue: string);
 begin
   FResponseInfo.CustomHeaders.AddValue(AName, AValue);
 end;
 
-procedure TDextIndyHttpResponse.AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions);
+procedure TIndyHttpResponse.AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions);
 var
   CookieStr: string;
 begin
@@ -565,12 +542,12 @@ begin
   FResponseInfo.CustomHeaders.AddValue('Set-Cookie', CookieStr);
 end;
 
-procedure TDextIndyHttpResponse.AppendCookie(const AName, AValue: string);
+procedure TIndyHttpResponse.AppendCookie(const AName, AValue: string);
 begin
   AppendCookie(AName, AValue, TCookieOptions.Default);
 end;
 
-procedure TDextIndyHttpResponse.DeleteCookie(const AName: string);
+procedure TIndyHttpResponse.DeleteCookie(const AName: string);
 var
   Opts: TCookieOptions;
 begin
@@ -579,57 +556,47 @@ begin
   AppendCookie(AName, '', Opts);
 end;
 
-function TDextIndyHttpResponse.GetStatusCode: Integer;
+function TIndyHttpResponse.GetStatusCode: Integer;
 begin
   Result := FResponseInfo.ResponseNo;
 end;
 
-function TDextIndyHttpResponse.GetContentType: string;
+function TIndyHttpResponse.GetContentType: string;
 begin
   Result := FResponseInfo.ContentType;
 end;
 
-procedure TDextIndyHttpResponse.SetStatusCode(AValue: Integer);
+procedure TIndyHttpResponse.SetStatusCode(AValue: Integer);
 begin
   FResponseInfo.ResponseNo := AValue;
 end;
 
-function TDextIndyHttpResponse.Status(AValue: Integer): IHttpResponse;
+function TIndyHttpResponse.Status(AValue: Integer): IHttpResponse;
 begin
   SetStatusCode(AValue);
   Result := Self;
 end;
 
-procedure TDextIndyHttpResponse.SetContentType(const AValue: string);
+procedure TIndyHttpResponse.SetContentType(const AValue: string);
 begin
   AddHeader('Content-Type', AValue);
   FResponseInfo.ContentType := AValue;
 end;
 
-procedure TDextIndyHttpResponse.SetContentLength(const AValue: Int64);
+procedure TIndyHttpResponse.SetContentLength(const AValue: Int64);
 begin
   FResponseInfo.ContentLength := AValue;
 end;
 
-procedure TDextIndyHttpResponse.Write(const AContent: string);
+procedure TIndyHttpResponse.Write(const AContent: string);
 begin
-  { Append instead of overwrite so consumers that build the response body
-    in multiple calls accumulate correctly. The main case is TSSEWriter:
-    WriteEvent calls Response.Write twice (once for 'event:' line, once for
-    'data:' line), and the SSE middleware loop calls WriteData repeatedly
-    for each message and WriteComment for keep-alive. With overwrite, only
-    the last Write reached the client, so Server-Sent Events streams were
-    effectively broken on the Indy backend.
-
-    Also relevant for streamed error messages and any handler that builds
-    its body in stages. Single-call handlers are unaffected because appending
-    to an empty ContentText is equivalent to assignment. }
-  FResponseInfo.ContentText := FResponseInfo.ContentText + AContent;
+  FResponseInfo.ContentText := AContent;
+  // Only set default content type if not already set
   if FResponseInfo.ContentType = '' then
     FResponseInfo.ContentType := 'text/plain; charset=utf-8';
 end;
 
-procedure TDextIndyHttpResponse.Write(const ABuffer: TBytes);
+procedure TIndyHttpResponse.Write(const ABuffer: TBytes);
 var
   Stream: TMemoryStream;
 begin
@@ -642,7 +609,7 @@ begin
   FResponseInfo.FreeContentStream := True; // Indy will free the stream
 end;
 
-procedure TDextIndyHttpResponse.Write(const AStream: TStream);
+procedure TIndyHttpResponse.Write(const AStream: TStream);
 begin
   FResponseInfo.ContentStream := AStream;
   FResponseInfo.FreeContentStream := False; // We do not own external stream unless specified, usually caller owns it or it's a TFileStream.
@@ -666,26 +633,26 @@ begin
   FResponseInfo.FreeContentStream := True;
 end;
 
-procedure TDextIndyHttpResponse.Json(const AJson: string);
+procedure TIndyHttpResponse.Json(const AJson: string);
 begin
   FResponseInfo.ContentText := AJson;
   FResponseInfo.ContentType := 'application/json; charset=utf-8';
 end;
 
-procedure TDextIndyHttpResponse.Json(const AValue: TValue);
+procedure TIndyHttpResponse.Json(const AValue: TValue);
 begin
   Json(TDextJson.Serialize(AValue));
 end;
 
-{ TDextIndyHttpContext }
+{ TIndyHttpContext }
 
-constructor TDextIndyHttpContext.Create(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo;
+constructor TIndyHttpContext.Create(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo;
   AResponseInfo: TIdHTTPResponseInfo; const AServices: IServiceProvider);
 begin
   inherited Create;
   FContext := AContext;
-  FRequest := TDextIndyHttpRequest.Create(ARequestInfo);
-  FResponse := TDextIndyHttpResponse.Create(AResponseInfo);
+  FRequest := TIndyHttpRequest.Create(ARequestInfo);
+  FResponse := TIndyHttpResponse.Create(AResponseInfo);
   
   // Create a new scope for THIS request. 
   // All Scoped services (like DbContext) resolved from this provider 
@@ -695,7 +662,7 @@ begin
   
 end;
 
-destructor TDextIndyHttpContext.Destroy;
+destructor TIndyHttpContext.Destroy;
 begin
   FItems := nil;
   FRequest := nil;
@@ -705,55 +672,55 @@ begin
   inherited;
 end;
 
-function TDextIndyHttpContext.GetRequest: IHttpRequest;
+function TIndyHttpContext.GetRequest: IHttpRequest;
 begin
   Result := FRequest;
 end;
 
-function TDextIndyHttpContext.GetResponse: IHttpResponse;
+function TIndyHttpContext.GetResponse: IHttpResponse;
 begin
   Result := FResponse;
 end;
 
-procedure TDextIndyHttpContext.SetResponse(const AValue: IHttpResponse);
+procedure TIndyHttpContext.SetResponse(const AValue: IHttpResponse);
 begin
   FResponse := AValue;
 end;
 
-function TDextIndyHttpContext.GetServices: IServiceProvider;
+function TIndyHttpContext.GetServices: IServiceProvider;
 begin
   Result := FServices;
 end;
 
-procedure TDextIndyHttpContext.SetServices(const AValue: IServiceProvider);
+procedure TIndyHttpContext.SetServices(const AValue: IServiceProvider);
 begin
   FServices := AValue;
 end;
 
-function TDextIndyHttpContext.GetUser: IClaimsPrincipal;
+function TIndyHttpContext.GetUser: IClaimsPrincipal;
 begin
   Result := FUser;
 end;
 
-procedure TDextIndyHttpContext.SetUser(const AValue: IClaimsPrincipal);
+procedure TIndyHttpContext.SetUser(const AValue: IClaimsPrincipal);
 begin
   FUser := AValue;
 end;
 
-function TDextIndyHttpContext.GetItems: IDictionary<string, TValue>;
+function TIndyHttpContext.GetItems: IDictionary<string, TValue>;
 begin
   if FItems = nil then
     FItems := TCollections.CreateDictionary<string, TValue>;
   Result := FItems;
 end;
 
-procedure TDextIndyHttpContext.SetRouteParams(const AParams: TRouteValueDictionary);
+procedure TIndyHttpContext.SetRouteParams(const AParams: TRouteValueDictionary);
 var
-  IndyRequest: TDextIndyHttpRequest;
+  IndyRequest: TIndyHttpRequest;
 begin
-  if FRequest is TDextIndyHttpRequest then
+  if FRequest is TIndyHttpRequest then
   begin
-    IndyRequest := TDextIndyHttpRequest(FRequest);
+    IndyRequest := TIndyHttpRequest(FRequest);
     IndyRequest.FRouteParams := AParams;
   end;
 end;

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -34,8 +34,10 @@ uses
 
 type
   /// <summary>
-  ///   Managed record that provides a fluent interface for defining Rate Limiting policies.
-  ///   Supports fixed window, sliding window, token bucket, and concurrency limits.
+  ///   Fluent builder for rate limiting policies.
+  /// </summary>
+  /// <summary>
+  ///   Fluent builder for rate limiting policies.
   /// </summary>
   TRateLimitPolicy = record
   private

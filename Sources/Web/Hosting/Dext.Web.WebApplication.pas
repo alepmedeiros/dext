@@ -35,11 +35,6 @@ uses
   Dext.Configuration.Interfaces;
 
 type
-  /// <summary>
-  ///   Central facade for creating and running web applications in the Dext Framework.
-  ///   Coordinates configuration (appsettings), dependency injection, middleware pipeline,
-  ///   and the execution of the server host (Indy/DCS).
-  /// </summary>
   TWebApplication = class(TInterfacedObject, IWebApplication, IWebHost)
   private
     FServices: IServiceCollection;
@@ -58,35 +53,20 @@ type
     destructor Destroy; override;
 
     // IWebApplication
-    /// <summary>Accesses the request pipeline builder to register middlewares.</summary>
     function GetApplicationBuilder: IApplicationBuilder;
-    /// <summary>Accesses the unified application configuration.</summary>
     function GetConfiguration: IConfiguration;
-    /// <summary>Accesses the service collection for dependency registration.</summary>
     function GetServices: TDextServices;
     function GetBuilder: TAppBuilder;
-    /// <summary>Builds the final ServiceProvider by integrating all registered dependencies.</summary>
     function BuildServices: IServiceProvider; // ?
-    /// <summary>Registers a class-based middleware in the pipeline.</summary>
     function UseMiddleware(Middleware: TClass): IWebApplication;
-    /// <summary>Applies a Startup class configured in the classic .NET pattern.</summary>
     function UseStartup(Startup: IStartup): IWebApplication; // ? Non-generic
-    /// <summary>Allows swapping the server factory (e.g., Indy for CrossSockets).</summary>
     procedure UseServerFactory(const AFactory: TServerFactory);
-    /// <summary>Scans the project for Controllers and registers their routes automatically.</summary>
     function MapControllers: IWebApplication;
-    
-    /// <summary>Starts the server in blocking mode on the default port.</summary>
     procedure Run; overload;
-    /// <summary>Starts the server in blocking mode on the specified port.</summary>
     procedure Run(Port: Integer); overload;
-    /// <summary>Starts the server in non-blocking mode (Background thread).</summary>
     procedure Start; overload;
-    /// <summary>Starts the server in non-blocking mode on the specified port.</summary>
     procedure Start(Port: Integer); overload;
-    /// <summary>Gracefully shuts down the server and releases resources.</summary>
     procedure Stop;
-    /// <summary>Defines the default port if not provided in Run/Start.</summary>
     procedure SetDefaultPort(Port: Integer);
 
     property DefaultPort: Integer read FDefaultPort write FDefaultPort;
@@ -204,7 +184,7 @@ begin
   
   // Ensure ALL interface fields are niled even if Teardown was skipped or partial.
   // Teardown nils these too, but we must be defensive in the destructor.
-  FActiveHost := nil;     // Releases TDextIndyWebServer → pipeline closures → middlewares
+  FActiveHost := nil;     // Releases TIndyWebServer → pipeline closures → middlewares
   FScanner := nil;        // Releases TControllerScanner → FCtx (TRttiContext)
   FAppBuilder := nil;     // Releases TApplicationBuilder → routes, middleware registrations
   FServiceProvider := nil; // Releases root DI provider → singletons
@@ -367,9 +347,9 @@ begin
     begin
       var ProviderName := ServerSection['SslProvider'];
       if SameText(ProviderName, 'Taurus') then
-        SSLHandler := TDextIndyTaurusSSLHandler.Create(CertFile, KeyFile, RootFile)
+        SSLHandler := TIndyTaurusSSLHandler.Create(CertFile, KeyFile, RootFile)
       else
-        SSLHandler := TDextIndyOpenSSLHandler.Create(CertFile, KeyFile, RootFile);
+        SSLHandler := TIndyOpenSSLHandler.Create(CertFile, KeyFile, RootFile);
     end
     else if (CertFile <> '') or (KeyFile <> '') then
       SafeWriteLn('[WARN] HTTPS configured but certificate files not found. Using HTTP.');
@@ -379,7 +359,7 @@ begin
   if Assigned(FServerFactory) then
     FActiveHost := FServerFactory(Port, RequestHandler, FServiceProvider)
   else
-    FActiveHost := TDextIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);
+    FActiveHost := TIndyWebServer.Create(Port, RequestHandler, FServiceProvider, SSLHandler);
 end;
 
 procedure TWebApplication.Teardown;

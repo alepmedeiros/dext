@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -41,50 +41,42 @@ uses
 
 type
   /// <summary>
-  ///   Detailed result of an HTTP execution, including request metadata.
-  ///   Ideal for displaying in debugging interfaces and technical logs.
+  ///   Extended response including request metadata for display purposes.
   /// </summary>
   THttpExecutionResult = record
-    /// <summary>Name assigned to the request in the .http file.</summary>
     RequestName: string;
-    /// <summary>HTTP verb used (GET, POST, etc).</summary>
     RequestMethod: string;
-    /// <summary>Full URL after variable resolution.</summary>
     RequestUrl: string;
-    /// <summary>Status code returned by the server.</summary>
     StatusCode: Integer;
-    /// <summary>Descriptive text of the status.</summary>
     StatusText: string;
-    /// <summary>Response body in string format.</summary>
     ResponseBody: string;
-    /// <summary>Collection of headers returned by the server.</summary>
     ResponseHeaders: IDictionary<string, string>;
-    /// <summary>Total execution time in milliseconds.</summary>
     DurationMs: Int64;
-    /// <summary>Indicates whether the request obtained a success status (2xx or 3xx).</summary>
     Success: Boolean;
-    /// <summary>Technical error message in case of connection or execution failure.</summary>
     ErrorMessage: string;
   end;
 
   /// <summary>
-  ///   Specialized executor for HTTP requests based on THttpRequestInfo.
-  ///   Acts as a bridge between the .http file parser and the Dext TRestClient.
+  ///   Executor for HTTP requests using Dext.Net.RestClient.
   /// </summary>
   THttpExecutor = class
   private
     class function MethodToEnum(const AMethod: string): TDextHttpMethod; static;
   public
-    /// <summary>Executes an HTTP request asynchronously.</summary>
+    /// <summary>
+    ///   Executes a single HTTP request asynchronously.
+    /// </summary>
     class function ExecuteAsync(const ARequest: THttpRequestInfo): TAsyncBuilder<IRestResponse>; static;
     
-    /// <summary>Executes a request by resolving dynamic variables before sending.</summary>
+    /// <summary>
+    ///   Executes a request with variables resolved from the collection.
+    /// </summary>
     class function ExecuteWithVariablesAsync(ARequest: THttpRequestInfo; 
       AVariables: IList<THttpVariable>): TAsyncBuilder<IRestResponse>; static;
     
     /// <summary>
-    ///   Executes a request synchronously (blocking) and returns a detailed result.
-    ///   Recommended only for CLI tools or monitoring Dashboards.
+    ///   Executes a request and returns a detailed result record.
+    ///   This is a synchronous wrapper for use in Dashboard UI.
     /// </summary>
     class function ExecuteSync(ARequest: THttpRequestInfo; 
       AVariables: IList<THttpVariable>): THttpExecutionResult; static;

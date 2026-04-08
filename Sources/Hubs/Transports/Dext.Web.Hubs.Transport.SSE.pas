@@ -436,18 +436,7 @@ end;
 
 class procedure TSSEWriter.ConfigureResponse(const Response: IHttpResponse);
 begin
-  { Per WHATWG / W3C Server-Sent Events spec, the event stream MUST be
-    encoded as UTF-8. Browsers' EventSource rejects any response whose
-    Content-Type charset parameter is anything other than utf-8. Without
-    an explicit charset here, the Indy backend emits
-    'text/event-stream; charset=ISO-8859-1' (inherited from the server's
-    ANSI codepage default), and the browser aborts the connection with
-    a console error:
-      "EventSource's response has a charset ('iso-8859-1') that is not
-       UTF-8. Aborting the connection."
-    Set charset=utf-8 explicitly so every SSE endpoint using TSSEWriter
-    is spec-compliant regardless of the server's locale. }
-  Response.SetContentType('text/event-stream; charset=utf-8');
+  Response.SetContentType('text/event-stream');
   Response.AddHeader('Cache-Control', 'no-cache');
   Response.AddHeader('Connection', 'keep-alive');
   Response.AddHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering

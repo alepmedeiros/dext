@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -547,19 +547,11 @@ const
   // {END_DEXT_ALIASES}
 
 /// <summary>
-///   Creates a property expression for use in query and specification engines.
-///   Ex: Prop('Name').Equal('Cezar')
+///   Global helper to create a property expression.
 /// </summary>
+///
 function Prop(const Name: string): TPropExpression;
-
-/// <summary>
-///   Gets the global Dext JSON serialization settings.
-/// </summary>
 function JsonSettings: TJsonSettings;
-
-/// <summary>
-///   Defines the global default settings for the Dext JSON engine.
-/// </summary>
 procedure JsonDefaultSettings(const Settings: TJsonSettings);
 
 implementation

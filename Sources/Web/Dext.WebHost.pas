@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -36,10 +36,6 @@ uses
   Dext.Configuration.Interfaces;
 
 type
-  /// <summary>
-  ///   Default implementation of the web host builder. 
-  ///   Provides a fluent API to configure services, URLs, and the application's request pipeline.
-  /// </summary>
   TWebHostBuilder = class(TInterfacedObject, IWebHostBuilder)
   private
     FServices: TDextServices;
@@ -51,17 +47,12 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>Creates a pre-configured builder with default framework behaviors.</summary>
     class function CreateDefault(Args: TArray<string>): IWebHostBuilder;
     
     // IWebHostBuilder implementation
-    /// <summary>Registers the delegate for service configuration (DI) in the container.</summary>
     function ConfigureServices(AConfigurator: TProc<IServiceCollection>): IWebHostBuilder;
-    /// <summary>Registers the delegate for request pipeline configuration (Middlewares).</summary>
     function Configure(AConfigurator: TProc<IApplicationBuilder>): IWebHostBuilder;
-    /// <summary>Defines the URIs where the server will listen (e.g., http://localhost:5000).</summary>
     function UseUrls(const AUrls: string): IWebHostBuilder;
-    /// <summary>Builds the configured web application and returns the host ready for execution.</summary>
     function Build: IWebHost;
 
     // Fluent API extensions

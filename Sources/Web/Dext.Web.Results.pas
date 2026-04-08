@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -42,9 +42,6 @@ uses
   Dext.Json;
 
 type
-  /// <summary>
-  ///   Abstract base class for <see cref="IResult"/> implementations.
-  /// </summary>
   TResult = class(TInterfacedObject, IResult)
   protected
     procedure Execute(AContext: IHttpContext); virtual; abstract;
@@ -63,9 +60,6 @@ type
     function GetObject: TValue;
   end;
 
-  /// <summary>
-  ///   Result that returns JSON formatted content.
-  /// </summary>
   TJsonResult = class(TResult)
   private
     FJson: string;
@@ -75,9 +69,6 @@ type
     procedure Execute(AContext: IHttpContext); override;
   end;
 
-  /// <summary>
-  ///   Simple result that returns only the HTTP status code (e.g. 204 NoContent, 401 Unauthorized).
-  /// </summary>
   TStatusCodeResult = class(TResult)
   private
     FStatusCode: Integer;
@@ -86,9 +77,6 @@ type
     procedure Execute(AContext: IHttpContext); override;
   end;
 
-  /// <summary>
-  ///   Result that returns textual content with a specific Content-Type (e.g. XML, Plain Text).
-  /// </summary>
   TContentResult = class(TResult)
   private
     FContent: string;
@@ -99,10 +87,6 @@ type
     procedure Execute(AContext: IHttpContext); override;
   end;
 
-  /// <summary>
-  ///   Generic result that uses content negotiation to format an object.
-  ///   Attempts to find a registered formatter (JSON, XML) that accepts type T.
-  /// </summary>
   TObjectResult<T> = class(TResult)
   private
     FValue: T;
@@ -112,9 +96,6 @@ type
     procedure Execute(AContext: IHttpContext); override;
   end;
 
-  /// <summary>
-  ///   Result that streams the content of a Stream to the HTTP response.
-  /// </summary>
   TStreamResult = class(TResult)
   private
     FStream: TStream;
@@ -126,103 +107,86 @@ type
     procedure Execute(AContext: IHttpContext); override;
   end;
 
-  /// <summary>
-  ///   Static helper class (Factory) for creating common HTTP results.
-  ///   Mainly used in Minimal APIs and Controllers to return standardized responses.
-  /// </summary>
   Results = class
   private
     class var FViewsPath: string;
     class var FAppPath: string;
     class function GetFullViewPath(const ARelativePath: string): string;
   public
-    /// <summary>Sets the root directory for View files (HTML).</summary>
+    /// <summary>
+    ///   Sets the root directory for view files (relative to app path or absolute).
+    ///   Example: 'wwwroot\views' or 'C:\MyApp\views'
+    /// </summary>
     class procedure SetViewsPath(const APath: string);
     
-    /// <summary>Sets the application root path for resolving relative paths.</summary>
+    /// <summary>
+    ///   Sets the application root path (used for resolving relative paths).
+    ///   If not set, uses the executable's directory.
+    /// </summary>
     class procedure SetAppPath(const APath: string);
     
-    /// <summary>Returns 200 OK.</summary>
     class function Ok: IResult; overload;
-    /// <summary>Returns 200 OK with string body or pre-formatted JSON.</summary>
     class function Ok(const AValue: string): IResult; overload;
-    /// <summary>Returns 200 OK with the object serialized via Content Negotiation.</summary>
     class function Ok<T>(const AValue: T): IResult; overload;
     
-    /// <summary>Returns 201 Created with the URI of the created resource.</summary>
     class function Created(const AUri: string; const AValue: string): IResult; overload;
-    /// <summary>Returns 201 Created with the object serialized via Content Negotiation.</summary>
     class function Created<T>(const AUri: string; const AValue: T): IResult; overload;
 
-    /// <summary>Returns 400 Bad Request.</summary>
     class function BadRequest: IResult; overload;
-    /// <summary>Returns 400 Bad Request with an error message.</summary>
     class function BadRequest(const AError: string): IResult; overload;
-    /// <summary>Returns 400 Bad Request with a serialized error object.</summary>
     class function BadRequest<T>(const AError: T): IResult; overload;
     
-    /// <summary>Returns 404 Not Found.</summary>
     class function NotFound: IResult; overload;
-    /// <summary>Returns 404 Not Found with a detailed message.</summary>
     class function NotFound(const AMessage: string): IResult; overload;
 
-    /// <summary>Returns 204 No Content.</summary>
     class function NoContent: IResult;
     
-    /// <summary>Returns 401 Unauthorized.</summary>
     class function Unauthorized: IResult; overload;
-    /// <summary>Returns 401 Unauthorized with a detailed message.</summary>
     class function Unauthorized(const AMessage: string): IResult; overload;
-    /// <summary>Returns 401 Unauthorized with a serialized object.</summary>
     class function Unauthorized<T>(const AValue: T): IResult; overload;
 
-    /// <summary>Returns 403 Forbidden.</summary>
     class function Forbidden: IResult; overload;
-    /// <summary>Returns 403 Forbidden with a detailed message.</summary>
     class function Forbidden(const AMessage: string): IResult; overload;
-    /// <summary>Returns 403 Forbidden with a serialized object.</summary>
     class function Forbidden<T>(const AValue: T): IResult; overload;
 
-    /// <summary>Returns 500 Internal Server Error with a friendly message.</summary>
     class function InternalServerError(const AMessage: string): IResult; overload;
-    /// <summary>Returns 500 Internal Server Error from a captured exception.</summary>
     class function InternalServerError(const E: Exception): IResult; overload;
     
-    /// <summary>Alias for InternalServerError.</summary>
+    /// <summary>
+    ///   Alias for InternalServerError - accepts an Exception directly.
+    ///   Usage: Result := Results.InternalError(E);
+    /// </summary>
     class function InternalError(const E: Exception): IResult; overload;
     class function InternalError(const AMessage: string): IResult; overload;
 
-    /// <summary>Returns an explicit JSON result.</summary>
     class function Json(const AJson: string; AStatusCode: Integer = 200): IResult; overload;
-    /// <summary>Serializes the object directly to JSON, ignoring full Content Negotiation.</summary>
     class function Json<T>(const AValue: T; AStatusCode: Integer = 200): IResult; overload;
-    /// <summary>Returns content as plain text (text/plain).</summary>
     class function Text(const AContent: string; AStatusCode: Integer = 200): IResult;
-    /// <summary>Returns content as pure HTML (text/html).</summary>
-    class function Html(const AHtml: string; AStatusCode: Integer = 200): IResult;
-    /// <summary>Returns generic content with a custom Content-Type.</summary>
-    class function Content(const AContent: string; const AContentType: string; AStatusCode: Integer = 200): IResult;
-    /// <summary>Sends a Stream (file, memory) to the response.</summary>
-    class function Stream(const AStream: TStream; const AContentType: string; AStatusCode: Integer = 200): IResult;
+    class function Html(const AHtml: string; AStatusCode: Integer = 200): IResult; // Added
+    class function Content(const AContent: string; const AContentType: string; AStatusCode: Integer = 200): IResult; // Added
+    class function Stream(const AStream: TStream; const AContentType: string; AStatusCode: Integer = 200): IResult; // Added
     
-    /// <summary>Renders a View file (HTML) located on the server.</summary>
+    /// <summary>
+    ///   Returns an HTML result by reading the content from a view file.
+    ///   The path is relative to ViewsPath (configured via SetViewsPath).
+    ///   Example: Results.HtmlFromFile('login.html') reads from 'wwwroot\views\login.html'
+    /// </summary>
     class function HtmlFromFile(const ARelativePath: string; AStatusCode: Integer = 200): IResult;
     
-    /// <summary>Reads the content of a View for manual string manipulation.</summary>
+    /// <summary>
+    ///   Reads the content of a view file and returns it as a string.
+    ///   Useful when you need to modify the HTML before returning it.
+    ///   Example: var Html := Results.ReadViewFile('settings.html');
+    /// </summary>
     class function ReadViewFile(const ARelativePath: string): string;
 
-    /// <summary>Returns an arbitrary HTTP status code.</summary>
     class function StatusCode(ACode: Integer): IResult; overload;
     class function StatusCode(ACode: Integer; const AContent: string): IResult; overload;
     
-    /// <summary>Renders a dynamic View using the Dext template engine.</summary>
     class function View(const AViewName: string): TDextViewResult; overload;
-    /// <summary>Renders a dynamic View linked to a database query.</summary>
     class function View<T: class>(const AViewName: string; const AQuery: TFluentQuery<T>): TDextViewResult; overload;
-    /// <summary>Renders a dynamic View linked to a model object (Model).</summary>
     class function View(const AViewName: string; AData: TObject; AOwns: Boolean = False): TDextViewResult; overload;
     
-    /// <summary>Renders only the fragment (Content) of a View, ignoring the Layout.</summary>
     class function ViewPart(const AViewName: string): TDextViewResult; overload;
     class function ViewPart<T: class>(const AViewName: string; const AQuery: TFluentQuery<T>): TDextViewResult; overload;
     class function ViewPart(const AViewName: string; AData: TObject; AOwns: Boolean = False): TDextViewResult; overload;

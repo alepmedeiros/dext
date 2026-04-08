@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -67,9 +67,6 @@ type
   /// <summary>
   ///   Interface for type converters that handle database-specific type mappings.
   /// </summary>
-  /// <summary>
-  ///   Interface for type converters that handle database-specific mappings.
-  /// </summary>
   ITypeConverter = interface
     ['{A1B2C3D4-E5F6-7890-1234-567890ABCDEF}']
     /// <summary>Returns true if this converter can handle the given type.</summary>
@@ -137,9 +134,6 @@ type
 
   /// <summary>
   ///   Converter for JSON/JSONB types (stores objects as JSON strings).
-  /// </summary>
-  /// <summary>
-  ///   Conversor para tipos JSON/JSONB (armazena objetos, records ou arrays como strings JSON).
   /// </summary>
   TJsonConverter = class(TTypeConverterBase)
   private
@@ -228,9 +222,6 @@ type
 
   /// <summary>
   ///   Registry for type converters.
-  /// </summary>
-  /// <summary>
-  ///   Registro global e thread-safe para conversores de tipo do ORM.
   /// </summary>
   TTypeConverterRegistry = class
   private

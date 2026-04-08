@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -60,7 +60,7 @@ type
   );
 
   /// <summary>
-  ///   Represents the result of a rate limit check.
+  ///   Result of a rate limit check.
   /// </summary>
   TRateLimitResult = record
     IsAllowed: Boolean;
@@ -74,7 +74,7 @@ type
   end;
 
   /// <summary>
-  ///   Base interface for all rate limiters (FixedWindow, TokenBucket, etc).
+  ///   Base interface for rate limiters.
   /// </summary>
   IRateLimiter = interface
     ['{8A9B1C2D-3E4F-5A6B-7C8D-9E0F1A2B3C4D}']
@@ -84,7 +84,7 @@ type
   end;
 
   /// <summary>
-  ///   Configuration object that details limits, algorithms, and rejection messages.
+  ///   Configuration for rate limiting policy.
   /// </summary>
   TRateLimitConfig = class
   private

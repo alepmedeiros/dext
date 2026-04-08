@@ -3,12 +3,11 @@
 interface
 
 uses
-  System.Character,
   System.Rtti,
-  System.StrUtils,
-  System.SyncObjs,
   System.SysUtils,
   System.TypInfo,
+  System.StrUtils,
+  System.Character,
   Dext.Collections,
   Dext.Collections.Dict,
   Dext.Types.Lazy;
@@ -21,9 +20,6 @@ type
   /// </summary>
   SmartPropAttribute = class(TCustomAttribute);
 
-  /// <summary>
-  ///   Helper to facilitate access to attributes on RTTI objects.
-  /// </summary>
   TRttiObjectHelper = class helper for TRttiObject
   public
     function GetAttribute<T: TCustomAttribute>: T; overload;
@@ -33,41 +29,27 @@ type
   end;
 
   /// <summary>
-  ///   Cache of structural information about a type. 
-  ///   Resolves whether the type is a Smart Property (Prop, Nullable, Lazy) and identifies the encapsulated inner type.
+  ///   Cached structural information about a type.
   /// </summary>
   TTypeMetadata = class
   public
-    /// <summary>Encapsulated base type (e.g., T from Prop of T).</summary>
     InnerType: PTypeInfo;
-    /// <summary>Indicates if the type is loaded on demand (Lazy).</summary>
     IsLazy: Boolean;
-    /// <summary>Indicates if the type supports null values (Nullable).</summary>
     IsNullable: Boolean;
-    /// <summary>Indicates if the type is a Dext Smart Type (Prop, Nullable, or Proxy).</summary>
     IsSmartProp: Boolean;
-    /// <summary>RTTI field that controls the 'HasValue' state in Nullables.</summary>
     HasValueField: TRttiField;
-    /// <summary>Original RTTI reference of the type.</summary>
     RttiType: TRttiType;
-    /// <summary>RTTI field that stores the raw value (FValue).</summary>
     ValueField: TRttiField;
     constructor Create(AType: PTypeInfo);
   end;
 
-  /// <summary>
-  ///   High-performance reflection utilities with integrated caching. 
-  ///   Optimized for generic record manipulation and value injection.
-  /// </summary>
   TReflection = class
   private
     class var FCache: IDictionary<PTypeInfo, TTypeMetadata>;
     class var FContext: TRttiContext;
-    class var FLock: TCriticalSection;
     class constructor Create;
     class destructor Destroy;
   public
-    /// <summary>Gets or creates cached metadata for the specified type (Thread-Safe).</summary>
     class function GetMetadata(AType: PTypeInfo): TTypeMetadata; static;
     class function GetValue(AInstance: TObject; const APropertyName: string): TValue; static;
     class procedure SetValue(AInstance: Pointer; AMember: TRttiMember; const AValue: TValue); static;
@@ -251,27 +233,20 @@ class constructor TReflection.Create;
 begin
   FContext := TRttiContext.Create;
   FCache := TCollections.CreateDictionary<PTypeInfo, TTypeMetadata>(True);
-  FLock := TCriticalSection.Create;
 end;
 
 class destructor TReflection.Destroy;
 begin
   FCache := nil;
-  FLock.Free;
   FContext.Free;
 end;
 
 class function TReflection.GetMetadata(AType: PTypeInfo): TTypeMetadata;
 begin
-  FLock.Enter;
-  try
-    if not FCache.TryGetValue(AType, Result) then
-    begin
-      Result := TTypeMetadata.Create(AType);
-      FCache.Add(AType, Result);
-    end;
-  finally
-    FLock.Leave;
+  if not FCache.TryGetValue(AType, Result) then
+  begin
+    Result := TTypeMetadata.Create(AType);
+    FCache.Add(AType, Result);
   end;
 end;
 

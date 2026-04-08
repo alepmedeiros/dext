@@ -1,4 +1,4 @@
-unit Dext.Web.Middleware.Logging;
+﻿unit Dext.Web.Middleware.Logging;
 
 interface
 
@@ -8,13 +8,8 @@ uses
   Dext.Web.Interfaces;
 
 type
-  /// <summary>
-  ///   Middleware for automated HTTP request logging.
-  ///   Tracks Method, Path, StatusCode and propagates correlation IDs using Log Scopes.
-  /// </summary>
   TRequestLoggingMiddleware = class(TMiddleware)
   public
-    /// <summary>Executes the logging logic before and after the next middleware in the pipeline.</summary>
     procedure Invoke(AContext: IHttpContext; ANext: TRequestDelegate); override;
   end;
 

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -35,17 +35,10 @@ uses
   Dext.Json;
 
 type
-  /// <summary>
-  ///   Default JSON output formatter using Dext.Json high-performance engine.
-  ///   Supports application/json and text/json media types.
-  /// </summary>
   TJsonOutputFormatter = class(TInterfacedObject, IOutputFormatter)
   public
-    /// <summary>Determines if the formatter can handle the requested response type.</summary>
     function CanWriteResult(const Context: IOutputFormatterContext): Boolean;
-    /// <summary>Returns the media types supported by this formatter (JSON).</summary>
     function GetSupportedMediaTypes: TArray<string>;
-    /// <summary>Serializes the object in the context and writes it to the response stream.</summary>
     procedure Write(const Context: IOutputFormatterContext);
   end;
 
