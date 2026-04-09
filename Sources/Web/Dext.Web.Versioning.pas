@@ -58,8 +58,6 @@ type
   ///   Version reader via URL path prefix (e.g. /v1/api/users extracts "1").
   ///   Examines the first segment of the request path for a version prefix.
   /// </summary>
-<<<<<<< HEAD
-=======
   /// <remarks>
   ///   The default prefix is "v", so paths like /v1/..., /v2.1/... are recognized.
   ///   Only the first path segment is examined to avoid false positives with
@@ -82,7 +80,6 @@ type
   ///   Composite reader that attempts to extract the version from multiple sources in sequence.
   ///   Returns the first non-empty result found.
   /// </summary>
->>>>>>> upstream/main
   TCompositeApiVersionReader = class(TInterfacedObject, IApiVersionReader)
   private
     FReaders: TArray<IApiVersionReader>;

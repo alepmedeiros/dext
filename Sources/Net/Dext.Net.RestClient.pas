@@ -62,12 +62,9 @@ uses
     function GetStatusText: string;
     function GetContentStream: TStream;
     function GetContentString: string;
-<<<<<<< HEAD
-=======
     /// <summary>Gets the value of a specific response header (case-insensitive lookup).</summary>
     /// <param name="AName">Header name (e.g. "Content-Type", "X-Request-Id").</param>
     /// <returns>The header value, or empty string if not found.</returns>
->>>>>>> upstream/main
     function GetHeader(const AName: string): string;
     /// <summary>Returns all response headers as a TNetHeaders array.</summary>
     function GetHeaders: TNetHeaders;
