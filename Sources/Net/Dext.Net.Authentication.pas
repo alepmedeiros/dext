@@ -30,7 +30,11 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  System.NetEncoding;
+  System.DateUtils,
+  System.Net.HttpClient,
+  System.Net.URLClient,
+  System.NetEncoding,
+  System.SyncObjs;
 
 type
   IAuthenticationProvider = interface
@@ -63,6 +67,38 @@ type
     constructor Create(const AKey, AValue: string);
     function GetHeaderValue: string;
     property Key: string read FKey;
+  end;
+
+  /// <summary>
+  ///   OAuth 2.0 Client Credentials authentication provider (RFC 6749 Section 4.4).
+  ///   Designed for machine-to-machine (M2M) communication where no user context is needed.
+  ///   Automatically fetches and caches the access token, refreshing it when expired.
+  /// </summary>
+  /// <remarks>
+  ///   Thread-safe: uses a critical section to protect concurrent token refresh.
+  ///   The token is refreshed 30 seconds before actual expiration to avoid edge cases.
+  /// </remarks>
+  TOAuth2ClientCredentialsProvider = class(TInterfacedObject, IAuthenticationProvider)
+  private
+    FTokenUrl: string;
+    FClientId: string;
+    FClientSecret: string;
+    FScope: string;
+    FCachedToken: string;
+    FExpiresAt: TDateTime;
+    FLock: TCriticalSection;
+    /// <summary>Fetches a new access token from the authorization server.</summary>
+    procedure RefreshToken;
+  public
+    /// <summary>Creates an OAuth2 Client Credentials provider.</summary>
+    /// <param name="ATokenUrl">The token endpoint URL (e.g. https://auth.example.com/oauth/token).</param>
+    /// <param name="AClientId">The client identifier issued by the authorization server.</param>
+    /// <param name="AClientSecret">The client secret issued by the authorization server.</param>
+    /// <param name="AScope">Optional space-separated list of requested scopes.</param>
+    constructor Create(const ATokenUrl, AClientId, AClientSecret: string;
+      const AScope: string = '');
+    destructor Destroy; override;
+    function GetHeaderValue: string;
   end;
 
 implementation
@@ -109,6 +145,107 @@ end;
 function TApiKeyAuthProvider.GetHeaderValue: string;
 begin
   Result := FValue;
+end;
+
+{ TOAuth2ClientCredentialsProvider }
+
+constructor TOAuth2ClientCredentialsProvider.Create(const ATokenUrl, AClientId, AClientSecret: string;
+  const AScope: string);
+begin
+  inherited Create;
+  FTokenUrl := ATokenUrl;
+  FClientId := AClientId;
+  FClientSecret := AClientSecret;
+  FScope := AScope;
+  FCachedToken := '';
+  FExpiresAt := 0;
+  FLock := TCriticalSection.Create;
+end;
+
+destructor TOAuth2ClientCredentialsProvider.Destroy;
+begin
+  FLock.Free;
+  inherited;
+end;
+
+procedure TOAuth2ClientCredentialsProvider.RefreshToken;
+var
+  HttpClient: THTTPClient;
+  Response: IHTTPResponse;
+  Body: TStringStream;
+  JsonStr: string;
+  TokenStart, TokenEnd: Integer;
+  ExpiresStart, ExpiresEnd: Integer;
+  ExpiresIn: Integer;
+  BodyContent: string;
+begin
+  HttpClient := THTTPClient.Create;
+  try
+    HttpClient.ContentType := 'application/x-www-form-urlencoded';
+
+    BodyContent := 'grant_type=client_credentials' +
+      '&client_id=' + TNetEncoding.URL.Encode(FClientId) +
+      '&client_secret=' + TNetEncoding.URL.Encode(FClientSecret);
+    if FScope <> '' then
+      BodyContent := BodyContent + '&scope=' + TNetEncoding.URL.Encode(FScope);
+
+    Body := TStringStream.Create(BodyContent, TEncoding.UTF8);
+    try
+      Response := HttpClient.Post(FTokenUrl, Body, nil,
+        [TNetHeader.Create('Content-Type', 'application/x-www-form-urlencoded')]) as IHTTPResponse;
+
+      if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
+        raise Exception.CreateFmt(
+          'OAuth2 token request failed (HTTP %d): %s',
+          [Response.StatusCode, Response.ContentAsString]);
+
+      // Lightweight JSON parsing (avoids dependency on Dext.Json for this low-level unit)
+      JsonStr := Response.ContentAsString;
+
+      // Extract access_token
+      TokenStart := Pos('"access_token"', JsonStr);
+      if TokenStart = 0 then
+        raise Exception.Create('OAuth2 response missing access_token');
+      TokenStart := Pos('"', JsonStr, TokenStart + Length('"access_token"'));
+      TokenStart := Pos('"', JsonStr, TokenStart + 1) + 1;
+      TokenEnd := Pos('"', JsonStr, TokenStart);
+      FCachedToken := Copy(JsonStr, TokenStart, TokenEnd - TokenStart);
+
+      // Extract expires_in (default 3600 if not present)
+      ExpiresIn := 3600;
+      ExpiresStart := Pos('"expires_in"', JsonStr);
+      if ExpiresStart > 0 then
+      begin
+        ExpiresStart := Pos(':', JsonStr, ExpiresStart) + 1;
+        // Skip whitespace
+        while (ExpiresStart <= Length(JsonStr)) and (JsonStr[ExpiresStart] = ' ') do
+          Inc(ExpiresStart);
+        ExpiresEnd := ExpiresStart;
+        while (ExpiresEnd <= Length(JsonStr)) and CharInSet(JsonStr[ExpiresEnd], ['0'..'9']) do
+          Inc(ExpiresEnd);
+        ExpiresIn := StrToIntDef(Copy(JsonStr, ExpiresStart, ExpiresEnd - ExpiresStart), 3600);
+      end;
+
+      // Set expiration with 30-second safety margin
+      FExpiresAt := IncSecond(Now, ExpiresIn - 30);
+    finally
+      Body.Free;
+    end;
+  finally
+    HttpClient.Free;
+  end;
+end;
+
+function TOAuth2ClientCredentialsProvider.GetHeaderValue: string;
+begin
+  FLock.Enter;
+  try
+    if (FCachedToken = '') or (Now >= FExpiresAt) then
+      RefreshToken;
+    Result := 'Bearer ' + FCachedToken;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 end.

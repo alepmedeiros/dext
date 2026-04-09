@@ -25,13 +25,16 @@ uses
 
 procedure RefreshProviderMetadata(AProvider: TEntityDataProvider);
 var
-  Parser: TEntityMetadataParser;
-  ParsedList: IList<TEntityClassMetadata>;
-  ParsedCollection: ICollection;
   FileName, Content: string;
   MD: TEntityClassMetadata;
+<<<<<<< HEAD
   LogPath: string;
   LogStrings: TStringList;
+=======
+  ParsedCollection: ICollection;
+  ParsedList: IList<TEntityClassMetadata>;
+  Parser: TEntityMetadataParser;
+>>>>>>> upstream/main
 begin
   if AProvider = nil then
     Exit;
@@ -54,6 +57,7 @@ begin
         if Assigned(GOnGetSourceContent) then
           Content := GOnGetSourceContent(FileName);
 
+<<<<<<< HEAD
         ParsedList := Parser.ParseUnit(FileName, Content);
         try
           LogStrings.Add(Format('  Result: Found %d classes', [ParsedList.Count]));
@@ -86,6 +90,16 @@ begin
     try
       TFile.AppendAllText(LogPath, LogStrings.Text);
     except
+=======
+      ParsedList := Parser.ParseUnit(FileName, Content);
+      for MD in ParsedList do
+      begin
+        AProvider.AddOrSetMetadata(MD);
+      end;
+
+      if Supports(ParsedList, ICollection, ParsedCollection) then
+        ParsedCollection.OwnsObjects := False;
+>>>>>>> upstream/main
     end;
   finally
     LogStrings.Free;

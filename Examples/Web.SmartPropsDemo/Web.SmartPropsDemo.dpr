@@ -82,6 +82,7 @@ begin
 
     App := TDextApplication.Create;
 
+
     // Configure Services
     App.Services.AddDbContext<TAppDbContext>(
       procedure(Options: TDbContextOptions)
@@ -95,6 +96,10 @@ begin
     
     // Seed database AFTER services are built
     SeedDatabase;
+
+    App.Builder
+      .UseHttpLogging
+      .UseDeveloperExceptionPage;
 
     // Endpoint: GET /products (Smart Property Query)
     App.Builder.MapGet('/products',

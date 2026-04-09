@@ -3,122 +3,100 @@
 Este documento serve como um índice mestre de todas as funcionalidades implementadas no Dext Framework. Ele deve ser usado como referência para auditorias de qualidade, documentação e cobertura de testes.
 
 > [!IMPORTANT]
-> Este índice foi gerado via "Raio-X" técnico nos fontes direto. Se uma feature está aqui, ela possui implementação validada no `Sources/`.
+> Este índice foi gerado via "Raio-X" técnico nos fontes direto. Todas as funcionalidades listadas abaixo possuem implementação validada nas pastas `Sources/`.
 
 ---
 
 ## 🧩 1. Dext Core Foundation (Sources\Core)
 
-Fundação de baixo nível e utilitários de alto desempenho.
+Fundação de baixo nível e utilitários de alto desempenho para o ecossistema Dext.
 
-- [x] **Dext.Core.Reflection**:
-  - [x] **Smart Properties**: Resolução recursiva de caminhos (ex: `User.Address.Street`).
-  - [x] **Metadata Engine**: Cache global de tipos (`TTypeMetadata`) e scanning de atributos.
-- [x] **Dext.DI (Dependency Injection)**:
-  - [x] **Hybrid Model**: Suporte a ARC (Interfaces) e Não-ARC (Classes) simultaneamente.
-  - [x] **Lifecycles**: Singleton, Transient e Scoped (Request-bound).
-- [x] **Dext.Json (High Performance)**:
-  - [x] **UTF-8 Engine**: Driver-based com suporte a buffers `IDataReader`.
-  - [x] **Automatic Casing**: Conversão nativa para PascalCase, camelCase e **snake_case**.
-- [x] **Dext.Configuration**:
-  - [x] **Hierarchical Config**: Chaves delimitadas estilo .NET (`Server:App:Port`).
-  - [x] **Multi-Provider**: Precedência garantida entre JSON, EnvVars e CLI.
-- [x] **Dext.Types.UUID**:
-  - [x] **RFC 9562 Compliance**: Suporte nativo a **UUID v7 (Time-ordered)**.
-  - [x] **Network Byte Order**: Armazenamento Big-Endian para interop direta com PostgreSQL.
-- [x] **Dext.Core.Activator**:
-  - [x] **Greedy Strategy**: Resolução "gulosa" de construtores otimizada para DI.
-  - [x] **Auto-Collections**: Instanciação automática de `TList\<T\>` para `IList\<T\>`.
+- **Dext.Core.Reflection**: Inclui o motor de **Smart Properties** para resolução recursiva de caminhos (ex: `User.Address.Street`) e o **Metadata Engine** com cache global de tipos e scanning de atributos de alta performance.
+- **Dext.DI (Dependency Injection)**: Modelo híbrido com suporte a ARC (Interfaces) e Não-ARC (Classes), ciclos de vida Singleton, Transient e Scoped, e suporte a **Auto-Collections** (instanciação automática de listas).
+- **Dext.Json (High Performance Engine)**: Driver-based (`DextJsonDataObjects` / `System.JSON`) com suporte a buffers `IDataReader`, **Automatic Casing** (Pascal, camel, snake_case) e **Utf8 Serializer** de baixa alocação.
+- **Dext.Configuration**: Sistema hierárquico estilo .NET com suporte a múltiplos provedores (JSON, YAML, EnvVars, CLI) e o **Options Pattern** para configuração tipada via `IOptions<T>`.
+- **Dext.Types & Semantics**: Suporte nativo a **UUID v7 (RFC 9562)** com armazenamento Big-Endian, **Nullable\<T\>**, Smart Enums e conversores de tipo baseados em RTTI.
+- **Dext.Core.Activator**: Motor de ativação com **Greedy Strategy** para resolução de construtores complexos.
+- **Dext.Threading & Async**: Implementação fluente de **Async/Await** via `TAsyncTask` e suporte a **CancellationToken** para cancelamento cooperativo.
+- **Dext.Core.Memory**: Gerenciamento de memória avançado com **Dext.Core.Span** (Zero-allocation) e `Dext.MM` para buffers temporários.
 
 ---
 
-## 🌐 2. Dext Web Framework (Interfaces & Hosting)
+## 📚 2. Dext Collections Library (Sources\Core)
 
-- **Status**: RC 1.0 (Curadoria concluída)
-- **Pipeline de Middlewares**: Arquitetura baseada em "Chain of Responsibility" (estilo .NET). Suporta middlewares funcionais (delegates) e baseados em classe com injeção de dependência via construtor.
+Biblioteca de coleções moderna otimizada para performance extrema e concorrência.
+
+- **Standard & Concurrent**: Implementações otimizadas de List, Dictionary, HashSet e versões thread-safe como `ConcurrentQueue` e `ConcurrentStack`.
+- **Frozen Collections**: Estruturas de dados imutáveis de alto desempenho otimizadas para cenários de leitura intensa (estilo .NET 8).
+- **Channels**: Primitivas de comunicação assíncrona estilo Go (Producer/Consumer) para construção de pipelines de dados.
+- **Aceleração de Hardware**: Suporte a **SIMD & Vectors** (AVX/SSE) para processamento matemático em lote e **Raw Collections** para redução de overhead do Garbage Collector.
+
+---
+
+## 🌐 3. Dext Web Framework (Sources\Web)
+
+Framework web modular baseado em pipeline de middlewares e arquitetura Controller/Minimal API.
+
 - **Minimal API & Bootstrapping**: Classe `TWebApplication` para inicialização fluente. Inclui carregamento automático de configurações (`appsettings.json`, `appsettings.yaml`, Environment Variables), registro de serviços e build do pipeline em uma única fachada.
-- **Roteamento Avançado**: Motor de rotas com suporte a parâmetros dinâmicos (ex: `{id}`), restrições de rota e versionamento nativo de API via cabeçalho, query ou path.
-- **Model Binding Inteligente**:
-  - Atributos para vinculação explícita: `[FromBody]`, `[FromQuery]`, `[FromRoute]`, `[FromHeader]`, `[FromServices]`.
-  - Suporte a **Hybrid Binding**: Um único record pode receber dados de múltiplas fontes HTTP simultaneamente.
-  - Otimização **Zero-Allocation**: Deserialização UTF-8 direta para recordes, minimizando o uso de memória em requisições de alta frequência.
-- **Hosting Foundation**:
-  - Abstrações de `IWebHost`, `IWebHostBuilder` e `IHttpContext`.
-  - Servidor padrão baseado em **Indy** (`TDextIndyWebServer`) com suporte a **OpenSSL** e **Taurus SSL**.
-  - Suporte a `IHostedService` para tarefas de background integradas ao ciclo de vida do servidor.
-  - Sincronização automática de schema (Auto-Migrations) durante o startup do host.
-- **Segurança & Identidade**: Abstração de `IClaimsPrincipal` integrada ao `IHttpContext.User` para suporte a autenticação JWT e baseada em cookies.
-- **Middleware Pipeline**: Logger, Compression (GZip/Brotli), Exception Handling (ProblemDetails), DeveloperExceptionPage, CORS e StartupLock.
-- **Rate Limiting**: Políticas de Fixed/Sliding Window, Token Bucket e Concurrency.
-- **Response Caching**: Suporte a In-Memory e **Redis**.
-- **API Documentation**: Geração automática de **OpenAPI / Swagger** com atributos ricos.
-- **Observability**: **Health Checks** com suporte a serviços externos e status detalhado.
-- **View Engines**: Suporte a **Web Stencils** para Server-Side Rendering (SSR).
-- **Real-time & Hubs**: 
-  - [x] **SSE (Server-Sent Events)**: Suporte nativo para streaming unidirecional em tempo real.
-  - [x] **Hubs Infrastructure**: Abstração inspirada no SignalR com `IHubContext` e `IHub`.
-  - [x] **Protocols**: Suporte a JSON para mensagens de hub.
-  - [ ] **WebSockets**: Suporte planejado (apenas interfaces e infraestrutura base no momento).
-- **Event Bus & Messaging**:
-  - [x] **Decoupled Events**: Sistema de Event Bus in-memory para comunicação entre camadas.
-  - [x] **Event Behaviors**: Suporte a interceptores e comportamentos customizados no processamento de eventos.
-  - [x] **DI Integration**: Registro e resolução automática de Event Handlers via Container DI.
-- **Advanced Hosting Adapters**:
-  - [x] **WebBroker Integration**: Permite rodar Dext em IIS (ISAPI), Apache (CGI) ou Standalone WebBroker.
-  - [x] **Delphi CrossSockets (DCS)**: Adaptador de ultra-alta performance para Linux/Windows (requer DCS de terceiros).
+- **Pipeline de Middlewares**: Arquitetura baseada em "Chain of Responsibility" suportando middlewares funcionais (delegates) e baseados em classe com injeção de dependência via construtor.
+- **Roteamento Avançado**: Motor de rotas com suporte a parâmetros dinâmicos (ex: `{id}`), restrições de rota e versionamento nativo de API via cabeçalho (`THeaderApiVersionReader`), query string (`TQueryStringApiVersionReader`), path (`TPathApiVersionReader`) e composição de múltiplas estratégias (`TCompositeApiVersionReader`).
+- **Model Binding Inteligente**: Suporte a **Hybrid Binding** e atributos `[FromBody]`, `[FromQuery]`, `[FromRoute]`, `[FromHeader]`, `[FromServices]`. Otimização **Zero-Allocation** com deserialização UTF-8 direta para recordes e classes.
+- **Hosting Foundation**: Abstrações de `IWebHost` e `IWebHostBuilder`. Servidor padrão baseado em **Indy** com suporte a **OpenSSL** e **Taurus SSL**. Inclui suporte a **IHostedService** para tarefas de background.
+- **Auto-Migrations**: Sincronização automática de schema durante o startup do servidor web.
+- **Segurança & Identidade**: Abstração de `IClaimsPrincipal` para suporte a autenticação JWT, Basic Auth e Cookies.
+- **Middleware Pipeline Nativo**: Logger, Compression (GZip/Brotli), Exception Handling (**ProblemDetails**), **DeveloperExceptionPage**, CORS e StartupLock.
+- **Rate Limiting**: Políticas de Fixed/Sliding Window, Token Bucket e Concurrency Limiter.
+- **Caching & Observability**: Suporte a In-Memory/Redis, **Health Checks** detalhados e geração automática de **OpenAPI / Swagger**.
+- **Real-time & Hubs**: Suporte nativo a **SSE (Server-Sent Events)** e infraestrutura de Hubs inspirada no SignalR com `IHubContext` e protocolos JSON.
+- **Object Lifecycle Management**: Tracking robusto de objetos criados por Model Binding, com integração ao **ChangeTracker** do ORM para transferência automática de ownership (evita memory leaks em entidades persistidas).
 
 ---
 
-## 📊 3. Dext ORM (Entity Framework style)
+## 📊 4. Dext ORM & Entity Framework (Sources\Data)
 
-Persistência poliglota e produtividade.
+Persistência poliglota com foco em produtividade Code-First e performance.
 
-- [x] **Core Persistence**: `TDbContext` (Unit of Work) e `DbSet<T>` (Repository).
-- [x] **Change Tracking**: Monitoramento automático de estado (`Added`, `Modified`, `Deleted`, `Unchanged`).
-- [x] **Identity Map**: Garantia de unicidade de instâncias por sessão.
-- [x] **Fluent API & Mapping**: Configuração via `OnModelCreating` e Atributos ricos (`[Table]`, `[Column]`, `[Key]`).
-- [x] **Relacionamentos & Loading**: One-to-One, One-to-Many, Many-to-Many, **Lazy Loading** e **Eager Loading** (`Include`/`ThenInclude`).
-- **Query Engine (LINQ-like)**: Query fluída com Projeção (`Select`), Paging, Aggregates e SQL Cache.
-- [x] **Performance**: **Streaming Iterators** (Flyweight pattern) para leitura de grandes volumes com baixo GC.
-- [x] **Dataset & UI**: **EntityDataSet** especializado para mapear listas de objetos na VCL/FMX, com suporte nativo a **Design-Time Data Preview** em tempo real sem precisar compilar, Sorting e Filtering inline.
-- [x] **Type System**: Suporte nativo a **Smart Properties** (`Prop\<T\>`), **Nullable\<T\>** e **UUID v7 (RFC 9562)**.
-- [x] **JSON Support**: Mapeamento transparente de colunas **JSON/JSONB**.
-- [x] **Migrations System**: Evolução Code-First automatizada com snapshots cronológicos.
-- [x] **Poliglota (Dialetos)**: PostgreSQL, SQL Server, MySQL, SQLite, Oracle e Firebird.
-- [x] **Multi-Tenancy**: Filtro global de tenant isolado automaticamente (`ITenantAware`).
-- [x] **Data Normalization**: Conversores de tipo para GUID, Enums (String/Int) e Arrays.
+- **Core Persistence**: Implementação de `TDbContext` (Unit of Work) e `DbSet<T>` (Repository) com **Change Tracking** automático e **Identity Map** para unicidade de instâncias.
+- **Query Engine (LINQ-like)**: Query fluída com suporte a Projeção (**Select**), Paging, Aggregates e **SQL Cache** para reaproveitamento de comandos SQL gerados.
+- **Specification Pattern**: Integração com `Dext.Specifications` para regras de negócio desacopladas e reutilizáveis.
+- **Relacionamentos & Loading**: Suporte a One-to-One, One-to-Many e Many-to-Many com estratégias de **Lazy Loading** (via Proxy) e **Eager Loading** (`Include`/`ThenInclude`).
+- **Migrations System**: Evolução Code-First automatizada com snapshots cronológicos do modelo de dados.
+- **Poliglota (Dialetos)**: Suporte nativo a PostgreSQL, SQL Server, MySQL, SQLite, Oracle e Firebird.
+- **EntityDataSet**: Componente especializado para VCL/FMX com suporte a **Design-Time Data Preview**, Sorting e Filtering inline.
+- **Performance & Normalization**: **Streaming Iterators** (Flyweight pattern) para grandes volumes e conversores automáticos para GUID, Enums, JSONB e UUID v7.
 
 ---
 
-## 🧪 4. Dext Testing Framework
+## 🔌 5. Dext Net (HTTP Client & Authentication) (Sources\Net)
 
-Qualidade garantida com ferramentas nativas.
+Cliente HTTP de alto desempenho com suporte a autenticação plugável.
 
-- [x] **Test Runner**: CLI e Host interno de alta velocidade.
-- [x] **Assertions**: Fluent Assertions para legibilidade.
-- [x] **Mocking Framework**: Criação dinâmica de Mocks via Proxy.
-- [x] **IDE Integration**: Integração nativa com **TestInsight**.
-- [x] **Reporting**: Relatórios HTML e JSON para CI/CD.
-
----
-
-## 📦 5. Dext Networking & Connectivity
-
-- [x] **Dext.Net.RestClient**: Cliente HTTP moderno e fluente com suporte nativo a JSON e tratamento de erros.
-- [x] **Connection Pooling**: Gerenciamento de conexões de rede para alto rendimento e reuso de sockets.
-- [x] **Dext.Net.Authentication**: Suporte extensível a autenticação para consumo de APIs (Bearer, Basic, Custom).
+- **REST Client (TRestClient)**: API fluente com Connection Pooling, retry automático com backoff exponencial e suporte a Async/Await.
+- **Response Headers**: Acesso completo aos headers da resposta HTTP via `GetHeader` (case-insensitive) e `GetHeaders` (TNetHeaders array).
+- **Authentication Providers**: Bearer Token (JWT), Basic Auth (RFC 7617), API Key e **OAuth 2.0 Client Credentials** (RFC 6749 §4.4) com token caching automático, refresh thread-safe e margem de segurança de 30s.
+- **HTTP Request Builder**: Suporte a `THttpRequestInfo` para integração com parsers `.http`.
 
 ---
 
-## 🖥️ 6. Dext UI Framework (VCL/FMX)
+## 🧪 6. Dext Testing Framework (Sources\Testing)
 
-- [x] **MVU Architecture**: Implementação do padrão *Model-View-Update* para interfaces reativas e previsíveis.
-- [x] **UI Navigator**: Sistema de navegação centralizado com suporte a **Middlewares** e **Adaptações** para diferentes plataformas.
-- [x] **State Management**: Gerenciamento de estado de UI desacoplado e imutável.
-- [x] **UI Data Binding**: Vinculação de dados poderosa entre ViewModels/State e componentes visuais.
+Infraestrutura de testes integrada para garantia de qualidade.
+
+- **Test Runner & Dashboard**: Executor CLI de alta velocidade e host visual interno para monitoramento de execução.
+- **Assertions & Mocking**: API fluente de asserções rica e framework de **Mocking dinâmico** via Proxies com interceptores de chamada.
+- **Integração IDE**: Suporte nativo ao **TestInsight** e geração de relatórios em HTML, JSON e XML (JUnit).
+
+---
+
+## 🖥️ 7. Outras Tecnologias & Design-Time (Sources\UI, Sources\Design)
+
+- **Dext UI Framework**: Arquitetura **MVU** reativa para VCL/FMX, com Navigator (baseado em rotas), State Management desacoplado e Binding potente.
+- **Interception Engine**: Motor de proxy para intercepção de métodos, base para Mocks e recursos de AOP.
+- **Design-Time Experts**: Visualização de dados real-time no IDE Grid (Data Preview) e editores de propriedades especializados para metadados.
+- **Dext.Web.DataApi**: Motor de geração dinâmica de endpoints CRUD baseados no DbContext.
 
 ---
 
 ---
 
-*Dext Framework - Index updated after full Sources sweep on April 08, 2026.*
+*Dext Framework - Exhaustive Technical Map & Features Index. (Revision: April 08, 2026).*

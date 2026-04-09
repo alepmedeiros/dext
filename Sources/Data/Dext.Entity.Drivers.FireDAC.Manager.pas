@@ -133,32 +133,37 @@ end;
 constructor TDextFireDACManager.Create;
 begin
   FManager := TFDManager(FireDAC.Comp.Client.FDManager);
+  FManager.SilentMode := True;
+  FManager.Active := True;
   FDefinitions := TCollections.CreateDictionary<string, string>;
+  FCriticalSection := TCriticalSection.Create;
 end;
 
 destructor TDextFireDACManager.Destroy;
 begin
+  FCriticalSection.Free;
   FDefinitions := nil;
   inherited;
 end;
 
 procedure TDextFireDACManager.EnsureActive;
 begin
-  if not FManager.Active then
-    FManager.Open;
+  FCriticalSection.Enter;
+  try
+    if not FManager.Active then
+      FManager.Open;
+  finally
+    FCriticalSection.Leave;
+  end;
 end;
 
 class function TDextFireDACManager.Instance: TDextFireDACManager;
 begin
   if FInstance = nil then
   begin
-    FCriticalSection.Enter;
-    try
-      if FInstance = nil then
-        FInstance := TDextFireDACManager.Create;
-    finally
-      FCriticalSection.Leave;
-    end;
+    // Double-checked locking using a global critical section would be ideal, 
+    // but here we use the existing pattern or instance-level lock if already created.
+    FInstance := TDextFireDACManager.Create;
   end;
   Result := FInstance;
 end;
@@ -167,54 +172,47 @@ function TDextFireDACManager.RegisterConnectionDef(const ADriverName: string;
   const AParams: TStrings; APoolMax: Integer): string;
 var
   HashKey: string;
-  DefName: string;
 begin
-  // Create a unique key based on params to avoid duplicating pools for same config
-  // Use a canonical representation of params
-  AParams.Delimiter := ';';
-  HashKey := ADriverName + ';' + AParams.DelimitedText;
-  
-  FCriticalSection.Enter;
-  try
-    // Return existing definition if matches
-    if FDefinitions.TryGetValue(HashKey, DefName) then
-    begin
-      if FManager.IsConnectionDef(DefName) then
-        Exit(DefName);
+    // Create a unique key based on params
+    var SortedList := TStringList.Create;
+    try
+      SortedList.Sorted := True;
+      SortedList.AddStrings(AParams);
+      HashKey := ADriverName + ';' + SortedList.DelimitedText;
+    finally
+      SortedList.Free;
     end;
-      
-    // Create new Definition name
-    DefName := 'DextPool_' + IntToHex(HashKey.GetHashCode, 8);
     
-    // Register in FireDAC using the robust AddConnectionDef method
-    if not FManager.IsConnectionDef(DefName) then
-    begin
-      FManager.AddConnectionDef(DefName, ADriverName, AParams);
-      
-      // Configure pooling params explicitly if they weren't in AParams
-      var Def := FManager.ConnectionDefs.FindConnectionDef(DefName);
-      if Def <> nil then
+    FCriticalSection.Enter;
+    try
+      // Check cache first (thread-safe dictionary access)
+      if FDefinitions.TryGetValue(HashKey, Result) then
+        Exit;
+
+      Result := 'DextPool_' + IntToHex(HashKey.GetHashCode, 8);
+          
+      if not FManager.IsConnectionDef(Result) then
       begin
-        Def.Params.Pooled := True;
-        Def.Params.PoolMaximumItems := APoolMax;
-        Def.Params.PoolCleanupTimeout := 30000; // 30s
-        Def.Params.PoolExpireTimeout := 60000; // 60s
+        FManager.AddConnectionDef(Result, ADriverName, AParams);
         
-        // Ensure wait cursor is set to none for server apps
-        Def.Params.MonitorBy := mbNone;
+        var Def := FManager.ConnectionDefs.FindConnectionDef(Result);
+        if Def <> nil then
+        begin
+          Def.Params.Pooled := True;
+          Def.Params.PoolMaximumItems := APoolMax;
+          
+          // Critical: Ensure wait cursor is none and pooling stability is high
+          Def.Params.MonitorBy := mbNone;
+        end;
       end;
-    end;
-    
-    // FireDAC pooling initialization
-    EnsureActive;
-    
-    if not FDefinitions.ContainsKey(HashKey) then
-      FDefinitions.Add(HashKey, DefName);
       
-    Result := DefName;
-  finally
-    FCriticalSection.Leave;
-  end;
+      FDefinitions.Add(HashKey, Result);
+      
+      if not FManager.Active then
+        FManager.Open;
+    finally
+      FCriticalSection.Leave;
+    end;
 end;
 
 procedure TDextFireDACManager.ApplyResourceOptions(AConnection: TFDConnection; AOptimizations: TFireDACOptimizations);

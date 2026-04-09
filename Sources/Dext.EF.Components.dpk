@@ -39,7 +39,6 @@ requires
   Dext.EF.Core;
 
 contains
-  Dext.Entity.DataSet in 'Data\Dext.Entity.DataSet.pas',
   Dext.Entity.DataProvider in 'Data\Dext.Entity.DataProvider.pas';
 
 end.

@@ -55,8 +55,34 @@ type
   end;
 
   /// <summary>
-  ///   Combines multiple readers (e.g. check Header, then QueryString).
+  ///   Version reader via URL path prefix (e.g. /v1/api/users extracts "1").
+  ///   Examines the first segment of the request path for a version prefix.
   /// </summary>
+<<<<<<< HEAD
+=======
+  /// <remarks>
+  ///   The default prefix is "v", so paths like /v1/..., /v2.1/... are recognized.
+  ///   Only the first path segment is examined to avoid false positives with
+  ///   segments deeper in the URL (e.g. /api/v1/... would NOT match by default).
+  ///   Use a TCompositeApiVersionReader to combine with other readers.
+  /// </remarks>
+  TPathApiVersionReader = class(TInterfacedObject, IApiVersionReader)
+  private
+    FPrefix: string;
+  public
+    /// <summary>Creates a path version reader with the specified prefix (default: "v").</summary>
+    /// <param name="APrefix">
+    ///   The case-insensitive prefix that identifies a version segment (e.g. "v" matches "v1", "v2.1").
+    /// </param>
+    constructor Create(const APrefix: string = 'v');
+    function Read(const Context: IHttpContext): string;
+  end;
+
+  /// <summary>
+  ///   Composite reader that attempts to extract the version from multiple sources in sequence.
+  ///   Returns the first non-empty result found.
+  /// </summary>
+>>>>>>> upstream/main
   TCompositeApiVersionReader = class(TInterfacedObject, IApiVersionReader)
   private
     FReaders: TArray<IApiVersionReader>;
@@ -95,6 +121,42 @@ begin
     Result := Context.Request.Headers[FHeaderName]
   else
     Result := '';
+end;
+
+{ TPathApiVersionReader }
+
+constructor TPathApiVersionReader.Create(const APrefix: string);
+begin
+  inherited Create;
+  FPrefix := APrefix;
+end;
+
+function TPathApiVersionReader.Read(const Context: IHttpContext): string;
+var
+  Path, Segment: string;
+  SlashPos: Integer;
+begin
+  Result := '';
+  Path := Context.Request.Path;
+
+  // Strip leading slash to get the first segment
+  if (Path <> '') and (Path[1] = '/') then
+    Path := Copy(Path, 2, Length(Path) - 1);
+
+  if Path = '' then
+    Exit;
+
+  // Extract first segment (up to the next slash or end of string)
+  SlashPos := Pos('/', Path);
+  if SlashPos > 0 then
+    Segment := Copy(Path, 1, SlashPos - 1)
+  else
+    Segment := Path;
+
+  // Check if the segment starts with the configured prefix (case-insensitive)
+  if (Length(Segment) > Length(FPrefix)) and
+     SameText(Copy(Segment, 1, Length(FPrefix)), FPrefix) then
+    Result := Copy(Segment, Length(FPrefix) + 1, Length(Segment) - Length(FPrefix));
 end;
 
 { TCompositeApiVersionReader }

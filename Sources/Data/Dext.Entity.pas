@@ -428,117 +428,115 @@ end;
 { TPersistence }
 
 class procedure TPersistence.AddDbContext<T>(Services: IServiceCollection; Config: TProc<TDbContextOptions>);
+var
+  TemplateOptions: TDbContextOptions;
 begin
-  Services.AddScoped(
-    TServiceType.FromClass(T),
-    T,
-    function(Provider: IServiceProvider): TObject
-    begin
-      var Options := TDbContextOptions.Create;
-      try
-        // Apply user configuration
-        if Assigned(Config) then
-          Config(Options);
+  // 1. Process configuration ONCE during registration to capture stable values
+  TemplateOptions := TDbContextOptions.Create;
+  try
+    if Assigned(Config) then
+      Config(TemplateOptions);
+      
+    // 2. Capture stable values into local variables for the closure
+    var DriverName := TemplateOptions.DriverName;
+    var ConnectionString := TemplateOptions.ConnectionString;
+    var ConnectionDefName := TemplateOptions.ConnectionDefName;
+    var ConnectionDefString := TemplateOptions.ConnectionDefString;
+    var Pooling := TemplateOptions.Pooling;
+    var PoolMax := TemplateOptions.PoolMax;
+    var Optimizations := TemplateOptions.Optimizations;
+    var DialectOverride := TemplateOptions.Dialect;
+    var NamingStrategy := TemplateOptions.BuildNamingStrategy;
+    
+    // Convert dictionary to local copy for capture (capturing strings for automatic lifecycle)
+    var ParamsText: string;
+    var SL := TStringList.Create;
+    try
+      for var Pair in TemplateOptions.Params do
+        SL.Values[Pair.Key] := Pair.Value;
+      ParamsText := SL.Text;
+    finally
+      SL.Free;
+    end;
 
-        // 1. Connection Creation (Pooled)
-        var Connection: IDbConnection;
-        
-        if Options.CustomConnection <> nil then
-        begin
-          Connection := Options.CustomConnection;
-        end
-        else
-        begin
-          // FireDAC Creation
-          var FDConn := TFDConnection.Create(nil);
-          
-          if Options.ConnectionDefString <> '' then
+    Services.AddScoped(
+      TServiceType.FromClass(T),
+      T,
+      function(Provider: IServiceProvider): TObject
+      var
+        Connection: IDbConnection;
+        FDConn: TFDConnection;
+        Dialect: ISQLDialect;
+        DetectedDialect: TDatabaseDialect;
+      begin
+        // Factory execution: use captured values ONLY (avoids EInvalidPointer in multi-threaded closures)
+        FDConn := TFDConnection.Create(nil);
+        try
+          if ConnectionDefString <> '' then
           begin
-            var DefName := Options.ConnectionDefName;
-            if DefName = '' then DefName := 'DextMemoryDef_' + IntToHex(Options.ConnectionDefString.GetHashCode, 8);
-            TDextFireDACManager.Instance.RegisterConnectionDefFromString(DefName, Options.ConnectionDefString);
+            var DefName := ConnectionDefName;
+            if DefName = '' then DefName := 'DextMemoryDef_' + IntToHex(ConnectionDefString.GetHashCode, 8);
+            TDextFireDACManager.Instance.RegisterConnectionDefFromString(DefName, ConnectionDefString);
             FDConn.ConnectionDefName := DefName;
           end
-          else if Options.ConnectionDefName <> '' then
+          else if ConnectionDefName <> '' then
           begin
-            FDConn.ConnectionDefName := Options.ConnectionDefName;
+            FDConn.ConnectionDefName := ConnectionDefName;
           end
-          else if Options.Pooling then
+          else if Pooling then
           begin
-             var Params := TStringList.Create;
+             var LocalParams := TStringList.Create;
              try
-               for var Pair in Options.Params do
-                 Params.Values[Pair.Key] := Pair.Value;
-                 
-               // Use Manager to register/get Def
+               LocalParams.Text := ParamsText;
                var DefName := TDextFireDACManager.Instance.RegisterConnectionDef(
-                 Options.DriverName, 
-                 Params, 
-                 Options.PoolMax
+                 DriverName, 
+                 LocalParams, 
+                 PoolMax
                );
-               
-                FDConn.ConnectionDefName := DefName;
-                
-                // Apply performance and resource options
-                // Apply performance and resource options
-                TDextFireDACManager.Instance.ApplyResourceOptions(FDConn, Options.Optimizations);
-              finally
-                Params.Free;
-              end;
+               FDConn.ConnectionDefName := DefName;
+             finally
+               LocalParams.Free;
+             end;
+             TDextFireDACManager.Instance.ApplyResourceOptions(FDConn, Optimizations);
           end
           else
           begin
-            if Options.DriverName <> '' then
-              FDConn.DriverName := Options.DriverName;
+            if DriverName <> '' then
+              FDConn.DriverName := DriverName;
               
-            if Options.ConnectionString <> '' then
-              FDConn.ConnectionString := Options.ConnectionString;
+            if ConnectionString <> '' then
+              FDConn.ConnectionString := ConnectionString;
               
-            for var Pair in Options.Params do
-               FDConn.Params.Values[Pair.Key] := Pair.Value;
-
-            // Apply performance and resource options
-            // Apply performance and resource options
-            TDextFireDACManager.Instance.ApplyResourceOptions(FDConn, Options.Optimizations);
+            FDConn.Params.Text := ParamsText;
+            TDextFireDACManager.Instance.ApplyResourceOptions(FDConn, Optimizations);
           end;
           
-          try
-            // Ensure unique name for components created in threads (request scoped)
-            // to avoid global name conflicts in FireDAC manager
-            FDConn.SetUniqueName;
-            
-            FDConn.Open; 
-          except
-             FDConn.Free;
-             raise;
-          end;
-
-          Connection := TFireDACConnection.Create(FDConn, True); // Owns FDConn
+          FDConn.Open; 
+        except
+           FDConn.Free;
+           raise;
         end;
 
-        // 2. Dialect Resolution
-        var Dialect := Options.Dialect;
+        Connection := TFireDACConnection.Create(FDConn, True); // Owns FDConn
+
+        // Dialect Resolution
+        Dialect := DialectOverride;
         if Dialect = nil then
         begin
-          var DetectedDialect := TDialectFactory.DetectDialect(Options.DriverName);
+          DetectedDialect := TDialectFactory.DetectDialect(DriverName);
           if DetectedDialect <> ddUnknown then
              Dialect := TDialectFactory.CreateDialect(DetectedDialect)
           else
              Dialect := TSQLiteDialect.Create;
         end;
 
-        // 3. Create Context
-        // TEMP FIX: pass naming strategy from options (was hardcoded nil — bug reported to author)
-        var Ctx := TDbContextClass(T).Create(Connection, Dialect, Options.BuildNamingStrategy);
-        Result := Ctx;
-        
-      except
-        Options.Free;
-        raise;
-      end;
-      Options.Free;
-    end
-  );
+        // Create Context instance
+        Result := TDbContextClass(T).Create(Connection, Dialect, NamingStrategy);
+      end
+    );
+  finally
+    TemplateOptions.Free;
+  end;
 end;
 
 

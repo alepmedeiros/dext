@@ -62,7 +62,15 @@ uses
     function GetStatusText: string;
     function GetContentStream: TStream;
     function GetContentString: string;
+<<<<<<< HEAD
+=======
+    /// <summary>Gets the value of a specific response header (case-insensitive lookup).</summary>
+    /// <param name="AName">Header name (e.g. "Content-Type", "X-Request-Id").</param>
+    /// <returns>The header value, or empty string if not found.</returns>
+>>>>>>> upstream/main
     function GetHeader(const AName: string): string;
+    /// <summary>Returns all response headers as a TNetHeaders array.</summary>
+    function GetHeaders: TNetHeaders;
     
     property StatusCode: Integer read GetStatusCode;
     property StatusText: string read GetStatusText;
@@ -86,14 +94,17 @@ uses
     FStatusCode: Integer;
     FStatusText: string;
     FContentStream: TMemoryStream;
+    FHeaders: TNetHeaders;
   protected
     function GetStatusCode: Integer;
     function GetStatusText: string;
     function GetContentStream: TStream;
     function GetContentString: string;
     function GetHeader(const AName: string): string;
+    function GetHeaders: TNetHeaders;
   public
-    constructor Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream);
+    constructor Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream;
+      const AHeaders: TNetHeaders = nil);
     destructor Destroy; override;
   end;
 
@@ -103,7 +114,8 @@ uses
   protected
     function GetData: T;
   public
-    constructor Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream; AData: T);
+    constructor Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream;
+      AData: T; const AHeaders: TNetHeaders = nil);
     destructor Destroy; override;
   end;
 
@@ -171,6 +183,16 @@ uses
     function BearerToken(const AToken: string): TRestClient;
     function BasicAuth(const AUsername, APassword: string): TRestClient;
     function ApiKey(const AName, AValue: string; AInHeader: Boolean = True): TRestClient;
+    /// <summary>
+    ///   Configures OAuth 2.0 Client Credentials (M2M) authentication.
+    ///   The token is automatically fetched and cached, refreshing when expired.
+    /// </summary>
+    /// <param name="ATokenUrl">The authorization server's token endpoint.</param>
+    /// <param name="AClientId">The client identifier.</param>
+    /// <param name="AClientSecret">The client secret.</param>
+    /// <param name="AScope">Optional space-separated list of requested scopes.</param>
+    function OAuth2ClientCredentials(const ATokenUrl, AClientId, AClientSecret: string;
+      const AScope: string = ''): TRestClient;
     function Auth(AProvider: IAuthenticationProvider): TRestClient;
     function Header(const AName, AValue: string): TRestClient;
     function ContentType(AValue: TDextContentType): TRestClient;
@@ -224,11 +246,13 @@ end;
 
 { TRestResponse }
 
-constructor TRestResponse.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream);
+constructor TRestResponse.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream;
+  const AHeaders: TNetHeaders);
 begin
   inherited Create;
   FStatusCode := AStatusCode;
   FStatusText := AStatusText;
+  FHeaders := AHeaders;
   FContentStream := TMemoryStream.Create;
   if Assigned(AStream) then
   begin
@@ -261,8 +285,18 @@ begin
 end;
 
 function TRestResponse.GetHeader(const AName: string): string;
+var
+  I: Integer;
 begin
+  for I := 0 to High(FHeaders) do
+    if SameText(FHeaders[I].Name, AName) then
+      Exit(FHeaders[I].Value);
   Result := '';
+end;
+
+function TRestResponse.GetHeaders: TNetHeaders;
+begin
+  Result := FHeaders;
 end;
 
 function TRestResponse.GetStatusCode: Integer;
@@ -277,9 +311,10 @@ end;
 
 { TRestResponse<T> }
 
-constructor TRestResponse<T>.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream; AData: T);
+constructor TRestResponse<T>.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream;
+  AData: T; const AHeaders: TNetHeaders);
 begin
-  inherited Create(AStatusCode, AStatusText, AStream);
+  inherited Create(AStatusCode, AStatusText, AStream, AHeaders);
   FData := AData;
 end;
 
@@ -450,7 +485,7 @@ begin
 
               try
                 Response := HttpClient.Execute(MethodStr, Url, ABody, nil, Headers) as IHTTPResponse;
-                Result := TRestResponse.Create(Response.StatusCode, Response.StatusText, Response.ContentStream);
+                Result := TRestResponse.Create(Response.StatusCode, Response.StatusText, Response.ContentStream, Response.GetHeaders);
                 Exit;
               except
                 on E: Exception do
@@ -517,6 +552,13 @@ function TRestClient.ApiKey(const AName, AValue: string; AInHeader: Boolean): TR
 begin
   if AInHeader then
     FInstance.Auth(TApiKeyAuthProvider.Create(AName, AValue));
+  Result := Self;
+end;
+
+function TRestClient.OAuth2ClientCredentials(const ATokenUrl, AClientId, AClientSecret: string;
+  const AScope: string): TRestClient;
+begin
+  FInstance.Auth(TOAuth2ClientCredentialsProvider.Create(ATokenUrl, AClientId, AClientSecret, AScope));
   Result := Self;
 end;
 
@@ -592,7 +634,7 @@ begin
         function(Base: IRestResponse): IRestResponse<TRes>
         begin
           Result := TRestResponse<TRes>.Create(Base.StatusCode, Base.StatusText, Base.ContentStream,
-            TDextJson.Deserialize<TRes>(Base.ContentString));
+            TDextJson.Deserialize<TRes>(Base.ContentString), Base.GetHeaders);
         end
       )
   );
@@ -620,7 +662,7 @@ begin
         function(Base: IRestResponse): IRestResponse<TRes>
         begin
           Result := TRestResponse<TRes>.Create(Base.StatusCode, Base.StatusText, Base.ContentStream,
-            TDextJson.Deserialize<TRes>(Base.ContentString));
+            TDextJson.Deserialize<TRes>(Base.ContentString), Base.GetHeaders);
         end
       )
   );

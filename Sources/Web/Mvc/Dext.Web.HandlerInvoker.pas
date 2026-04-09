@@ -116,8 +116,11 @@ type
 implementation
 
 uses
-  Dext.Json,
-  Dext.Validation;
+  Dext.Json
+  {$IFDEF DEXT_ENABLE_ENTITY}
+  ,Dext.Entity.Attributes
+  {$ENDIF}
+  ,Dext.Validation;
 
 { THandlerInvoker }
 
@@ -132,9 +135,14 @@ end;
 procedure THandlerInvoker.CleanupBoundObjects;
 var
   I: Integer;
+  Obj: TObject;
 begin
   for I := 0 to High(FBoundObjects) do
-    FBoundObjects[I].Free;
+  begin
+    Obj := FBoundObjects[I];
+    if Obj <> nil then
+       Obj.Free;
+  end;
   FBoundObjects := nil;
 end;
 
@@ -217,7 +225,8 @@ begin
        else
          Result := TModelBinderHelper.BindBody<T>(FModelBinder, FContext);
        
-       // Track the created object for cleanup (except Entities, which Context owns)
+       // Track the created object for cleanup.
+       // Entities ([Table]) are NOT tracked because the DbContext assumes ownership.
        if TValue.From<T>(Result).AsObject <> nil then
        begin
          var IsEntity := False;
@@ -235,12 +244,7 @@ begin
          finally
            CtxRtti.Free;
          end;
-         
-         // TODO: This ownership transfer is fragile. It assumes the developer will ALWAYS
-         // add the entity to the DbContext, which then assumes memory ownership.
-         // If they don't, we will leak memory. We need a more robust tracking mechanism,
-         // perhaps checking if the entity was actually persisted (e.g., checking if an ID was filled)
-         // or using a dedicated tracking wrapper/interface instead of purely relying on [Table].
+
          if not IsEntity then
          begin
            SetLength(FBoundObjects, Length(FBoundObjects) + 1);
@@ -492,7 +496,7 @@ begin
     end;
   end;
 
-  // ? VALIDATION: Validate all record parameters
+  // VALIDATION: Validate all record parameters
   for I := 0 to High(Args) do
   begin
     if not Validate(Args[I]) then Exit(False);
@@ -501,21 +505,21 @@ begin
   try
     ResultValue := AMethod.Invoke(AInstance, Args);
 
-    // ? LIDAR COM PROCEDURES (SEM RETORNO)
+    // LIDAR COM PROCEDURES (SEM RETORNO)
     if ResultValue.IsEmpty then
     begin
       // Não faz nada - o controller já setou a resposta via Ctx.Response
     end
     else
     begin
-      // ? VERIFICAR SE RETORNOU IResult (APENAS SE NÃO ESTIVER VAZIO)
+      // VERIFICAR SE RETORNOU IResult (APENAS SE NÃO ESTIVER VAZIO)
       if ResultValue.TryAsType<IResult>(ResIntf) then
       begin
         ResIntf.Execute(FContext);
       end
       else
       begin
-        // ? AUTO-SERIALIZATION
+        // AUTO-SERIALIZATION
         FContext.Response.Json(TDextJson.Serialize(ResultValue));
       end;
     end;

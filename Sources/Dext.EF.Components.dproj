@@ -133,7 +133,6 @@
         <DCCReference Include="FireDACCommonDriver.dcp"/>
         <DCCReference Include="Dext.Core.dcp"/>
         <DCCReference Include="Dext.EF.Core.dcp"/>
-        <DCCReference Include="Data\Dext.Entity.DataSet.pas"/>
         <DCCReference Include="Data\Dext.Entity.DataProvider.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

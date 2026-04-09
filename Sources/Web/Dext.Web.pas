@@ -502,6 +502,7 @@ type
   IApiVersionReader = Dext.Web.Versioning.IApiVersionReader;
   TQueryStringApiVersionReader = Dext.Web.Versioning.TQueryStringApiVersionReader;
   THeaderApiVersionReader = Dext.Web.Versioning.THeaderApiVersionReader;
+  TPathApiVersionReader = Dext.Web.Versioning.TPathApiVersionReader;
   TCompositeApiVersionReader = Dext.Web.Versioning.TCompositeApiVersionReader;
 
   // Dext.Web.Interfaces
