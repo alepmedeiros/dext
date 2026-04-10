@@ -56,6 +56,7 @@ uses
   System.Generics.Collections,
   Dext.MCP.Protocol,
   Dext.MCP.Tools,
+  Dext.DI.Interfaces,
   Dext.Web.Interfaces,
   Dext.WebHost;
 
@@ -159,6 +160,7 @@ type
     // ---- HTTP route handlers ----
     procedure RouteSSE(Ctx: IHttpContext);
     procedure RouteMessage(Ctx: IHttpContext);
+    procedure RouteToolCallSync(Ctx: IHttpContext);
 
     // ---- Stdio loop ----
     procedure RunStdioLoop;
@@ -587,38 +589,42 @@ var
   KeepAlive: Integer;
 begin
   Session := FSessions.CreateSession;
+  Ctx.Response.BeginStreamingResponse;
+  try
+    ConfigureSSEResponse(Ctx.Response);
 
-  ConfigureSSEResponse(Ctx.Response);
+    // First event: tell the client where to POST messages
+    WriteSSEEvent(Ctx.Response, 'endpoint',
+      '/message?sessionId=' + Session.Id);
 
-  // First event: tell the client where to POST messages
-  WriteSSEEvent(Ctx.Response, 'endpoint',
-    '/message?sessionId=' + Session.Id);
+    // Envia cabecalhos HTTP + primeiro evento (Indy: chunked; antes o cliente bloqueava aqui)
+    Ctx.Response.Flush;
 
-  KeepAlive := 0;
+    KeepAlive := 0;
 
-  // SSE loop — stays open until client disconnects or server shuts down
-  while (not Session.IsClosed) and (not FSessions.IsShuttingDown) do
-  begin
-    // Drain the message queue
-    while Session.HasMessages and not FSessions.IsShuttingDown do
+    // SSE loop — stays open until client disconnects or server shuts down
+    while (not Session.IsClosed) and (not FSessions.IsShuttingDown) do
     begin
-      Msg := Session.Dequeue;
-      if Msg <> '' then
-        WriteSSEEvent(Ctx.Response, 'message', Msg);
-    end;
+      while Session.HasMessages and not FSessions.IsShuttingDown do
+      begin
+        Msg := Session.Dequeue;
+        if Msg <> '' then
+          WriteSSEEvent(Ctx.Response, 'message', Msg);
+      end;
 
-    // Keep-alive comment every ~15 s (150 × 100 ms)
-    Inc(KeepAlive);
-    if KeepAlive >= 150 then
-    begin
-      WriteSSEComment(Ctx.Response, 'ping');
-      KeepAlive := 0;
-    end;
+      Inc(KeepAlive);
+      if KeepAlive >= 150 then
+      begin
+        WriteSSEComment(Ctx.Response, 'ping');
+        KeepAlive := 0;
+      end;
 
-    Sleep(100);
+      Sleep(100);
+    end;
+  finally
+    Ctx.Response.EndStreamingResponse;
+    FSessions.RemoveSession(Session.Id);
   end;
-
-  FSessions.RemoveSession(Session.Id);
 end;
 
 procedure TMCPServer.RouteMessage(Ctx: IHttpContext);
@@ -661,6 +667,77 @@ begin
 
   // MCP SSE spec: POST always returns 202 Accepted (no body)
   Ctx.Response.StatusCode := 202;
+end;
+
+procedure TMCPServer.RouteToolCallSync(Ctx: IHttpContext);
+var
+  Body: string;
+  Req: TJSONObject;
+  ArgsVal: TJSONValue;
+  ArgsObj: TJSONObject;
+  ToolName: string;
+  Def: TMCPToolDef;
+  CallResult: string;
+  Parsed: TJSONValue;
+begin
+  Body := ReadBody(Ctx);
+  Req := TJSONObject.ParseJSONValue(Body) as TJSONObject;
+  if Req = nil then
+  begin
+    Ctx.Response.StatusCode := 400;
+    Ctx.Response.SetContentType('application/json');
+    Ctx.Response.Write('{"ok":false,"error":"invalid json"}');
+    Exit;
+  end;
+
+  try
+    ToolName := Req.GetValue<string>('name', '');
+    if ToolName = '' then
+    begin
+      Ctx.Response.StatusCode := 400;
+      Ctx.Response.SetContentType('application/json');
+      Ctx.Response.Write('{"ok":false,"error":"missing name"}');
+      Exit;
+    end;
+
+    if not FRegistry.TryGetTool(ToolName, Def) then
+    begin
+      Ctx.Response.StatusCode := 404;
+      Ctx.Response.SetContentType('application/json');
+      Ctx.Response.Write('{"ok":false,"error":"tool not found"}');
+      Exit;
+    end;
+
+    ArgsVal := Req.GetValue('arguments');
+    if (ArgsVal <> nil) and (ArgsVal is TJSONObject) then
+      ArgsObj := ArgsVal as TJSONObject
+    else
+      ArgsObj := TJSONObject.Create;
+    try
+      CallResult := Def.Callback(ArgsObj);
+      Ctx.Response.SetContentType('application/json');
+      Parsed := TJSONObject.ParseJSONValue(CallResult);
+      try
+        if Parsed <> nil then
+          Ctx.Response.Write(Parsed.ToJSON)
+        else
+          Ctx.Response.Write('{"result":"' + CallResult.Replace('"', '\"') + '"}');
+      finally
+        Parsed.Free;
+      end;
+    except
+      on E: Exception do
+      begin
+        Ctx.Response.StatusCode := 500;
+        Ctx.Response.SetContentType('application/json');
+        Ctx.Response.Write('{"ok":false,"error":"' + E.Message.Replace('"', '\"') + '"}');
+      end;
+    end;
+    if (ArgsVal = nil) or not (ArgsVal is TJSONObject) then
+      ArgsObj.Free;
+  finally
+    Req.Free;
+  end;
 end;
 
 // ---------------------------------------------------------------------------
@@ -757,6 +834,13 @@ begin
             Ctx.Response.Write(Format(
               '{"status":"ok","server":"%s","version":"%s","tools":%d}',
               [FName, FVersion, FRegistry.Count]));
+          end);
+
+        // Endpoint auxiliar para validacao/smoke tests sem sessao SSE.
+        App.MapPost('/tools/call-sync',
+          procedure(Ctx: IHttpContext)
+          begin
+            RouteToolCallSync(Ctx);
           end);
       end)
     .Build;

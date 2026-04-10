@@ -118,6 +118,9 @@ type
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
     procedure AppendCookie(const AName, AValue: string); overload;
     procedure DeleteCookie(const AName: string);
+    procedure BeginStreamingResponse;
+    procedure Flush;
+    procedure EndStreamingResponse;
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
     property ContentType: string read GetContentType write SetContentType;
   end;
@@ -540,6 +543,18 @@ begin
   Opts := TCookieOptions.Default;
   Opts.Expires := Now - 1;
   AppendCookie(AName, '', Opts);
+end;
+
+procedure TDextWebBrokerResponse.BeginStreamingResponse;
+begin
+end;
+
+procedure TDextWebBrokerResponse.Flush;
+begin
+end;
+
+procedure TDextWebBrokerResponse.EndStreamingResponse;
+begin
 end;
 
 { TDextWebBrokerContext }

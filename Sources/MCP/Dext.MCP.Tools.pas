@@ -22,15 +22,15 @@
 {  Description:                                                             }
 {    MCP Tool registry and fluent builder.                                  }
 {                                                                           }
-{    Usage:                                                                 }
+{    Usage (resumo):                                                        }
 {      Server.Tool('my-tool')                                               }
 {        .Description('Does something useful')                              }
 {        .Param('query', 'Search term', ptString)                           }
-{        .Param('limit', 'Max results', ptInteger, {required=}False)        }
+{        .Param('limit', 'Max results', ptInteger, False)                   }
 {        .OnCall(function(Args: TJSONObject): string                        }
-{          begin                                                             }
-{            Result := '{"ok": true}';                                      }
-{          end);                                                             }
+{          begin                                                            }
+{            Result := 'ok';                                                }
+{          end);                                                            }
 {                                                                           }
 {***************************************************************************}
 unit Dext.MCP.Tools;

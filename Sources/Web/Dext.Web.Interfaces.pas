@@ -177,6 +177,19 @@ type
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
     procedure AppendCookie(const AName, AValue: string); overload;
     procedure DeleteCookie(const AName: string);
+    /// <summary>
+    ///   Inicia resposta em streaming (ex.: SSE): Write acumula ate Flush enviar cabecalhos HTTP.
+    ///   Implementacao completa no adapter Indy; demais adapters podem usar no-op.
+    /// </summary>
+    procedure BeginStreamingResponse;
+    /// <summary>
+    ///   Envia cabecalhos (e corpo acumulado) ao cliente. No Indy usa Transfer-Encoding: chunked.
+    /// </summary>
+    procedure Flush;
+    /// <summary>
+    ///   Finaliza streaming (ex.: chunk terminal 0). No-op se Flush nunca foi chamado.
+    /// </summary>
+    procedure EndStreamingResponse;
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
     property ContentType: string read GetContentType write SetContentType;
   end;

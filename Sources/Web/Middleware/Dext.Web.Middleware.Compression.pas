@@ -44,6 +44,9 @@ type
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
     procedure AppendCookie(const AName, AValue: string); overload;
     procedure DeleteCookie(const AName: string);
+    procedure BeginStreamingResponse;
+    procedure Flush;
+    procedure EndStreamingResponse;
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
     property ContentType: string read GetContentType write SetContentType;
     property Buffer: TMemoryStream read FBuffer;
@@ -84,6 +87,9 @@ procedure TBufferedResponse.SetContentLength(const AValue: Int64); begin FInner.
 procedure TBufferedResponse.SetContentType(const AValue: string); begin FInner.SetContentType(AValue); end;
 procedure TBufferedResponse.SetStatusCode(AValue: Integer); begin FInner.StatusCode := AValue; end;
 function TBufferedResponse.Status(AValue: Integer): IHttpResponse; begin FInner.Status(AValue); Result := Self; end;
+procedure TBufferedResponse.BeginStreamingResponse; begin FInner.BeginStreamingResponse; end;
+procedure TBufferedResponse.Flush; begin FInner.Flush; end;
+procedure TBufferedResponse.EndStreamingResponse; begin FInner.EndStreamingResponse; end;
 procedure TBufferedResponse.Write(const AContent: string);
 var
   Bytes: TBytes;

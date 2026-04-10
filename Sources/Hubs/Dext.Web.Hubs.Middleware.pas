@@ -389,54 +389,51 @@ begin
   // Add to connection manager (as interface)
   FConnectionManager.Add(Connection);
   
-  // Configure SSE response
+  Ctx.Response.BeginStreamingResponse;
   TSSEWriter.ConfigureResponse(Ctx.Response);
   TSSEWriter.WriteRetry(Ctx.Response, 3000); // Retry after 3s on disconnect
-  
-  // Trigger OnConnected
+
   try
     Dispatcher.OnConnected(ConnectionId);
   except
     // Log but don't fail
   end;
-  
-  // Send connected event
+
   TSSEWriter.WriteEvent(Ctx.Response, 'connected', '{"connectionId":"' + ConnectionId + '"}');
-  
-  KeepAliveCounter := 0;
-  
-  // SSE loop - keep connection open
-  // Check BOTH connection closed AND transport shutdown
-  while (not Connection.Closed) and (not FSSETransport.IsShuttingDown) do
-  begin
-    // Check for pending messages
-    while Connection.HasPendingMessages and (not FSSETransport.IsShuttingDown) do
-    begin
-      Msg := Connection.DequeueMessage;
-      if Msg <> '' then
-        TSSEWriter.WriteData(Ctx.Response, Msg);
-    end;
-    
-    // Send keep-alive comment every 15 seconds (150 * 100ms)
-    Inc(KeepAliveCounter);
-    if KeepAliveCounter >= 150 then
-    begin
-      TSSEWriter.WriteComment(Ctx.Response, 'ping');
-      KeepAliveCounter := 0;
-    end;
-    
-    Sleep(100);
-  end;
-  
-  // Cleanup
-  FConnectionManager.Remove(ConnectionId);
-  FSSETransport.RemoveConnection(ConnectionId);
-  
-  // Trigger OnDisconnected
+  Ctx.Response.Flush;
+
   try
-    Dispatcher.OnDisconnected(ConnectionId, nil);
-  except
-    // Log but don't fail
+    KeepAliveCounter := 0;
+
+    while (not Connection.Closed) and (not FSSETransport.IsShuttingDown) do
+    begin
+      while Connection.HasPendingMessages and (not FSSETransport.IsShuttingDown) do
+      begin
+        Msg := Connection.DequeueMessage;
+        if Msg <> '' then
+          TSSEWriter.WriteData(Ctx.Response, Msg);
+      end;
+
+      Inc(KeepAliveCounter);
+      if KeepAliveCounter >= 150 then
+      begin
+        TSSEWriter.WriteComment(Ctx.Response, 'ping');
+        KeepAliveCounter := 0;
+      end;
+
+      Sleep(100);
+    end;
+
+    FConnectionManager.Remove(ConnectionId);
+    FSSETransport.RemoveConnection(ConnectionId);
+
+    try
+      Dispatcher.OnDisconnected(ConnectionId, nil);
+    except
+      // Log but don't fail
+    end;
+  finally
+    Ctx.Response.EndStreamingResponse;
   end;
 end;
 

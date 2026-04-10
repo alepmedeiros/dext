@@ -166,6 +166,9 @@ type
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
     procedure AppendCookie(const AName, AValue: string); overload;
     procedure DeleteCookie(const AName: string);
+    procedure BeginStreamingResponse;
+    procedure Flush;
+    procedure EndStreamingResponse;
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
     property ContentType: string read GetContentType write SetContentType;
 
@@ -685,6 +688,21 @@ end;
 procedure TResponseCaptureWrapper.AddHeader(const AName, AValue: string);
 begin
   FOriginal.AddHeader(AName, AValue);
+end;
+
+procedure TResponseCaptureWrapper.BeginStreamingResponse;
+begin
+  FOriginal.BeginStreamingResponse;
+end;
+
+procedure TResponseCaptureWrapper.Flush;
+begin
+  FOriginal.Flush;
+end;
+
+procedure TResponseCaptureWrapper.EndStreamingResponse;
+begin
+  FOriginal.EndStreamingResponse;
 end;
 
 procedure TResponseCaptureWrapper.AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions);
