@@ -35,7 +35,7 @@ interface
 uses
   System.SysUtils,
   System.JSON,
-  System.Generics.Collections,
+  Dext.Collections.Dict,
   Dext.AI.Agent.Contracts;
 
 type

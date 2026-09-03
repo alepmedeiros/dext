@@ -46,7 +46,7 @@ uses
   System.NetConsts,
   System.Net.HttpClient,
   System.Net.URLClient,
-  System.Generics.Collections,
+  Dext.Collections,
   Dext.AI.Agent.Contracts;
 
 type
@@ -246,7 +246,7 @@ begin
 
   Root := TJSONObject.ParseJSONValue(ABody) as TJSONObject;
   if Root = nil then
-    raise ELLMProviderError.CreateFmt('Anthropic: resposta inválida: %s', [ABody]);
+    raise ELLMProviderError.CreateFmt('Anthropic: resposta invï¿½lida: %s', [ABody]);
   try
     ContentArr := Root.GetValue<TJSONArray>('content', nil);
     if ContentArr = nil then
@@ -304,7 +304,7 @@ var
   Response: IHTTPResponse;
 begin
   if FApiKey = '' then
-    raise ELLMProviderError.Create('Anthropic: API key não configurada.');
+    raise ELLMProviderError.Create('Anthropic: API key nï¿½o configurada.');
 
   HttpClient := THTTPClient.Create;
   try

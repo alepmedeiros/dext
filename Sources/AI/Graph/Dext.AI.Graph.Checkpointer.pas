@@ -33,7 +33,8 @@ interface
 
 uses
   Dext.AI.Graph.Contracts,
-  System.Generics.Collections,
+  Dext.Collections,
+  Dext.Collections.Dict,
   System.SysUtils;
 
 type

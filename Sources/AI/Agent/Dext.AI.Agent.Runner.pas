@@ -39,10 +39,10 @@ uses
   Dext.AI.MCP.Protocol,
   Dext.AI.MCP.Attributes,
   Dext.Core.Reflection,
+  Dext.Collections,
   System.Rtti,
   System.SysUtils,
-  System.JSON,
-  System.Generics.Collections;
+  System.JSON;
 
 type
   TAgentRunner = class
@@ -50,7 +50,7 @@ type
     FProvider:  ILLMProvider;
     FConfig:    TAgentConfig;
     FObserver:  IAgentObserver;
-    FProviders: TObjectList<TMCPToolProvider>;
+    FProviders: TList<TMCPToolProvider>;
 
     function BuildToolSchemas: TArray<TToolSchema>;
     function BuildInputSchema(AMethod: TRttiMethod): string;
@@ -78,7 +78,7 @@ begin
   FProvider  := AProvider;
   FConfig    := AConfig;
   FObserver  := AObserver;
-  FProviders := TObjectList<TMCPToolProvider>.Create(True);
+  FProviders := TList<TMCPToolProvider>.Create(True);
 end;
 
 destructor TAgentRunner.Destroy;
@@ -329,7 +329,7 @@ begin
     end;
 
     Result.Success  := False;
-    Result.ErrorMsg := 'Limite de iterações atingido';
+    Result.ErrorMsg := 'Limite de iteraï¿½ï¿½es atingido';
   finally
     Messages.Free;
   end;

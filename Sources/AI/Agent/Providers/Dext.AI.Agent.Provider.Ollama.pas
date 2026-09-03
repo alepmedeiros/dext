@@ -40,7 +40,6 @@ uses
   System.NetConsts,
   System.Net.HttpClient,
   System.Net.URLClient,
-  System.Generics.Collections,
   Dext.AI.Agent.Contracts;
 
 type
@@ -204,7 +203,7 @@ begin
 
   Root := TJSONObject.ParseJSONValue(ABody) as TJSONObject;
   if Root = nil then
-    raise ELLMProviderError.CreateFmt('Ollama: resposta inválida: %s', [ABody]);
+    raise ELLMProviderError.CreateFmt('Ollama: resposta invï¿½lida: %s', [ABody]);
   try
     Message := Root.GetValue<TJSONObject>('message', nil);
     if Message = nil then

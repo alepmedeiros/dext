@@ -34,7 +34,8 @@ interface
 
 uses
   System.SysUtils,
-  System.Generics.Collections,
+  Dext.Collections,
+  Dext.Collections.Dict,
   Dext.AI.Graph.Contracts,
   Dext.AI.Graph.State,
   Dext.AI.Graph.Edge,

@@ -39,7 +39,6 @@ uses
   System.NetConsts,
   System.Net.HttpClient,
   System.Net.URLClient,
-  System.Generics.Collections,
   Dext.AI.Agent.Contracts;
 
 type
@@ -215,7 +214,7 @@ begin
 
   Root := TJSONObject.ParseJSONValue(ABody) as TJSONObject;
   if Root = nil then
-    raise ELLMProviderError.CreateFmt('OpenAI: resposta inválida: %s', [ABody]);
+    raise ELLMProviderError.CreateFmt('OpenAI: resposta invï¿½lida: %s', [ABody]);
   try
     Choices := Root.GetValue<TJSONArray>('choices', nil);
     if (Choices = nil) or (Choices.Count = 0) then
@@ -278,7 +277,7 @@ var
   Response: IHTTPResponse;
 begin
   if FApiKey = '' then
-    raise ELLMProviderError.Create('OpenAI: API key não configurada.');
+    raise ELLMProviderError.Create('OpenAI: API key nï¿½o configurada.');
 
   HttpClient := THTTPClient.Create;
   try

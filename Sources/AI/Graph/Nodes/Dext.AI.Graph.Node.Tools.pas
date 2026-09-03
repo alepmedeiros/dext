@@ -43,12 +43,12 @@ uses
   System.Rtti,
   System.JSON,
   System.SysUtils,
-  System.Generics.Collections;
+  Dext.Collections;
 
 type
   TToolsNode = class
   private
-    FProviders: TObjectList<TMCPToolProvider>;
+    FProviders: TList<TMCPToolProvider>;
 
     function ExecuteSingleTool(
       const AToolName, AArgsJson: string
@@ -82,7 +82,7 @@ uses
 constructor TToolsNode.Create;
 begin
   inherited Create;
-  FProviders := TObjectList<TMCPToolProvider>.Create(True);
+  FProviders := TList<TMCPToolProvider>.Create(True);
 end;
 
 destructor TToolsNode.Destroy;
