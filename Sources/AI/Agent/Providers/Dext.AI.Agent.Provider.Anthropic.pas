@@ -1,4 +1,4 @@
-Ôªø{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -16,6 +16,23 @@
 {    TLLMMessage per tool call, so this provider coalesces any run of       }
 {    consecutive lrToolResult messages into a single user message when      }
 {    building the request body.                                            }
+{                                                                           }
+{***************************************************************************}
+{                                                                           }
+{           Copyright (C) 2026 Cesar Romero & Dext Contributors             }
+{                                                                           }
+{           Licensed under the Apache License, Version 2.0 (the "License"); }
+{           you may not use this file except in compliance with the License.}
+{           You may obtain a copy of the License at                         }
+{                                                                           }
+{               http://www.apache.org/licenses/LICENSE-2.0                  }
+{                                                                           }
+{           Unless required by applicable law or agreed to in writing,      }
+{           software distributed under the LICENSE is distributed on an     }
+{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
+{           either express or implied. See the License for the specific     }
+{           language governing permissions and limitations under the        }
+{           License.                                                        }
 {                                                                           }
 {***************************************************************************}
 unit Dext.AI.Agent.Provider.Anthropic;
@@ -229,7 +246,7 @@ begin
 
   Root := TJSONObject.ParseJSONValue(ABody) as TJSONObject;
   if Root = nil then
-    raise ELLMProviderError.CreateFmt('Anthropic: resposta inv√°lida: %s', [ABody]);
+    raise ELLMProviderError.CreateFmt('Anthropic: resposta inv·lida: %s', [ABody]);
   try
     ContentArr := Root.GetValue<TJSONArray>('content', nil);
     if ContentArr = nil then
@@ -287,7 +304,7 @@ var
   Response: IHTTPResponse;
 begin
   if FApiKey = '' then
-    raise ELLMProviderError.Create('Anthropic: API key n√£o configurada.');
+    raise ELLMProviderError.Create('Anthropic: API key n„o configurada.');
 
   HttpClient := THTTPClient.Create;
   try

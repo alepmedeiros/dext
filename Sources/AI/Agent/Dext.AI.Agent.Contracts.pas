@@ -1,4 +1,4 @@
-ï»¿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -10,6 +10,23 @@
 {    Core contracts for the Dext.AI.Agent framework: message/response       }
 {    types, the ILLMProvider strategy interface, agent configuration and    }
 {    the observer interface used to report ReAct loop progress.             }
+{                                                                           }
+{***************************************************************************}
+{                                                                           }
+{           Copyright (C) 2026 Cesar Romero & Dext Contributors             }
+{                                                                           }
+{           Licensed under the Apache License, Version 2.0 (the "License"); }
+{           you may not use this file except in compliance with the License.}
+{           You may obtain a copy of the License at                         }
+{                                                                           }
+{               http://www.apache.org/licenses/LICENSE-2.0                  }
+{                                                                           }
+{           Unless required by applicable law or agreed to in writing,      }
+{           software distributed under the LICENSE is distributed on an     }
+{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
+{           either express or implied. See the License for the specific     }
+{           language governing permissions and limitations under the        }
+{           License.                                                        }
 {                                                                           }
 {***************************************************************************}
 unit Dext.AI.Agent.Contracts;
@@ -56,9 +73,9 @@ type
     InputSchema: string; // JSON Schema serializado
   end;
 
-  // Interface Ãºnica â€” o Strategy
+  // Interface única — o Strategy
   ILLMProvider = interface
-    ['{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}']
+    ['{4D3AA7B5-B79F-4D02-BE3A-817337BD87E0}']
     function Complete(
       const AMessages: TArray<TLLMMessage>;
       const ATools:    TArray<TToolSchema>
@@ -88,7 +105,7 @@ type
   end;
 
   IAgentObserver = interface
-    ['{B2C3D4E5-F6A7-8901-BCDE-F12345678901}']
+    ['{4F08B7DA-FFED-4F9C-893B-6C90BD45B08F}']
     procedure OnIterationStart(AIteration: Integer);
     procedure OnToolCall(const AToolName, AArgsJson: string);
     procedure OnToolResult(const AToolName, AResult: string);
@@ -103,7 +120,7 @@ implementation
 const
   DEFAULT_SYSTEM_PROMPT =
     'You are a helpful assistant. Use the available tools to answer accurately. ' +
-    'Never invent data â€” only use what the tools return.';
+    'Never invent data — only use what the tools return.';
 
 { TLLMMessage }
 

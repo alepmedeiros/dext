@@ -283,7 +283,7 @@ begin
 
       if SameText(Input.Trim, ':estado') then
       begin
-        var CurState := TAgentState(Agent.GetState(ThreadId));
+        var CurState := Agent.GetState(ThreadId);
         if CurState = nil then
           Writeln('  (nenhum estado salvo ainda para esta thread)')
         else

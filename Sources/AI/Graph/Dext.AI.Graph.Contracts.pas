@@ -11,6 +11,23 @@
 {    Equivalente ao core do LangGraph (StateGraph / CompiledGraph).         }
 {                                                                           }
 {***************************************************************************}
+{                                                                           }
+{           Copyright (C) 2026 Cesar Romero & Dext Contributors             }
+{                                                                           }
+{           Licensed under the Apache License, Version 2.0 (the "License"); }
+{           you may not use this file except in compliance with the License.}
+{           You may obtain a copy of the License at                         }
+{                                                                           }
+{               http://www.apache.org/licenses/LICENSE-2.0                  }
+{                                                                           }
+{           Unless required by applicable law or agreed to in writing,      }
+{           software distributed under the LICENSE is distributed on an     }
+{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
+{           either express or implied. See the License for the specific     }
+{           language governing permissions and limitations under the        }
+{           License.                                                        }
+{                                                                           }
+{***************************************************************************}
 unit Dext.AI.Graph.Contracts;
 
 interface
@@ -59,7 +76,7 @@ type
   ): TAgentState;
 
   ICompiledAgent = interface
-    ['{C3D4E5F6-A7B8-9012-CDEF-123456789012}']
+    ['{51DC1EAC-E787-40C9-A492-0A921091C6AE}']
     function Run(
       const AInput:    string;
       const AThreadId: string = ''
@@ -67,7 +84,7 @@ type
 
     function Resume(const AThreadId: string): TGraphRunResult;
     procedure Cancel(const AThreadId: string);
-    function GetState(const AThreadId: string): TObject;
+    function GetState(const AThreadId: string): TAgentState;
 
     // Adapta este grafo compilado para ser usado como um nó comum de um
     // grafo pai (subgraph-as-node). O estado é passado direto — sem
@@ -78,7 +95,7 @@ type
   end;
 
   ICheckpointer = interface
-    ['{D4E5F6A7-B8C9-0123-DEFA-234567890123}']
+    ['{D7F9922F-69E0-442D-84A1-416753A62F8F}']
     procedure Save(const AThreadId: string; const AStateJson: string);
     function  Load(const AThreadId: string): string;
     function  Exists(const AThreadId: string): Boolean;

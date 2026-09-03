@@ -1,4 +1,4 @@
-Ôªø{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -9,6 +9,23 @@
 {  Description:                                                             }
 {    ILLMProvider implementation for OpenAI's Chat Completions API.         }
 {    POST https://api.openai.com/v1/chat/completions                       }
+{                                                                           }
+{***************************************************************************}
+{                                                                           }
+{           Copyright (C) 2026 Cesar Romero & Dext Contributors             }
+{                                                                           }
+{           Licensed under the Apache License, Version 2.0 (the "License"); }
+{           you may not use this file except in compliance with the License.}
+{           You may obtain a copy of the License at                         }
+{                                                                           }
+{               http://www.apache.org/licenses/LICENSE-2.0                  }
+{                                                                           }
+{           Unless required by applicable law or agreed to in writing,      }
+{           software distributed under the LICENSE is distributed on an     }
+{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
+{           either express or implied. See the License for the specific     }
+{           language governing permissions and limitations under the        }
+{           License.                                                        }
 {                                                                           }
 {***************************************************************************}
 unit Dext.AI.Agent.Provider.OpenAI;
@@ -198,7 +215,7 @@ begin
 
   Root := TJSONObject.ParseJSONValue(ABody) as TJSONObject;
   if Root = nil then
-    raise ELLMProviderError.CreateFmt('OpenAI: resposta inv√°lida: %s', [ABody]);
+    raise ELLMProviderError.CreateFmt('OpenAI: resposta inv·lida: %s', [ABody]);
   try
     Choices := Root.GetValue<TJSONArray>('choices', nil);
     if (Choices = nil) or (Choices.Count = 0) then
@@ -226,9 +243,14 @@ begin
         TCObj := ToolCallsArr.Items[I] as TJSONObject;
         FnObj := TCObj.GetValue<TJSONObject>('function', nil);
         TC := Default(TLLMToolCall);
-        TC.Id       := TCObj.GetValue<string>('id', '');
-        TC.Name     := FnObj.GetValue<string>('name', '');
-        TC.ArgsJson := FnObj.GetValue<string>('arguments', '{}');
+        TC.Id := TCObj.GetValue<string>('id', '');
+        if FnObj <> nil then
+        begin
+          TC.Name     := FnObj.GetValue<string>('name', '');
+          TC.ArgsJson := FnObj.GetValue<string>('arguments', '{}');
+        end
+        else
+          TC.ArgsJson := '{}';
         ToolCalls[I] := TC;
       end;
       Result.ToolCalls := ToolCalls;
@@ -256,7 +278,7 @@ var
   Response: IHTTPResponse;
 begin
   if FApiKey = '' then
-    raise ELLMProviderError.Create('OpenAI: API key n√£o configurada.');
+    raise ELLMProviderError.Create('OpenAI: API key n„o configurada.');
 
   HttpClient := THTTPClient.Create;
   try
