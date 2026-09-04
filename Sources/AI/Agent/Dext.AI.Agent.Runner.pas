@@ -37,10 +37,7 @@ uses
   Dext.AI.MCP.Tools,
   Dext.AI.MCP.Types,
   Dext.AI.MCP.Protocol,
-  Dext.AI.MCP.Attributes,
-  Dext.Core.Reflection,
   Dext.Collections,
-  System.Rtti,
   System.SysUtils,
   System.JSON;
 
@@ -50,10 +47,12 @@ type
     FProvider:  ILLMProvider;
     FConfig:    TAgentConfig;
     FObserver:  IAgentObserver;
-    FProviders: TList<TMCPToolProvider>;
+    // TMCPToolRegistry já faz o scan RTTI de [MCPTool]/[MCPParam] e assume a
+    // ownership dos providers registrados — mesma lógica que o MCP Server
+    // usa, sem uma segunda cópia divergente aqui.
+    FRegistry:  TMCPToolRegistry;
 
     function BuildToolSchemas: TArray<TToolSchema>;
-    function BuildInputSchema(AMethod: TRttiMethod): string;
     function ExecuteTool(const AToolName, AArgsJson: string): string;
     function ToolResultToText(const AResult: TMCPToolResult): string;
   public
@@ -78,99 +77,49 @@ begin
   FProvider  := AProvider;
   FConfig    := AConfig;
   FObserver  := AObserver;
-  FProviders := TList<TMCPToolProvider>.Create(True);
+  FRegistry  := TMCPToolRegistry.Create;
 end;
 
 destructor TAgentRunner.Destroy;
 begin
-  FProviders.Free;
+  FRegistry.Free;
   inherited;
 end;
 
 procedure TAgentRunner.RegisterProvider(AProvider: TMCPToolProvider);
 begin
-  FProviders.Add(AProvider);
-end;
-
-function TAgentRunner.BuildInputSchema(AMethod: TRttiMethod): string;
-var
-  Ctx: TRttiContext;
-  JSchema, JProps, JParam: TJSONObject;
-  JRequired: TJSONArray;
-  Attr: TCustomAttribute;
-  ParamAttr: MCPParamAttribute;
-begin
-  Ctx := TRttiContext.Create;
-  try
-    JProps    := TJSONObject.Create;
-    JRequired := TJSONArray.Create;
-
-    for Attr in AMethod.GetAttributes do
-      if Attr is MCPParamAttribute then
-      begin
-        ParamAttr := MCPParamAttribute(Attr);
-
-        JParam := TJSONObject.Create;
-        JParam.AddPair('description', ParamAttr.Description);
-        case ParamAttr.ParamType of
-          ptString:  JParam.AddPair('type', 'string');
-          ptInteger: JParam.AddPair('type', 'integer');
-          ptNumber:  JParam.AddPair('type', 'number');
-          ptBoolean: JParam.AddPair('type', 'boolean');
-        end;
-        JProps.AddPair(ParamAttr.Name, JParam);
-
-        if ParamAttr.Required then
-          JRequired.Add(ParamAttr.Name);
-      end;
-
-    JSchema := TJSONObject.Create;
-    try
-      JSchema.AddPair('type', 'object');
-      JSchema.AddPair('properties', JProps);
-      if JRequired.Count > 0 then
-        JSchema.AddPair('required', JRequired)
-      else
-        JRequired.Free;
-
-      Result := JSchema.ToJSON;
-    finally
-      JSchema.Free;
-    end;
-  finally
-    Ctx.Free;
-  end;
+  if AProvider <> nil then
+    FRegistry.RegisterProvider(AProvider);
 end;
 
 function TAgentRunner.BuildToolSchemas: TArray<TToolSchema>;
 var
-  Ctx: TRttiContext;
-  Provider: TMCPToolProvider;
-  Method: TRttiMethod;
-  ToolAttr: MCPToolAttribute;
-  Schemas: TList<TToolSchema>;
+  Arr: TJSONArray;
+  Item: TJSONObject;
+  InputSchema: TJSONValue;
   Schema: TToolSchema;
+  List: TArray<TToolSchema>;
+  I: Integer;
 begin
-  Ctx := TRttiContext.Create;
-  Schemas := TList<TToolSchema>.Create;
+  Arr := FRegistry.BuildToolsArray;
   try
-    for Provider in FProviders do
-      for Method in Ctx.GetType(Provider.ClassType).GetMethods do
-      begin
-        ToolAttr := Method.GetAttribute<MCPToolAttribute>;
-        if ToolAttr = nil then Continue;
-
-        Schema := Default(TToolSchema);
-        Schema.Name        := ToolAttr.Name;
-        Schema.Description := ToolAttr.Description;
-        Schema.InputSchema := BuildInputSchema(Method);
-        Schemas.Add(Schema);
-      end;
-
-    Result := Schemas.ToArray;
+    SetLength(List, Arr.Count);
+    for I := 0 to Arr.Count - 1 do
+    begin
+      Item := Arr.Items[I] as TJSONObject;
+      Schema := Default(TToolSchema);
+      Schema.Name        := Item.GetValue<string>('name', '');
+      Schema.Description := Item.GetValue<string>('description', '');
+      InputSchema := Item.GetValue('inputSchema');
+      if InputSchema <> nil then
+        Schema.InputSchema := InputSchema.ToJSON
+      else
+        Schema.InputSchema := '{}';
+      List[I] := Schema;
+    end;
+    Result := List;
   finally
-    Schemas.Free;
-    Ctx.Free;
+    Arr.Free;
   end;
 end;
 
@@ -199,47 +148,31 @@ end;
 
 function TAgentRunner.ExecuteTool(const AToolName, AArgsJson: string): string;
 var
-  Ctx: TRttiContext;
-  Provider: TMCPToolProvider;
-  RttiType: TRttiType;
-  Method: TRttiMethod;
-  ToolAttr: MCPToolAttribute;
+  Def: TMCPToolDef;
   JArgs: TJSONObject;
-  InvokeResult: TValue;
 begin
-  Ctx := TRttiContext.Create;
+  if not FRegistry.TryGetTool(AToolName, Def) then
+    Exit('[Error: Tool not found: ' + AToolName + ']');
+
+  JArgs := TJSONObject.ParseJSONValue(AArgsJson) as TJSONObject;
+  if JArgs = nil then
+    JArgs := TJSONObject.Create;
   try
-    JArgs := TJSONObject.ParseJSONValue(AArgsJson) as TJSONObject;
-    if JArgs = nil then
-      JArgs := TJSONObject.Create;
     try
-      for Provider in FProviders do
-      begin
-        RttiType := Ctx.GetType(Provider.ClassType);
-        for Method in RttiType.GetMethods do
-        begin
-          ToolAttr := Method.GetAttribute<MCPToolAttribute>;
-          if (ToolAttr = nil) or (ToolAttr.Name <> AToolName) then
-            Continue;
-
-          try
-            Provider.BeforeCall(AToolName, JArgs);
-            InvokeResult := Method.Invoke(Provider, [TValue.From<TJSONObject>(JArgs)]);
-            Provider.AfterCall(AToolName);
-            Exit(ToolResultToText(InvokeResult.AsType<TMCPToolResult>));
-          except
-            on E: Exception do
-              Exit('[Error] ' + E.Message);
-          end;
-        end;
-      end;
-
-      Result := '[Error: Tool not found: ' + AToolName + ']';
-    finally
-      JArgs.Free;
+      // ResultCallback (rico) tem precedência sobre o Callback legado
+      // (string) — mesma ordem usada em TMCPServer.HandleToolsCall.
+      if Assigned(Def.ResultCallback) then
+        Exit(ToolResultToText(Def.ResultCallback(JArgs)))
+      else if Assigned(Def.Callback) then
+        Exit(Def.Callback(JArgs))
+      else
+        Exit('[Error: Tool "' + AToolName + '" has no callback]');
+    except
+      on E: Exception do
+        Exit('[Error] ' + E.Message);
     end;
   finally
-    Ctx.Free;
+    JArgs.Free;
   end;
 end;
 

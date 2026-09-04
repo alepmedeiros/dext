@@ -37,9 +37,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.JSON,
-  System.NetConsts,
-  System.Net.HttpClient,
-  System.Net.URLClient,
+  Dext.Net.RestClient,
   Dext.AI.Agent.Contracts;
 
 type
@@ -250,38 +248,30 @@ end;
 function TOllamaProvider.Complete(const AMessages: TArray<TLLMMessage>;
   const ATools: TArray<TToolSchema>): TLLMResponse;
 var
-  HttpClient: THTTPClient;
   Body: TJSONObject;
-  Stream: TStringStream;
-  Response: IHTTPResponse;
+  Response: IRestResponse;
 begin
-  HttpClient := THTTPClient.Create;
+  Body := BuildRequestBody(AMessages, ATools);
   try
-    HttpClient.ConnectionTimeout := 120000;
-    HttpClient.ResponseTimeout   := 120000;
-    HttpClient.ContentType := 'application/json';
-
-    Body := BuildRequestBody(AMessages, ATools);
-    try
-      Stream := TStringStream.Create(Body.ToJSON, TEncoding.UTF8);
-      try
-        Response := HttpClient.Post(FBaseUrl + '/api/chat', Stream, nil,
-          [TNetHeader.Create('Content-Type', 'application/json')]);
-      finally
-        Stream.Free;
-      end;
-    finally
-      Body.Free;
-    end;
-
-    if Response.StatusCode <> 200 then
-      raise ELLMProviderError.CreateFmt('Ollama HTTP %d: %s',
-        [Response.StatusCode, Response.ContentAsString(TEncoding.UTF8)]);
-
-    Result := ParseResponse(Response.ContentAsString(TEncoding.UTF8));
+    // FBaseUrl � s� a origem (ex.: http://localhost:11434) — o path
+    // '/api/chat' vai no PostJson(endpoint, payload) de 2 argumentos, que
+    // concatena via GetFullUrl sem duplicar a barra (FBaseUrl j� chega sem
+    // '/' final pelo TrimRight do construtor, e '/api/chat' j� come�a com
+    // '/').
+    Response :=
+      TRestClient.Create(FBaseUrl)
+        .Timeout(120000)
+        .PostJson('/api/chat', Body.ToJSON)
+        .Await;
   finally
-    HttpClient.Free;
+    Body.Free;
   end;
+
+  if not Response.IsSuccess then
+    raise ELLMProviderError.CreateFmt('Ollama HTTP %d: %s',
+      [Response.StatusCode, Response.ContentString]);
+
+  Result := ParseResponse(Response.ContentString);
 end;
 
 end.

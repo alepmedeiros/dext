@@ -43,10 +43,8 @@ uses
   System.SysUtils,
   System.Classes,
   System.JSON,
-  System.NetConsts,
-  System.Net.HttpClient,
-  System.Net.URLClient,
   Dext.Collections,
+  Dext.Net.RestClient,
   Dext.AI.Agent.Contracts;
 
 type
@@ -298,43 +296,30 @@ end;
 function TAnthropicProvider.Complete(const AMessages: TArray<TLLMMessage>;
   const ATools: TArray<TToolSchema>): TLLMResponse;
 var
-  HttpClient: THTTPClient;
   Body: TJSONObject;
-  Stream: TStringStream;
-  Response: IHTTPResponse;
+  Response: IRestResponse;
 begin
   if FApiKey = '' then
     raise ELLMProviderError.Create('Anthropic: API key n�o configurada.');
 
-  HttpClient := THTTPClient.Create;
+  Body := BuildRequestBody(AMessages, ATools);
   try
-    HttpClient.ConnectionTimeout := 120000;
-    HttpClient.ResponseTimeout   := 120000;
-    HttpClient.CustomHeaders['x-api-key'] := FApiKey;
-    HttpClient.CustomHeaders['anthropic-version'] := '2023-06-01';
-    HttpClient.ContentType := 'application/json';
-
-    Body := BuildRequestBody(AMessages, ATools);
-    try
-      Stream := TStringStream.Create(Body.ToJSON, TEncoding.UTF8);
-      try
-        Response := HttpClient.Post(FEndpoint, Stream, nil,
-          [TNetHeader.Create('Content-Type', 'application/json')]);
-      finally
-        Stream.Free;
-      end;
-    finally
-      Body.Free;
-    end;
-
-    if Response.StatusCode <> 200 then
-      raise ELLMProviderError.CreateFmt('Anthropic HTTP %d: %s',
-        [Response.StatusCode, Response.ContentAsString(TEncoding.UTF8)]);
-
-    Result := ParseResponse(Response.ContentAsString(TEncoding.UTF8));
+    Response :=
+      TRestClient.Create(FEndpoint)
+        .Timeout(120000)
+        .Header('x-api-key', FApiKey)
+        .Header('anthropic-version', '2023-06-01')
+        .PostJson(Body.ToJSON)
+        .Await;
   finally
-    HttpClient.Free;
+    Body.Free;
   end;
+
+  if not Response.IsSuccess then
+    raise ELLMProviderError.CreateFmt('Anthropic HTTP %d: %s',
+      [Response.StatusCode, Response.ContentString]);
+
+  Result := ParseResponse(Response.ContentString);
 end;
 
 end.

@@ -52,7 +52,7 @@
         <DCC_ExeOutput>..\..\Output\</DCC_ExeOutput>
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_UnitSearchPath>..\..\..\Sources\AI\Agent;..\..\..\Sources\AI\Agent\Providers;..\..\..\Sources\AI\MCP;..\..\..\Sources\Core;..\..\..\Sources\Core\Base;..\..\..\Sources\Core\Json;..\..\..\Sources\Common;..\..\..\Output\$(ProductVersion)\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\..\Sources\AI\Agent;..\..\..\Sources\AI\Agent\Providers;..\..\..\Sources\AI\MCP;..\..\..\Sources\Net;..\..\..\Sources\Core;..\..\..\Sources\Core\Base;..\..\..\Sources\Core\Json;..\..\..\Sources\Common;..\..\..\Output\$(ProductVersion)\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <Icns_MainIcns>$(BDS)\bin\delphi_PROJECTICNS.icns</Icns_MainIcns>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <PreBuildEvent><![CDATA[if exist appsettings.json copy /Y appsettings.json "$(DCC_ExeOutput)"

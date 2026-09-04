@@ -36,6 +36,7 @@ requires
   IndyProtocols,
   IndyCore,
   Dext.Core,
+  Dext.Net.Core,
   Dext.Web.Core;
 
 contains

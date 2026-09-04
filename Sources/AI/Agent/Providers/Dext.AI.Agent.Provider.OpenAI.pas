@@ -36,9 +36,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.JSON,
-  System.NetConsts,
-  System.Net.HttpClient,
-  System.Net.URLClient,
+  Dext.Net.RestClient,
   Dext.AI.Agent.Contracts;
 
 type
@@ -271,42 +269,33 @@ end;
 function TOpenAIProvider.Complete(const AMessages: TArray<TLLMMessage>;
   const ATools: TArray<TToolSchema>): TLLMResponse;
 var
-  HttpClient: THTTPClient;
   Body: TJSONObject;
-  Stream: TStringStream;
-  Response: IHTTPResponse;
+  Response: IRestResponse;
 begin
   if FApiKey = '' then
     raise ELLMProviderError.Create('OpenAI: API key n�o configurada.');
 
-  HttpClient := THTTPClient.Create;
+  Body := BuildRequestBody(AMessages, ATools);
   try
-    HttpClient.ConnectionTimeout := 120000;
-    HttpClient.ResponseTimeout   := 120000;
-    HttpClient.CustomHeaders['Authorization'] := 'Bearer ' + FApiKey;
-    HttpClient.ContentType := 'application/json';
-
-    Body := BuildRequestBody(AMessages, ATools);
-    try
-      Stream := TStringStream.Create(Body.ToJSON, TEncoding.UTF8);
-      try
-        Response := HttpClient.Post(FEndpoint, Stream, nil,
-          [TNetHeader.Create('Content-Type', 'application/json')]);
-      finally
-        Stream.Free;
-      end;
-    finally
-      Body.Free;
-    end;
-
-    if Response.StatusCode <> 200 then
-      raise ELLMProviderError.CreateFmt('OpenAI HTTP %d: %s',
-        [Response.StatusCode, Response.ContentAsString(TEncoding.UTF8)]);
-
-    Result := ParseResponse(Response.ContentAsString(TEncoding.UTF8));
+    // FEndpoint j� � a URL absoluta do endpoint (n�o um base+path) — passada
+    // como BaseUrl com PostJson(payload) de 1 argumento, que faz POST direto
+    // nela sem concatenar nada (GetFullUrl s� concatena quando o endpoint
+    // passado ao PostJson n�o est� vazio).
+    Response :=
+      TRestClient.Create(FEndpoint)
+        .Timeout(120000)
+        .Header('Authorization', 'Bearer ' + FApiKey)
+        .PostJson(Body.ToJSON)
+        .Await;
   finally
-    HttpClient.Free;
+    Body.Free;
   end;
+
+  if not Response.IsSuccess then
+    raise ELLMProviderError.CreateFmt('OpenAI HTTP %d: %s',
+      [Response.StatusCode, Response.ContentString]);
+
+  Result := ParseResponse(Response.ContentString);
 end;
 
 end.

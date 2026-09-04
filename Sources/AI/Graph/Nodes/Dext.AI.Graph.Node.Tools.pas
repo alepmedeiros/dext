@@ -6,8 +6,11 @@
 {                                                                           }
 {***************************************************************************}
 {                                                                           }
-{  Description:                                                             }
+{  Description:                                                            }
 {    TToolsNode — nó padrão que executa as tool calls pendentes (ToolNode). }
+{    Delega registro/despacho de tools para Dext.AI.MCP.Tools.             }
+{    TMCPToolRegistry (já usado pelo MCP Server) em vez de reimplementar   }
+{    o scan RTTI aqui — evita duas cópias divergentes da mesma lógica.     }
 {                                                                           }
 {***************************************************************************}
 {                                                                           }
@@ -34,28 +37,26 @@ interface
 uses
   Dext.AI.Graph.Contracts,
   Dext.AI.Graph.State,
-  Dext.AI.Graph.Graph,
   Dext.AI.Agent.Contracts,
   Dext.AI.MCP.Tools,
-  Dext.AI.MCP.Attributes,
   Dext.AI.MCP.Types,
   Dext.AI.MCP.Protocol,
-  System.Rtti,
   System.JSON,
-  System.SysUtils,
-  Dext.Collections;
+  System.SysUtils;
 
 type
   TToolsNode = class
   private
-    FProviders: TList<TMCPToolProvider>;
+    // TMCPToolRegistry já faz o scan RTTI de [MCPTool]/[MCPParam] e é dono
+    // dos providers registrados (RegisterProvider assume ownership) — não
+    // há double-free aqui porque TToolsNode nunca guarda os providers
+    // diretamente, só repassa para o registry.
+    FRegistry: TMCPToolRegistry;
 
     function ExecuteSingleTool(
       const AToolName, AArgsJson: string
     ): string;
 
-    function BuildInputSchema(AMethod: TRttiMethod): string;
-    function BuildToolSchemas: TArray<TToolSchema>;
     function ToolResultToText(const AResult: TMCPToolResult): string;
   public
     constructor Create;
@@ -74,27 +75,24 @@ type
 
 implementation
 
-uses
-  System.Classes;
-
 { TToolsNode }
 
 constructor TToolsNode.Create;
 begin
   inherited Create;
-  FProviders := TList<TMCPToolProvider>.Create(True);
+  FRegistry := TMCPToolRegistry.Create;
 end;
 
 destructor TToolsNode.Destroy;
 begin
-  FProviders.Free;
+  FRegistry.Free;
   inherited;
 end;
 
 procedure TToolsNode.RegisterProvider(AProvider: TMCPToolProvider);
 begin
   if AProvider <> nil then
-    FProviders.Add(AProvider);
+    FRegistry.RegisterProvider(AProvider);
 end;
 
 function TToolsNode.GetAsHandler: TNodeHandler;
@@ -107,83 +105,33 @@ begin
 end;
 
 function TToolsNode.GetToolSchemas: TArray<TToolSchema>;
-begin
-  Result := BuildToolSchemas;
-end;
-
-function TToolsNode.BuildInputSchema(AMethod: TRttiMethod): string;
 var
-  JSchema, JProps, JParam: TJSONObject;
-  JRequired: TJSONArray;
-  Attr: TCustomAttribute;
-  ParamAttr: MCPParamAttribute;
-begin
-  JProps    := TJSONObject.Create;
-  JRequired := TJSONArray.Create;
-
-  for Attr in AMethod.GetAttributes do
-    if Attr is MCPParamAttribute then
-    begin
-      ParamAttr := MCPParamAttribute(Attr);
-
-      JParam := TJSONObject.Create;
-      JParam.AddPair('description', ParamAttr.Description);
-      case ParamAttr.ParamType of
-        ptString:  JParam.AddPair('type', 'string');
-        ptInteger: JParam.AddPair('type', 'integer');
-        ptNumber:  JParam.AddPair('type', 'number');
-        ptBoolean: JParam.AddPair('type', 'boolean');
-      end;
-      JProps.AddPair(ParamAttr.Name, JParam);
-
-      if ParamAttr.Required then
-        JRequired.Add(ParamAttr.Name);
-    end;
-
-  JSchema := TJSONObject.Create;
-  try
-    JSchema.AddPair('type', 'object');
-    JSchema.AddPair('properties', JProps);
-    if JRequired.Count > 0 then
-      JSchema.AddPair('required', JRequired)
-    else
-      JRequired.Free;
-    Result := JSchema.ToJSON;
-  finally
-    JSchema.Free;
-  end;
-end;
-
-function TToolsNode.BuildToolSchemas: TArray<TToolSchema>;
-var
-  Ctx: TRttiContext;
-  Provider: TMCPToolProvider;
-  Method: TRttiMethod;
-  ToolAttr: MCPToolAttribute;
-  Schemas: TList<TToolSchema>;
+  Arr: TJSONArray;
+  Item: TJSONObject;
+  InputSchema: TJSONValue;
   Schema: TToolSchema;
+  List: TArray<TToolSchema>;
+  I: Integer;
 begin
-  Ctx := TRttiContext.Create;
-  Schemas := TList<TToolSchema>.Create;
+  Arr := FRegistry.BuildToolsArray;
   try
-    for Provider in FProviders do
-      for Method in Ctx.GetType(Provider.ClassType).GetMethods do
-      begin
-        ToolAttr := Method.GetAttribute<MCPToolAttribute>;
-        if ToolAttr = nil then
-          Continue;
-
-        Schema := Default(TToolSchema);
-        Schema.Name        := ToolAttr.Name;
-        Schema.Description := ToolAttr.Description;
-        Schema.InputSchema := BuildInputSchema(Method);
-        Schemas.Add(Schema);
-      end;
-
-    Result := Schemas.ToArray;
+    SetLength(List, Arr.Count);
+    for I := 0 to Arr.Count - 1 do
+    begin
+      Item := Arr.Items[I] as TJSONObject;
+      Schema := Default(TToolSchema);
+      Schema.Name        := Item.GetValue<string>('name', '');
+      Schema.Description := Item.GetValue<string>('description', '');
+      InputSchema := Item.GetValue('inputSchema');
+      if InputSchema <> nil then
+        Schema.InputSchema := InputSchema.ToJSON
+      else
+        Schema.InputSchema := '{}';
+      List[I] := Schema;
+    end;
+    Result := List;
   finally
-    Schemas.Free;
-    Ctx.Free;
+    Arr.Free;
   end;
 end;
 
@@ -214,47 +162,31 @@ function TToolsNode.ExecuteSingleTool(
   const AToolName, AArgsJson: string
 ): string;
 var
-  Ctx: TRttiContext;
-  Provider: TMCPToolProvider;
-  RttiType: TRttiType;
-  Method: TRttiMethod;
-  ToolAttr: MCPToolAttribute;
+  Def: TMCPToolDef;
   JArgs: TJSONObject;
-  InvokeResult: TValue;
 begin
-  Ctx := TRttiContext.Create;
+  if not FRegistry.TryGetTool(AToolName, Def) then
+    Exit('[Error: Tool not found: ' + AToolName + ']');
+
+  JArgs := TJSONObject.ParseJSONValue(AArgsJson) as TJSONObject;
+  if JArgs = nil then
+    JArgs := TJSONObject.Create;
   try
-    JArgs := TJSONObject.ParseJSONValue(AArgsJson) as TJSONObject;
-    if JArgs = nil then
-      JArgs := TJSONObject.Create;
     try
-      for Provider in FProviders do
-      begin
-        RttiType := Ctx.GetType(Provider.ClassType);
-        for Method in RttiType.GetMethods do
-        begin
-          ToolAttr := Method.GetAttribute<MCPToolAttribute>;
-          if (ToolAttr = nil) or (ToolAttr.Name <> AToolName) then
-            Continue;
-
-          try
-            Provider.BeforeCall(AToolName, JArgs);
-            InvokeResult := Method.Invoke(Provider, [TValue.From<TJSONObject>(JArgs)]);
-            Provider.AfterCall(AToolName);
-            Exit(ToolResultToText(InvokeResult.AsType<TMCPToolResult>));
-          except
-            on E: Exception do
-              Exit('[Error] ' + E.Message);
-          end;
-        end;
-      end;
-
-      Result := '[Error: Tool not found: ' + AToolName + ']';
-    finally
-      JArgs.Free;
+      // ResultCallback (rico) tem precedência sobre o Callback legado
+      // (string) — mesma ordem usada em TMCPServer.HandleToolsCall.
+      if Assigned(Def.ResultCallback) then
+        Exit(ToolResultToText(Def.ResultCallback(JArgs)))
+      else if Assigned(Def.Callback) then
+        Exit(Def.Callback(JArgs))
+      else
+        Exit('[Error: Tool "' + AToolName + '" has no callback]');
+    except
+      on E: Exception do
+        Exit('[Error] ' + E.Message);
     end;
   finally
-    Ctx.Free;
+    JArgs.Free;
   end;
 end;
 

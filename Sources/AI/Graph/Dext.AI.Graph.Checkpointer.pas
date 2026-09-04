@@ -35,7 +35,8 @@ uses
   Dext.AI.Graph.Contracts,
   Dext.Collections,
   Dext.Collections.Dict,
-  System.SysUtils;
+  System.SysUtils,
+  System.Hash;
 
 type
   TMemoryCheckpointer = class(TInterfacedObject, ICheckpointer)
@@ -118,18 +119,24 @@ function TFileCheckpointer.SanitizeId(const AThreadId: string): string;
 var
   I: Integer;
   C: Char;
+  Clean: string;
 begin
-  Result := '';
+  Clean := '';
   for I := 1 to Length(AThreadId) do
   begin
     C := AThreadId[I];
     if CharInSet(C, ['A'..'Z', 'a'..'z', '0'..'9', '-', '_']) then
-      Result := Result + C
+      Clean := Clean + C
     else
-      Result := Result + '_';
+      Clean := Clean + '_';
   end;
-  if Result = '' then
-    Result := 'thread';
+  if Clean = '' then
+    Clean := 'thread';
+  // Substituir caracteres inválidos por "_" pode colidir (ex.: "a/b" e "a:b"
+  // viram ambos "a_b"), fazendo threads distintas compartilharem o mesmo
+  // arquivo de checkpoint. Um sufixo hash do id original torna o nome do
+  // arquivo praticamente único mesmo quando a parte legível colide.
+  Result := Clean + '-' + IntToHex(THashBobJenkins.GetHashValue(AThreadId), 8);
 end;
 
 function TFileCheckpointer.FilePath(const AThreadId: string): string;

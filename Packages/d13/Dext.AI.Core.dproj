@@ -110,6 +110,7 @@
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="Dext.Core.dcp"/>
+        <DCCReference Include="Dext.Net.Core.dcp"/>
         <DCCReference Include="Dext.Web.Core.dcp"/>
         <DCCReference Include="..\..\Sources\AI\MCP\Dext.AI.MCP.Attributes.pas"/>
         <DCCReference Include="..\..\Sources\AI\MCP\Dext.AI.MCP.Prompts.pas"/>
