@@ -36,7 +36,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  System.JSON,
+  DextJsonDataObjects,
   Dext.Net.RestClient,
   Dext.AI.Agent.Contracts;
 
@@ -47,11 +47,8 @@ type
     FModel:     string;
     FMaxTokens: Integer;
 
-    function BuildRequestBody(const AMessages: TArray<TLLMMessage>;
-      const ATools: TArray<TToolSchema>): TJSONObject;
-    function BuildMessageJSON(const AMessage: TLLMMessage): TJSONObject;
-    function BuildToolJSON(const ATool: TToolSchema): TJSONObject;
-    function ParseResponse(const ABody: string): TLLMResponse;
+    function BuildMessageJSON(const AMessage: TLLMMessage): TJsonObject;
+    function BuildToolJSON(const ATool: TToolSchema): TJsonObject;
     function MapDoneReason(const AReason: string): TLLMStopReason;
   public
     constructor Create(const ABaseUrl, AModel: string; AMaxTokens: Integer);
@@ -62,6 +59,12 @@ type
     ): TLLMResponse;
     function ProviderName: string;
     function ModelName: string;
+
+    // Públicos (não usados fora deste provider hoje) para permitir testar o
+    // request/response JSON diretamente, sem depender de rede.
+    function BuildRequestBody(const AMessages: TArray<TLLMMessage>;
+      const ATools: TArray<TToolSchema>): TJsonObject;
+    function ParseResponse(const ABody: string): TLLMResponse;
   end;
 
 implementation
@@ -86,95 +89,92 @@ begin
   Result := FModel;
 end;
 
-function TOllamaProvider.BuildMessageJSON(const AMessage: TLLMMessage): TJSONObject;
+function TOllamaProvider.BuildMessageJSON(const AMessage: TLLMMessage): TJsonObject;
 var
-  ToolCallsArr: TJSONArray;
+  ToolCallsArr: TJsonArray;
   TC: TLLMToolCall;
-  TCObj, FnObj: TJSONObject;
+  TCObj, FnObj: TJsonObject;
 begin
-  Result := TJSONObject.Create;
+  Result := TJsonObject.Create;
   case AMessage.Role of
     lrSystem:
     begin
-      Result.AddPair('role', 'system');
-      Result.AddPair('content', AMessage.Content);
+      Result.S['role'] := 'system';
+      Result.S['content'] := AMessage.Content;
     end;
     lrUser:
     begin
-      Result.AddPair('role', 'user');
-      Result.AddPair('content', AMessage.Content);
+      Result.S['role'] := 'user';
+      Result.S['content'] := AMessage.Content;
     end;
     lrAssistant:
     begin
-      Result.AddPair('role', 'assistant');
-      Result.AddPair('content', AMessage.Content);
+      Result.S['role'] := 'assistant';
+      Result.S['content'] := AMessage.Content;
 
       if Length(AMessage.ToolCalls) > 0 then
       begin
-        ToolCallsArr := TJSONArray.Create;
+        ToolCallsArr := Result.A['tool_calls'];
         for TC in AMessage.ToolCalls do
         begin
-          TCObj := TJSONObject.Create;
-          FnObj := TJSONObject.Create;
-          FnObj.AddPair('name', TC.Name);
-          FnObj.AddPair('arguments', TC.ArgsJson);
-          TCObj.AddPair('function', FnObj);
-          ToolCallsArr.Add(TCObj);
+          TCObj := ToolCallsArr.AddObject;
+          FnObj := TCObj.O['function'];
+          FnObj.S['name'] := TC.Name;
+          FnObj.S['arguments'] := TC.ArgsJson;
         end;
-        Result.AddPair('tool_calls', ToolCallsArr);
       end;
     end;
     lrToolResult:
     begin
-      Result.AddPair('role', 'tool');
-      Result.AddPair('tool_call_id', AMessage.ToolCallId);
-      Result.AddPair('content', AMessage.Content);
+      Result.S['role'] := 'tool';
+      Result.S['tool_call_id'] := AMessage.ToolCallId;
+      Result.S['content'] := AMessage.Content;
     end;
   end;
 end;
 
-function TOllamaProvider.BuildToolJSON(const ATool: TToolSchema): TJSONObject;
+function TOllamaProvider.BuildToolJSON(const ATool: TToolSchema): TJsonObject;
 var
-  FnObj: TJSONObject;
-  Params: TJSONValue;
+  FnObj: TJsonObject;
+  Params: TJsonBaseObject;
 begin
-  Result := TJSONObject.Create;
-  Result.AddPair('type', 'function');
+  Result := TJsonObject.Create;
+  Result.S['type'] := 'function';
 
-  FnObj := TJSONObject.Create;
-  FnObj.AddPair('name', ATool.Name);
-  FnObj.AddPair('description', ATool.Description);
+  FnObj := Result.O['function'];
+  FnObj.S['name'] := ATool.Name;
+  FnObj.S['description'] := ATool.Description;
 
-  Params := TJSONObject.ParseJSONValue(ATool.InputSchema);
-  if Params = nil then
-    Params := TJSONObject.Create;
-  FnObj.AddPair('parameters', Params);
-
-  Result.AddPair('function', FnObj);
+  Params := TJsonBaseObject.Parse(ATool.InputSchema);
+  if Params is TJsonObject then
+    FnObj.O['parameters'] := TJsonObject(Params)
+  else
+  begin
+    Params.Free;
+    FnObj.O['parameters'] := TJsonObject.Create;
+  end;
 end;
 
 function TOllamaProvider.BuildRequestBody(const AMessages: TArray<TLLMMessage>;
-  const ATools: TArray<TToolSchema>): TJSONObject;
+  const ATools: TArray<TToolSchema>): TJsonObject;
 var
-  MsgsArr, ToolsArr: TJSONArray;
+  MsgsArr, ToolsArr: TJsonArray;
   Msg: TLLMMessage;
   Tool: TToolSchema;
 begin
-  Result := TJSONObject.Create;
-  Result.AddPair('model', FModel);
-  Result.AddPair('stream', TJSONBool.Create(False));
+  Result := TJsonObject.Create;
+  Result.S['model'] := FModel;
+  Result.B['stream'] := False;
 
-  MsgsArr := TJSONArray.Create;
+  MsgsArr := Result.A['messages'];
   for Msg in AMessages do
     MsgsArr.Add(BuildMessageJSON(Msg));
-  Result.AddPair('messages', MsgsArr);
 
   if Length(ATools) > 0 then
   begin
-    ToolsArr := TJSONArray.Create;
+    ToolsArr := Result.A['tools'];
     for Tool in ATools do
       ToolsArr.Add(BuildToolJSON(Tool));
-    Result.AddPair('tools', ToolsArr);
   end;
 end;
 
@@ -190,46 +190,60 @@ end;
 
 function TOllamaProvider.ParseResponse(const ABody: string): TLLMResponse;
 var
-  Root, Message, TCObj, FnObj: TJSONObject;
-  ToolCallsArr: TJSONArray;
+  Parsed: TJsonBaseObject;
+  Root, Message, TCObj, FnObj: TJsonObject;
+  ToolCallsArr: TJsonArray;
   ToolCalls: TArray<TLLMToolCall>;
   I: Integer;
   TC: TLLMToolCall;
-  ArgsVal: TJSONValue;
 begin
   Result := Default(TLLMResponse);
 
-  Root := TJSONObject.ParseJSONValue(ABody) as TJSONObject;
-  if Root = nil then
-    raise ELLMProviderError.CreateFmt('Ollama: resposta inv�lida: %s', [ABody]);
   try
-    Message := Root.GetValue<TJSONObject>('message', nil);
-    if Message = nil then
+    Parsed := TJsonBaseObject.Parse(ABody);
+  except
+    on E: Exception do
+      raise ELLMProviderError.CreateFmt('Ollama: resposta inválida: %s', [ABody]);
+  end;
+  if not (Parsed is TJsonObject) then
+  begin
+    Parsed.Free;
+    raise ELLMProviderError.CreateFmt('Ollama: resposta inválida: %s', [ABody]);
+  end;
+  Root := TJsonObject(Parsed);
+  try
+    if (Root.Types['message'] <> jdtObject) or (Root.O['message'] = nil) then
       raise ELLMProviderError.CreateFmt('Ollama: resposta sem message: %s', [ABody]);
+    Message := Root.O['message'];
 
-    Result.Content := Message.GetValue<string>('content', '');
+    // "content" pode vir null em vez de "" — mesmo cuidado do provider
+    // OpenAI: o parser representa null como jdtObject(nil), e ler isso via
+    // S[] lançaria EJsonCastException.
+    if Message.Types['content'] = jdtString then
+      Result.Content := Message.S['content']
+    else
+      Result.Content := '';
 
-    // 'tool_calls' is absent on a plain-text final answer - GetValue<T> with a
-    // default is required here, the 1-arg overload raises EJSONException instead
-    // of returning nil when the key is missing.
-    ToolCallsArr := Message.GetValue<TJSONArray>('tool_calls', nil);
-    if ToolCallsArr <> nil then
+    if Message.Types['tool_calls'] = jdtArray then
     begin
+      ToolCallsArr := Message.A['tool_calls'];
       SetLength(ToolCalls, ToolCallsArr.Count);
       for I := 0 to ToolCallsArr.Count - 1 do
       begin
-        TCObj := ToolCallsArr.Items[I] as TJSONObject;
-        FnObj := TCObj.GetValue<TJSONObject>('function', nil);
+        TCObj := ToolCallsArr.O[I];
         TC := Default(TLLMToolCall);
         TC.Id := 'ollama-call-' + IntToStr(I);
         TC.ArgsJson := '{}';
 
-        if FnObj <> nil then
+        if TCObj.Types['function'] = jdtObject then
         begin
-          TC.Name := FnObj.GetValue<string>('name', '');
-          ArgsVal := FnObj.GetValue('arguments');
-          if ArgsVal <> nil then
-            TC.ArgsJson := ArgsVal.ToJSON;
+          FnObj := TCObj.O['function'];
+          TC.Name := FnObj.S['name'];
+          // Ollama devolve "arguments" como objeto JSON de verdade (não como
+          // string escapada, ao contrário da OpenAI) — serializa de volta
+          // para string para caber em TLLMToolCall.ArgsJson.
+          if FnObj.Types['arguments'] = jdtObject then
+            TC.ArgsJson := FnObj.O['arguments'].ToJSON;
         end;
 
         ToolCalls[I] := TC;
@@ -237,7 +251,7 @@ begin
       Result.ToolCalls := ToolCalls;
     end;
 
-    Result.StopReason := MapDoneReason(Root.GetValue<string>('done_reason', ''));
+    Result.StopReason := MapDoneReason(Root.S['done_reason']);
     Result.InputTokens  := 0;
     Result.OutputTokens := 0;
   finally
@@ -248,15 +262,15 @@ end;
 function TOllamaProvider.Complete(const AMessages: TArray<TLLMMessage>;
   const ATools: TArray<TToolSchema>): TLLMResponse;
 var
-  Body: TJSONObject;
+  Body: TJsonObject;
   Response: IRestResponse;
 begin
   Body := BuildRequestBody(AMessages, ATools);
   try
-    // FBaseUrl � s� a origem (ex.: http://localhost:11434) — o path
+    // FBaseUrl é só a origem (ex.: http://localhost:11434) — o path
     // '/api/chat' vai no PostJson(endpoint, payload) de 2 argumentos, que
-    // concatena via GetFullUrl sem duplicar a barra (FBaseUrl j� chega sem
-    // '/' final pelo TrimRight do construtor, e '/api/chat' j� come�a com
+    // concatena via GetFullUrl sem duplicar a barra (FBaseUrl já chega sem
+    // '/' final pelo TrimRight do construtor, e '/api/chat' já começa com
     // '/').
     Response :=
       TRestClient.Create(FBaseUrl)

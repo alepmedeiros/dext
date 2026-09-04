@@ -42,7 +42,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  System.JSON,
+  DextJsonDataObjects,
   Dext.Collections,
   Dext.Net.RestClient,
   Dext.AI.Agent.Contracts;
@@ -55,10 +55,7 @@ type
     FMaxTokens: Integer;
     FEndpoint:  string;
 
-    function BuildRequestBody(const AMessages: TArray<TLLMMessage>;
-      const ATools: TArray<TToolSchema>): TJSONObject;
-    function BuildToolJSON(const ATool: TToolSchema): TJSONObject;
-    function ParseResponse(const ABody: string): TLLMResponse;
+    function BuildToolJSON(const ATool: TToolSchema): TJsonObject;
     function MapStopReason(const AReason: string): TLLMStopReason;
   public
     constructor Create(const AApiKey, AModel: string; AMaxTokens: Integer);
@@ -69,6 +66,12 @@ type
     ): TLLMResponse;
     function ProviderName: string;
     function ModelName: string;
+
+    // Públicos (não usados fora deste provider hoje) para permitir testar o
+    // request/response JSON diretamente, sem depender de rede.
+    function BuildRequestBody(const AMessages: TArray<TLLMMessage>;
+      const ATools: TArray<TToolSchema>): TJsonObject;
+    function ParseResponse(const ABody: string): TLLMResponse;
   end;
 
 implementation
@@ -94,37 +97,41 @@ begin
   Result := FModel;
 end;
 
-function TAnthropicProvider.BuildToolJSON(const ATool: TToolSchema): TJSONObject;
+function TAnthropicProvider.BuildToolJSON(const ATool: TToolSchema): TJsonObject;
 var
-  Schema: TJSONValue;
+  Schema: TJsonBaseObject;
 begin
-  Result := TJSONObject.Create;
-  Result.AddPair('name', ATool.Name);
-  Result.AddPair('description', ATool.Description);
+  Result := TJsonObject.Create;
+  Result.S['name'] := ATool.Name;
+  Result.S['description'] := ATool.Description;
 
-  Schema := TJSONObject.ParseJSONValue(ATool.InputSchema);
-  if Schema = nil then
-    Schema := TJSONObject.Create;
-  Result.AddPair('input_schema', Schema);
+  Schema := TJsonBaseObject.Parse(ATool.InputSchema);
+  if Schema is TJsonObject then
+    Result.O['input_schema'] := TJsonObject(Schema)
+  else
+  begin
+    Schema.Free;
+    Result.O['input_schema'] := TJsonObject.Create;
+  end;
 end;
 
 function TAnthropicProvider.BuildRequestBody(const AMessages: TArray<TLLMMessage>;
-  const ATools: TArray<TToolSchema>): TJSONObject;
+  const ATools: TArray<TToolSchema>): TJsonObject;
 var
-  MsgsArr, ToolsArr: TJSONArray;
-  ContentArr: TJSONArray;
-  MsgObj, ContentBlock: TJSONObject;
+  MsgsArr, ToolsArr: TJsonArray;
+  ContentArr: TJsonArray;
+  MsgObj, ContentBlock: TJsonObject;
   I, J: Integer;
   Msg: TLLMMessage;
   TC: TLLMToolCall;
   Tool: TToolSchema;
-  ArgsVal: TJSONValue;
+  ArgsVal: TJsonBaseObject;
 begin
-  Result := TJSONObject.Create;
-  Result.AddPair('model', FModel);
-  Result.AddPair('max_tokens', TJSONNumber.Create(FMaxTokens));
+  Result := TJsonObject.Create;
+  Result.S['model'] := FModel;
+  Result.I['max_tokens'] := FMaxTokens;
 
-  MsgsArr := TJSONArray.Create;
+  MsgsArr := Result.A['messages'];
 
   I := 0;
   while I < Length(AMessages) do
@@ -134,48 +141,48 @@ begin
     case Msg.Role of
       lrSystem:
       begin
-        Result.AddPair('system', Msg.Content);
+        Result.S['system'] := Msg.Content;
         Inc(I);
       end;
 
       lrUser:
       begin
-        MsgObj := TJSONObject.Create;
-        MsgObj.AddPair('role', 'user');
-        MsgObj.AddPair('content', Msg.Content);
-        MsgsArr.Add(MsgObj);
+        MsgObj := MsgsArr.AddObject;
+        MsgObj.S['role'] := 'user';
+        MsgObj.S['content'] := Msg.Content;
         Inc(I);
       end;
 
       lrAssistant:
       begin
-        MsgObj := TJSONObject.Create;
-        MsgObj.AddPair('role', 'assistant');
-        ContentArr := TJSONArray.Create;
+        MsgObj := MsgsArr.AddObject;
+        MsgObj.S['role'] := 'assistant';
+        ContentArr := MsgObj.A['content'];
 
         if Msg.Content <> '' then
         begin
-          ContentBlock := TJSONObject.Create;
-          ContentBlock.AddPair('type', 'text');
-          ContentBlock.AddPair('text', Msg.Content);
-          ContentArr.Add(ContentBlock);
+          ContentBlock := ContentArr.AddObject;
+          ContentBlock.S['type'] := 'text';
+          ContentBlock.S['text'] := Msg.Content;
         end;
 
         for TC in Msg.ToolCalls do
         begin
-          ContentBlock := TJSONObject.Create;
-          ContentBlock.AddPair('type', 'tool_use');
-          ContentBlock.AddPair('id', TC.Id);
-          ContentBlock.AddPair('name', TC.Name);
-          ArgsVal := TJSONObject.ParseJSONValue(TC.ArgsJson);
-          if ArgsVal = nil then
-            ArgsVal := TJSONObject.Create;
-          ContentBlock.AddPair('input', ArgsVal);
-          ContentArr.Add(ContentBlock);
+          ContentBlock := ContentArr.AddObject;
+          ContentBlock.S['type'] := 'tool_use';
+          ContentBlock.S['id'] := TC.Id;
+          ContentBlock.S['name'] := TC.Name;
+
+          ArgsVal := TJsonBaseObject.Parse(TC.ArgsJson);
+          if ArgsVal is TJsonObject then
+            ContentBlock.O['input'] := TJsonObject(ArgsVal)
+          else
+          begin
+            ArgsVal.Free;
+            ContentBlock.O['input'] := TJsonObject.Create;
+          end;
         end;
 
-        MsgObj.AddPair('content', ContentArr);
-        MsgsArr.Add(MsgObj);
         Inc(I);
       end;
 
@@ -183,23 +190,20 @@ begin
       begin
         // Coalesce this run of consecutive tool-result messages into a
         // single {"role":"user","content":[tool_result, tool_result, ...]}
-        MsgObj := TJSONObject.Create;
-        MsgObj.AddPair('role', 'user');
-        ContentArr := TJSONArray.Create;
+        MsgObj := MsgsArr.AddObject;
+        MsgObj.S['role'] := 'user';
+        ContentArr := MsgObj.A['content'];
 
         J := I;
         while (J < Length(AMessages)) and (AMessages[J].Role = lrToolResult) do
         begin
-          ContentBlock := TJSONObject.Create;
-          ContentBlock.AddPair('type', 'tool_result');
-          ContentBlock.AddPair('tool_use_id', AMessages[J].ToolCallId);
-          ContentBlock.AddPair('content', AMessages[J].Content);
-          ContentArr.Add(ContentBlock);
+          ContentBlock := ContentArr.AddObject;
+          ContentBlock.S['type'] := 'tool_result';
+          ContentBlock.S['tool_use_id'] := AMessages[J].ToolCallId;
+          ContentBlock.S['content'] := AMessages[J].Content;
           Inc(J);
         end;
 
-        MsgObj.AddPair('content', ContentArr);
-        MsgsArr.Add(MsgObj);
         I := J;
       end;
     else
@@ -207,14 +211,11 @@ begin
     end;
   end;
 
-  Result.AddPair('messages', MsgsArr);
-
   if Length(ATools) > 0 then
   begin
-    ToolsArr := TJSONArray.Create;
+    ToolsArr := Result.A['tools'];
     for Tool in ATools do
       ToolsArr.Add(BuildToolJSON(Tool));
-    Result.AddPair('tools', ToolsArr);
   end;
 end;
 
@@ -232,8 +233,9 @@ end;
 
 function TAnthropicProvider.ParseResponse(const ABody: string): TLLMResponse;
 var
-  Root, Usage, Block: TJSONObject;
-  ContentArr: TJSONArray;
+  Parsed: TJsonBaseObject;
+  Root, Usage, Block: TJsonObject;
+  ContentArr: TJsonArray;
   I: Integer;
   BlockType: string;
   TextBuf: TStringBuilder;
@@ -242,31 +244,40 @@ var
 begin
   Result := Default(TLLMResponse);
 
-  Root := TJSONObject.ParseJSONValue(ABody) as TJSONObject;
-  if Root = nil then
-    raise ELLMProviderError.CreateFmt('Anthropic: resposta inv�lida: %s', [ABody]);
   try
-    ContentArr := Root.GetValue<TJSONArray>('content', nil);
-    if ContentArr = nil then
+    Parsed := TJsonBaseObject.Parse(ABody);
+  except
+    on E: Exception do
+      raise ELLMProviderError.CreateFmt('Anthropic: resposta inválida: %s', [ABody]);
+  end;
+  if not (Parsed is TJsonObject) then
+  begin
+    Parsed.Free;
+    raise ELLMProviderError.CreateFmt('Anthropic: resposta inválida: %s', [ABody]);
+  end;
+  Root := TJsonObject(Parsed);
+  try
+    if Root.Types['content'] <> jdtArray then
       raise ELLMProviderError.CreateFmt('Anthropic: resposta sem content: %s', [ABody]);
+    ContentArr := Root.A['content'];
 
     TextBuf   := TStringBuilder.Create;
     ToolCalls := TList<TLLMToolCall>.Create;
     try
       for I := 0 to ContentArr.Count - 1 do
       begin
-        Block := ContentArr.Items[I] as TJSONObject;
-        BlockType := Block.GetValue<string>('type', '');
+        Block := ContentArr.O[I];
+        BlockType := Block.S['type'];
 
         if BlockType = 'text' then
-          TextBuf.Append(Block.GetValue<string>('text', ''))
+          TextBuf.Append(Block.S['text'])
         else if BlockType = 'tool_use' then
         begin
           TC := Default(TLLMToolCall);
-          TC.Id   := Block.GetValue<string>('id', '');
-          TC.Name := Block.GetValue<string>('name', '');
-          if Block.GetValue('input') <> nil then
-            TC.ArgsJson := Block.GetValue('input').ToJSON
+          TC.Id   := Block.S['id'];
+          TC.Name := Block.S['name'];
+          if Block.Types['input'] = jdtObject then
+            TC.ArgsJson := Block.O['input'].ToJSON
           else
             TC.ArgsJson := '{}';
           ToolCalls.Add(TC);
@@ -280,13 +291,13 @@ begin
       ToolCalls.Free;
     end;
 
-    Result.StopReason := MapStopReason(Root.GetValue<string>('stop_reason', ''));
+    Result.StopReason := MapStopReason(Root.S['stop_reason']);
 
-    Usage := Root.GetValue<TJSONObject>('usage', nil);
-    if Usage <> nil then
+    if Root.Types['usage'] = jdtObject then
     begin
-      Result.InputTokens  := Usage.GetValue<Integer>('input_tokens', 0);
-      Result.OutputTokens := Usage.GetValue<Integer>('output_tokens', 0);
+      Usage := Root.O['usage'];
+      Result.InputTokens  := Usage.I['input_tokens'];
+      Result.OutputTokens := Usage.I['output_tokens'];
     end;
   finally
     Root.Free;
@@ -296,11 +307,11 @@ end;
 function TAnthropicProvider.Complete(const AMessages: TArray<TLLMMessage>;
   const ATools: TArray<TToolSchema>): TLLMResponse;
 var
-  Body: TJSONObject;
+  Body: TJsonObject;
   Response: IRestResponse;
 begin
   if FApiKey = '' then
-    raise ELLMProviderError.Create('Anthropic: API key n�o configurada.');
+    raise ELLMProviderError.Create('Anthropic: API key não configurada.');
 
   Body := BuildRequestBody(AMessages, ATools);
   try
