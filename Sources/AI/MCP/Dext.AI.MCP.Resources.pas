@@ -1,29 +1,29 @@
 {***************************************************************************}
-{                                                                           }
-{           Dext Framework                                                  }
-{                                                                           }
-{           Copyright (C) 2026 Cesar Romero & Dext Contributors             }
-{                                                                           }
-{           Licensed under the Apache License, Version 2.0 (the "License"); }
-{           you may not use this file except in compliance with the License.}
-{           You may obtain a copy of the License at                         }
-{                                                                           }
-{               http://www.apache.org/licenses/LICENSE-2.0                  }
-{                                                                           }
-{           Unless required by applicable law or agreed to in writing,      }
-{           software distributed under the License is distributed on an     }
-{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
-{           either express or implied. See the License for the specific     }
-{           language governing permissions and limitations under the        }
-{           License.                                                        }
-{                                                                           }
+{                                                                                   }
+{           Dext Framework                                                          }
+{                                                                                   }
+{           Copyright (C) 2026 Cesar Romero & Dext Contributors                     }
+{                                                                                   }
+{           Licensed under the Apache License, Version 2.0 (the "License");         }
+{           you may not use this file except in compliance with the License.        }
+{           You may obtain a copy of the License at                                 }
+{                                                                                   }
+{               http://www.apache.org/licenses/LICENSE-2.0                          }
+{                                                                                   }
+{           Unless required by applicable law or agreed to in writing,              }
+{           software distributed under the License is distributed on an             }
+{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,            }
+{           either express or implied. See the License for the specific             }
+{           language governing permissions and limitations under the                }
+{           License.                                                                }
+{                                                                                   }
 {***************************************************************************}
 {                                                                           }
 {  Description:                                                             }
 {    MCP Resource registry and fluent builder.                              }
 {                                                                           }
 {    Resources are read-only data sources that LLMs can fetch by URI.       }
-{    Think of them as "files" or "documents" the model can read.            }
+{    Think of them as "files" or "documents" the model can read.           }
 {                                                                           }
 {  Fluent registration:                                                     }
 {    Server.Resource('file:///config', 'App Config', 'text/json')           }
@@ -44,7 +44,7 @@ interface
 
 uses
   System.SysUtils,
-  System.JSON,
+  DextJsonDataObjects,
   System.RTTI,
   Dext.Collections,
   Dext.Collections.Dict,
@@ -123,9 +123,9 @@ type
 
     /// <summary>
     /// Builds the JSON array for the resources/list response.
-    /// Caller owns the returned TJSONArray.
+    /// Caller owns the returned TJsonArray.
     /// </summary>
-    function BuildResourcesArray: TJSONArray;
+    function BuildResourcesArray: TJsonArray;
 
     function Count: Integer;
   end;
@@ -264,24 +264,23 @@ begin
   Result := FResources.Count;
 end;
 
-function TMCPResourceRegistry.BuildResourcesArray: TJSONArray;
+function TMCPResourceRegistry.BuildResourcesArray: TJsonArray;
 var
-  Arr: TJSONArray;
+  Arr: TJsonArray;
   Def: TMCPResourceDef;
-  ResObj: TJSONObject;
+  ResObj: TJsonObject;
 begin
-  Arr := TJSONArray.Create;
+  Arr := TJsonArray.Create;
 
   for Def in FResources.Values do
   begin
-    ResObj := TJSONObject.Create;
-    ResObj.AddPair('uri', Def.Uri);
-    ResObj.AddPair('name', Def.Name);
+    ResObj := Arr.AddObject;
+    ResObj.S['uri'] := Def.Uri;
+    ResObj.S['name'] := Def.Name;
     if Def.Description <> '' then
-      ResObj.AddPair('description', Def.Description);
+      ResObj.S['description'] := Def.Description;
     if Def.MimeType <> '' then
-      ResObj.AddPair('mimeType', Def.MimeType);
-    Arr.Add(ResObj);
+      ResObj.S['mimeType'] := Def.MimeType;
   end;
 
   Result := Arr;

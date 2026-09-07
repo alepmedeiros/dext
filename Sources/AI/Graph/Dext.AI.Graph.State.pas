@@ -34,7 +34,7 @@ interface
 
 uses
   System.SysUtils,
-  System.JSON,
+  DextJsonDataObjects,
   Dext.Collections.Dict,
   Dext.AI.Agent.Contracts;
 
@@ -124,70 +124,71 @@ begin
     Result := lrUser;
 end;
 
-function MessageToJson(const AMsg: TLLMMessage): TJSONObject;
+function MessageToJson(const AMsg: TLLMMessage): TJsonObject;
 var
-  JCalls: TJSONArray;
-  JCall: TJSONObject;
+  JCalls: TJsonArray;
+  JCall: TJsonObject;
   TC: TLLMToolCall;
 begin
-  Result := TJSONObject.Create;
-  Result.AddPair('role', RoleToName(AMsg.Role));
-  Result.AddPair('content', AMsg.Content);
-  Result.AddPair('toolCallId', AMsg.ToolCallId);
-  JCalls := TJSONArray.Create;
+  Result := TJsonObject.Create;
+  Result.S['role'] := RoleToName(AMsg.Role);
+  Result.S['content'] := AMsg.Content;
+  Result.S['toolCallId'] := AMsg.ToolCallId;
+  JCalls := Result.A['toolCalls'];
   for TC in AMsg.ToolCalls do
   begin
-    JCall := TJSONObject.Create;
-    JCall.AddPair('id', TC.Id);
-    JCall.AddPair('name', TC.Name);
-    JCall.AddPair('argsJson', TC.ArgsJson);
-    JCalls.Add(JCall);
+    JCall := JCalls.AddObject;
+    JCall.S['id'] := TC.Id;
+    JCall.S['name'] := TC.Name;
+    JCall.S['argsJson'] := TC.ArgsJson;
   end;
-  Result.AddPair('toolCalls', JCalls);
 end;
 
-function JsonToMessage(AObj: TJSONObject): TLLMMessage;
+function JsonToMessage(AObj: TJsonObject): TLLMMessage;
 var
-  JCalls: TJSONArray;
-  JCallObj: TJSONObject;
+  JCalls: TJsonArray;
+  JCallObj: TJsonObject;
   TC: TLLMToolCall;
   Calls: TArray<TLLMToolCall>;
   I: Integer;
 begin
   Result := Default(TLLMMessage);
-  Result.Role       := NameToRole(AObj.GetValue<string>('role', 'user'));
-  Result.Content    := AObj.GetValue<string>('content', '');
-  Result.ToolCallId := AObj.GetValue<string>('toolCallId', '');
-  JCalls := AObj.GetValue('toolCalls') as TJSONArray;
-  if JCalls = nil then
+  // AObj.S['role'] returns '' when absent, and NameToRole('') already falls
+  // through to lrUser (its else branch) - same effective default as the
+  // original GetValue<string>('role', 'user').
+  Result.Role       := NameToRole(AObj.S['role']);
+  Result.Content    := AObj.S['content'];
+  Result.ToolCallId := AObj.S['toolCallId'];
+  if AObj.Types['toolCalls'] <> jdtArray then
     Exit;
+  JCalls := AObj.A['toolCalls'];
   SetLength(Calls, JCalls.Count);
   for I := 0 to JCalls.Count - 1 do
   begin
-    JCallObj := JCalls.Items[I] as TJSONObject;
+    JCallObj := JCalls.O[I];
     TC := Default(TLLMToolCall);
-    TC.Id       := JCallObj.GetValue<string>('id', '');
-    TC.Name     := JCallObj.GetValue<string>('name', '');
-    TC.ArgsJson := JCallObj.GetValue<string>('argsJson', '');
+    TC.Id       := JCallObj.S['id'];
+    TC.Name     := JCallObj.S['name'];
+    TC.ArgsJson := JCallObj.S['argsJson'];
     Calls[I] := TC;
   end;
   Result.ToolCalls := Calls;
 end;
 
-function ToolCallToJson(const ATC: TLLMToolCall): TJSONObject;
+function ToolCallToJson(const ATC: TLLMToolCall): TJsonObject;
 begin
-  Result := TJSONObject.Create;
-  Result.AddPair('id', ATC.Id);
-  Result.AddPair('name', ATC.Name);
-  Result.AddPair('argsJson', ATC.ArgsJson);
+  Result := TJsonObject.Create;
+  Result.S['id'] := ATC.Id;
+  Result.S['name'] := ATC.Name;
+  Result.S['argsJson'] := ATC.ArgsJson;
 end;
 
-function JsonToToolCall(AObj: TJSONObject): TLLMToolCall;
+function JsonToToolCall(AObj: TJsonObject): TLLMToolCall;
 begin
   Result := Default(TLLMToolCall);
-  Result.Id       := AObj.GetValue<string>('id', '');
-  Result.Name     := AObj.GetValue<string>('name', '');
-  Result.ArgsJson := AObj.GetValue<string>('argsJson', '');
+  Result.Id       := AObj.S['id'];
+  Result.Name     := AObj.S['name'];
+  Result.ArgsJson := AObj.S['argsJson'];
 end;
 
 { TAgentState }
@@ -355,36 +356,33 @@ end;
 
 function TAgentState.ToJson: string;
 var
-  Root: TJSONObject;
-  JMsgs, JCalls: TJSONArray;
-  JMeta: TJSONObject;
+  Root: TJsonObject;
+  JMsgs, JCalls: TJsonArray;
+  JMeta: TJsonObject;
   Msg: TLLMMessage;
   TC: TLLMToolCall;
   Pair: TPair<string, string>;
 begin
-  Root := TJSONObject.Create;
+  Root := TJsonObject.Create;
   try
-    Root.AddPair('threadId', FThreadId);
-    Root.AddPair('currentNode', FCurrentNode);
-    Root.AddPair('iteration', TJSONNumber.Create(FIteration));
-    Root.AddPair('isDone', TJSONBool.Create(FIsDone));
-    Root.AddPair('finalAnswer', FFinalAnswer);
+    Root.S['threadId'] := FThreadId;
+    Root.S['currentNode'] := FCurrentNode;
+    Root.I['iteration'] := FIteration;
+    Root.B['isDone'] := FIsDone;
+    Root.S['finalAnswer'] := FFinalAnswer;
 
-    JMsgs := TJSONArray.Create;
+    JMsgs := Root.A['messages'];
     for Msg in FMessages do
       JMsgs.Add(MessageToJson(Msg));
-    Root.AddPair('messages', JMsgs);
 
-    JCalls := TJSONArray.Create;
+    JCalls := Root.A['pendingCalls'];
     for TC in FPendingCalls do
       JCalls.Add(ToolCallToJson(TC));
-    Root.AddPair('pendingCalls', JCalls);
 
-    JMeta := TJSONObject.Create;
+    JMeta := Root.O['metadata'];
     if FMetadata <> nil then
       for Pair in FMetadata do
-        JMeta.AddPair(Pair.Key, Pair.Value);
-    Root.AddPair('metadata', JMeta);
+        JMeta.S[Pair.Key] := Pair.Value;
 
     Result := Root.ToJSON;
   finally
@@ -394,55 +392,61 @@ end;
 
 class function TAgentState.FromJson(const AJson: string): TAgentState;
 var
-  Root: TJSONObject;
-  JMsgs, JCalls: TJSONArray;
-  JMeta: TJSONObject;
-  JVal: TJSONValue;
+  Parsed: TJsonBaseObject;
+  Root: TJsonObject;
+  JMsgs, JCalls: TJsonArray;
+  JMeta: TJsonObject;
   Msgs: TArray<TLLMMessage>;
   Calls: TArray<TLLMToolCall>;
   Meta: TDictionary<string, string>;
   I: Integer;
-  Pair: TJSONPair;
 begin
-  Root := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
-  if Root = nil then
-    raise EArgumentException.Create('JSON de estado inválido');
   try
-    JMsgs := Root.GetValue('messages') as TJSONArray;
-    if JMsgs <> nil then
+    Parsed := TJsonBaseObject.Parse(AJson);
+  except
+    Parsed := nil;
+  end;
+  if not (Parsed is TJsonObject) then
+  begin
+    Parsed.Free;
+    raise EArgumentException.Create('JSON de estado inválido');
+  end;
+  Root := TJsonObject(Parsed);
+  try
+    if Root.Types['messages'] = jdtArray then
     begin
+      JMsgs := Root.A['messages'];
       SetLength(Msgs, JMsgs.Count);
       for I := 0 to JMsgs.Count - 1 do
-        Msgs[I] := JsonToMessage(JMsgs.Items[I] as TJSONObject);
+        Msgs[I] := JsonToMessage(JMsgs.O[I]);
     end;
 
-    JCalls := Root.GetValue('pendingCalls') as TJSONArray;
-    if JCalls <> nil then
+    if Root.Types['pendingCalls'] = jdtArray then
     begin
+      JCalls := Root.A['pendingCalls'];
       SetLength(Calls, JCalls.Count);
       for I := 0 to JCalls.Count - 1 do
-        Calls[I] := JsonToToolCall(JCalls.Items[I] as TJSONObject);
+        Calls[I] := JsonToToolCall(JCalls.O[I]);
     end;
 
     Meta := TDictionary<string, string>.Create;
-    JMeta := Root.GetValue('metadata') as TJSONObject;
-    if JMeta <> nil then
-      for Pair in JMeta do
-      begin
-        JVal := Pair.JsonValue;
-        if JVal <> nil then
-          Meta.AddOrSetValue(Pair.JsonString.Value, JVal.Value);
-      end;
+    if Root.Types['metadata'] = jdtObject then
+    begin
+      JMeta := Root.O['metadata'];
+      if JMeta <> nil then
+        for I := 0 to JMeta.Count - 1 do
+          Meta.AddOrSetValue(JMeta.Names[I], JMeta.Items[I].Value);
+    end;
 
     Result := TAgentState.CreateInternal(
       Msgs,
       Calls,
-      Root.GetValue<string>('currentNode', ''),
-      Root.GetValue<Integer>('iteration', 0),
-      Root.GetValue<Boolean>('isDone', False),
-      Root.GetValue<string>('finalAnswer', ''),
+      Root.S['currentNode'],
+      Root.I['iteration'],
+      Root.B['isDone'],
+      Root.S['finalAnswer'],
       Meta,
-      Root.GetValue<string>('threadId', '')
+      Root.S['threadId']
     );
   finally
     Root.Free;

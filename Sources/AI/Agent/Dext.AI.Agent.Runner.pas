@@ -39,7 +39,7 @@ uses
   Dext.AI.MCP.Protocol,
   Dext.Collections,
   System.SysUtils,
-  System.JSON;
+  DextJsonDataObjects;
 
 type
   TAgentRunner = class
@@ -94,9 +94,8 @@ end;
 
 function TAgentRunner.BuildToolSchemas: TArray<TToolSchema>;
 var
-  Arr: TJSONArray;
-  Item: TJSONObject;
-  InputSchema: TJSONValue;
+  Arr: TJsonArray;
+  Item: TJsonObject;
   Schema: TToolSchema;
   List: TArray<TToolSchema>;
   I: Integer;
@@ -106,13 +105,12 @@ begin
     SetLength(List, Arr.Count);
     for I := 0 to Arr.Count - 1 do
     begin
-      Item := Arr.Items[I] as TJSONObject;
+      Item := Arr.O[I];
       Schema := Default(TToolSchema);
-      Schema.Name        := Item.GetValue<string>('name', '');
-      Schema.Description := Item.GetValue<string>('description', '');
-      InputSchema := Item.GetValue('inputSchema');
-      if InputSchema <> nil then
-        Schema.InputSchema := InputSchema.ToJSON
+      Schema.Name        := Item.S['name'];
+      Schema.Description := Item.S['description'];
+      if Item.Types['inputSchema'] = jdtObject then
+        Schema.InputSchema := Item.O['inputSchema'].ToJSON
       else
         Schema.InputSchema := '{}';
       List[I] := Schema;
@@ -149,14 +147,24 @@ end;
 function TAgentRunner.ExecuteTool(const AToolName, AArgsJson: string): string;
 var
   Def: TMCPToolDef;
-  JArgs: TJSONObject;
+  Parsed: TJsonBaseObject;
+  JArgs: TJsonObject;
 begin
   if not FRegistry.TryGetTool(AToolName, Def) then
     Exit('[Error: Tool not found: ' + AToolName + ']');
 
-  JArgs := TJSONObject.ParseJSONValue(AArgsJson) as TJSONObject;
-  if JArgs = nil then
-    JArgs := TJSONObject.Create;
+  try
+    Parsed := TJsonBaseObject.Parse(AArgsJson);
+  except
+    Parsed := nil;
+  end;
+  if Parsed is TJsonObject then
+    JArgs := TJsonObject(Parsed)
+  else
+  begin
+    Parsed.Free;
+    JArgs := TJsonObject.Create;
+  end;
   try
     try
       // ResultCallback (rico) tem precedência sobre o Callback legado

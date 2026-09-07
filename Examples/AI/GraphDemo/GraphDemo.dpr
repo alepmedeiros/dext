@@ -6,7 +6,7 @@ uses
   Winapi.Windows,
   System.SysUtils,
   System.Math,
-  System.JSON,
+  DextJsonDataObjects,
   System.IOUtils,
   System.Classes,
   Dext.AI.MCP.Tools,
@@ -31,42 +31,43 @@ type
     [MCPTool('list_files', 'Lista arquivos em um diretório')]
     [MCPParam('path', 'Caminho do diretório', ptString, True)]
     [MCPParam('extension', 'Filtro ex: .pas (opcional)', ptString, False)]
-    function ListFiles(const Args: TJSONObject): TMCPToolResult;
+    function ListFiles(const Args: TJsonObject): TMCPToolResult;
 
     [MCPTool('read_file', 'Lê o conteúdo de um arquivo')]
     [MCPParam('path', 'Caminho completo do arquivo', ptString, True)]
     [MCPParam('max_lines', 'Máximo de linhas (default: 50)', ptInteger, False)]
-    function ReadFile(const Args: TJSONObject): TMCPToolResult;
+    function ReadFile(const Args: TJsonObject): TMCPToolResult;
 
     [MCPTool('count_lines', 'Conta linhas de código em um arquivo')]
     [MCPParam('path', 'Caminho completo do arquivo', ptString, True)]
-    function CountLines(const Args: TJSONObject): TMCPToolResult;
+    function CountLines(const Args: TJsonObject): TMCPToolResult;
   end;
 
-function TFileSystemTools.ListFiles(const Args: TJSONObject): TMCPToolResult;
+function TFileSystemTools.ListFiles(const Args: TJsonObject): TMCPToolResult;
 var
   Path, Ext, Pattern: string;
   SR: TSearchRec;
-  JA: TJSONArray;
+  JA: TJsonArray;
+  JO: TJsonObject;
 begin
-  Path := Args.GetValue<string>('path', '.');
-  Ext  := Args.GetValue<string>('extension', '');
+  Path := Args.S['path'];
+  if Path = '' then Path := '.';
+  Ext  := Args.S['extension'];
 
   if not DirectoryExists(Path) then
     Exit(TMCPToolResult.Error('Diretório não encontrado: ' + Path));
 
   Pattern := IncludeTrailingPathDelimiter(Path) + '*' + Ext;
-  JA := TJSONArray.Create;
+  JA := TJsonArray.Create;
   try
     if FindFirst(Pattern, faAnyFile, SR) = 0 then
     try
       repeat
         if (SR.Attr and faDirectory) = 0 then
         begin
-          var JO := TJSONObject.Create;
-          JO.AddPair('name', SR.Name);
-          JO.AddPair('size', TJSONNumber.Create(SR.Size));
-          JA.AddElement(JO);
+          JO := JA.AddObject;
+          JO.S['name'] := SR.Name;
+          JO.L['size'] := SR.Size;
         end;
       until FindNext(SR) <> 0;
     finally
@@ -81,15 +82,18 @@ begin
   end;
 end;
 
-function TFileSystemTools.ReadFile(const Args: TJSONObject): TMCPToolResult;
+function TFileSystemTools.ReadFile(const Args: TJsonObject): TMCPToolResult;
 var
   Path: string;
   MaxLines, I: Integer;
   Lines: TStringList;
   SB: TStringBuilder;
 begin
-  Path     := Args.GetValue<string>('path', '');
-  MaxLines := Args.GetValue<Integer>('max_lines', 50);
+  Path := Args.S['path'];
+  if Args.Contains('max_lines') then
+    MaxLines := Args.I['max_lines']
+  else
+    MaxLines := 50;
 
   if not FileExists(Path) then
     Exit(TMCPToolResult.Error('Arquivo não encontrado: ' + Path));
@@ -110,14 +114,14 @@ begin
   end;
 end;
 
-function TFileSystemTools.CountLines(const Args: TJSONObject): TMCPToolResult;
+function TFileSystemTools.CountLines(const Args: TJsonObject): TMCPToolResult;
 var
   Path: string;
   Lines: TStringList;
   Code, Comment, Blank: Integer;
   Line: string;
 begin
-  Path := Args.GetValue<string>('path', '');
+  Path := Args.S['path'];
   if not FileExists(Path) then
     Exit(TMCPToolResult.Error('Arquivo não encontrado: ' + Path));
 

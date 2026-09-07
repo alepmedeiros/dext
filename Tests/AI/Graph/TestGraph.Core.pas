@@ -33,7 +33,7 @@ interface
 uses
   System.SysUtils,
   System.IOUtils,
-  System.JSON,
+  DextJsonDataObjects,
   Dext.Testing,
   Dext.AI.Agent.Contracts,
   Dext.AI.Agent.Runner,
@@ -131,7 +131,7 @@ type
   public
     [MCPTool('echo', 'Echoes the input text back')]
     [MCPParam('text', 'Text to echo', ptString)]
-    function Echo(const Args: TJSONObject): TMCPToolResult; virtual;
+    function Echo(const Args: TJsonObject): TMCPToolResult; virtual;
   end;
 
   [TestFixture('TMCPToolRegistry adoption (TToolsNode / TAgentRunner)')]
@@ -608,9 +608,9 @@ end;
 
 { TEchoToolProvider }
 
-function TEchoToolProvider.Echo(const Args: TJSONObject): TMCPToolResult;
+function TEchoToolProvider.Echo(const Args: TJsonObject): TMCPToolResult;
 begin
-  Result := TMCPToolResult.Text('echo:' + Args.GetValue<string>('text', ''));
+  Result := TMCPToolResult.Text('echo:' + Args.S['text']);
 end;
 
 { TToolAdoptionTests }

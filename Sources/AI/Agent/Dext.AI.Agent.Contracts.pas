@@ -34,7 +34,7 @@ unit Dext.AI.Agent.Contracts;
 interface
 
 uses
-  System.SysUtils, System.JSON;
+  System.SysUtils;
 
 type
   TLLMRole = (lrSystem, lrUser, lrAssistant, lrToolResult);
@@ -73,7 +73,7 @@ type
     InputSchema: string; // JSON Schema serializado
   end;
 
-  // Interface única — o Strategy
+  // Interface ï¿½nica ï¿½ o Strategy
   ILLMProvider = interface
     ['{4D3AA7B5-B79F-4D02-BE3A-817337BD87E0}']
     function Complete(
@@ -120,7 +120,7 @@ implementation
 const
   DEFAULT_SYSTEM_PROMPT =
     'You are a helpful assistant. Use the available tools to answer accurately. ' +
-    'Never invent data — only use what the tools return.';
+    'Never invent data ï¿½ only use what the tools return.';
 
 { TLLMMessage }
 
