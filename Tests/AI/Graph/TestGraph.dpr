@@ -43,6 +43,7 @@ begin
         .RegisterFixtures([
           TStateJsonTests,
           TConditionalEdgeTests,
+          TGraphValidationTests,
           TCheckpointerSanitizeTests,
           THitlTests,
           TSubgraphTests,

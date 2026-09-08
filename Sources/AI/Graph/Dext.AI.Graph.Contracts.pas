@@ -106,7 +106,11 @@ type
   EGraphCompileError   = class(EGraphError);
   EGraphExecutionError = class(EGraphError);
   ENodeNotFound        = class(EGraphError);
-  ECycleDetected       = class(EGraphError);
+  // Levantada quando nenhum caminho do entry point alcança GRAPH_END.
+  // Não detecta ciclos em si - um grafo com ciclo mas que também tem uma
+  // saída válida para GRAPH_END não dispara isto (ciclos são um padrão
+  // normal em StateGraph, ex.: call_llm -> execute_tools -> call_llm).
+  ENoPathToEnd         = class(EGraphCompileError);
 
 implementation
 

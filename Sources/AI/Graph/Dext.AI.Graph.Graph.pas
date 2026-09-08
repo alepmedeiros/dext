@@ -63,6 +63,7 @@ type
     procedure ValidateEntryPoint;
     procedure ValidateNodesExist;
     procedure ValidateReachability;
+    procedure ValidateNoEdgeFrom(const ASource: string);
     function  FindNode(const AName: string): TGraphNode;
     function  CollectInterrupts: TArray<string>;
     function  IsSpecialNode(const AName: string): Boolean;
@@ -162,8 +163,26 @@ begin
   Result := Self;
 end;
 
+procedure TAgentGraph.ValidateNoEdgeFrom(const ASource: string);
+var
+  Edge: TEdge;
+begin
+  // ResolveNextNode usa a PRIMEIRA edge cujo SourceNode casa com o nó
+  // atual — uma segunda AddEdge/AddConditionalEdge do mesmo nó seria
+  // silenciosamente ignorada em runtime em vez de sinalizar o erro de
+  // configuração aqui, em tempo de definição do grafo.
+  for Edge in FEdges do
+    if Edge.SourceNode = ASource then
+      raise EGraphCompileError.CreateFmt(
+        'Já existe uma edge de saída definida para o nó "%s" - apenas ' +
+        'uma AddEdge ou AddConditionalEdge é suportada por nó de origem ' +
+        '(o roteamento em runtime usa a primeira que casar, então uma ' +
+        'segunda seria ignorada silenciosamente)', [ASource]);
+end;
+
 function TAgentGraph.AddEdge(const AFrom, ATo: string): TAgentGraph;
 begin
+  ValidateNoEdgeFrom(AFrom);
   FEdges.Add(TEdge.Fixed(AFrom, ATo));
   Result := Self;
 end;
@@ -177,6 +196,7 @@ begin
   if not Assigned(ACondition) then
     raise EGraphCompileError.CreateFmt(
       'Condição ausente na edge condicional de "%s"', [AFrom]);
+  ValidateNoEdgeFrom(AFrom);
   FEdges.Add(TEdge.Conditional(AFrom, ACondition, ARoutes));
   Result := Self;
 end;
@@ -289,7 +309,7 @@ begin
     end;
 
     if not ReachedEnd then
-      raise ECycleDetected.Create(
+      raise ENoPathToEnd.Create(
         'Nenhum caminho do ponto de entrada até GRAPH_END');
   finally
     Queue.Free;

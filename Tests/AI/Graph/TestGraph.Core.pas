@@ -85,6 +85,19 @@ type
     procedure RoutesToEnd_WhenNoPendingCalls;
   end;
 
+  [TestFixture('TAgentGraph - Compile-time validation')]
+  TGraphValidationTests = class
+  public
+    [Test]
+    procedure AddEdge_SecondFixedEdgeFromSameSource_RaisesCompileError;
+    [Test]
+    procedure AddConditionalEdge_WhenFixedEdgeAlreadyExistsFromSameSource_RaisesCompileError;
+    [Test]
+    procedure Compile_NoPathToEnd_RaisesENoPathToEnd;
+    [Test]
+    procedure Compile_CycleWithValidExit_DoesNotRaise;
+  end;
+
   [TestFixture('TFileCheckpointer - SanitizeId')]
   TCheckpointerSanitizeTests = class
   private
@@ -386,6 +399,111 @@ begin
   Should(Result.FinalAnswer).Be('immediate-answer');
   Should(Provider.CallCount).Be(1)
     .Because('sem tool calls pendentes, a rota condicional deve ir direto para GRAPH_END');
+end;
+
+{ TGraphValidationTests }
+
+procedure TGraphValidationTests.AddEdge_SecondFixedEdgeFromSameSource_RaisesCompileError;
+var
+  Graph: TAgentGraph;
+  Raised: Boolean;
+begin
+  Graph := TAgentGraph.Create;
+  try
+    Graph
+      .AddNode('a', FakeLLMHandler)
+      .AddNode('b', FakeLLMHandler)
+      .AddNode('c', FakeLLMHandler)
+      .AddEdge('a', 'b');
+
+    Raised := False;
+    try
+      Graph.AddEdge('a', 'c');
+    except
+      on E: EGraphCompileError do
+        Raised := True;
+    end;
+    Should(Raised).BeTrue
+      .Because('uma segunda AddEdge do mesmo nó seria ignorada silenciosamente em runtime (ResolveNextNode usa a primeira que casar)');
+  finally
+    Graph.Free;
+  end;
+end;
+
+procedure TGraphValidationTests.AddConditionalEdge_WhenFixedEdgeAlreadyExistsFromSameSource_RaisesCompileError;
+var
+  Graph: TAgentGraph;
+  Raised: Boolean;
+begin
+  Graph := TAgentGraph.Create;
+  try
+    Graph
+      .AddNode('a', FakeLLMHandler)
+      .AddNode('b', FakeLLMHandler)
+      .AddEdge('a', 'b');
+
+    Raised := False;
+    try
+      Graph.AddConditionalEdge('a', RouteToolsOrEnd, [TEdgeRoute.ToEnd]);
+    except
+      on E: EGraphCompileError do
+        Raised := True;
+    end;
+    Should(Raised).BeTrue
+      .Because('misturar edge fixa e condicional do mesmo nó de origem também é ambíguo em runtime');
+  finally
+    Graph.Free;
+  end;
+end;
+
+procedure TGraphValidationTests.Compile_NoPathToEnd_RaisesENoPathToEnd;
+var
+  Graph: TAgentGraph;
+  Config: TAgentConfig;
+  Provider: TFakeLLMProvider;
+  Raised: Boolean;
+begin
+  Config := Default(TAgentConfig);
+  Provider := TFakeLLMProvider.Create;
+  Graph := TAgentGraph.Create;
+  try
+    Graph
+      .AddNode('a', FakeLLMHandler)
+      .AddNode('b', FakeLLMHandler)
+      .SetEntryPoint('a')
+      .AddEdge('a', 'b')
+      .AddEdge('b', 'a'); // ciclo fechado - nunca alcança GRAPH_END
+
+    Raised := False;
+    try
+      Graph.Compile(Provider, Config, nil, nil);
+    except
+      on E: ENoPathToEnd do
+        Raised := True;
+    end;
+    Should(Raised).BeTrue;
+  finally
+    Graph.Free;
+  end;
+end;
+
+procedure TGraphValidationTests.Compile_CycleWithValidExit_DoesNotRaise;
+var
+  Agent: ICompiledAgent;
+  Raised: Boolean;
+begin
+  // BuildToolLoopGraph replica o padrão ReAct real (call_llm <-> tools) -
+  // um ciclo intencional que deve compilar sem erro, já que existe uma
+  // rota condicional de call_llm até GRAPH_END. Ciclos não são o problema;
+  // a ausência de QUALQUER caminho até GRAPH_END é.
+  Raised := False;
+  try
+    Agent := BuildToolLoopGraph(TFakeLLMProvider.Create, False, TMemoryCheckpointer.Create);
+  except
+    Raised := True;
+  end;
+  Should(Raised).BeFalse
+    .Because('ciclos intencionais não são erro de compile');
 end;
 
 { TCheckpointerSanitizeTests }
