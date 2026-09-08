@@ -95,7 +95,7 @@ type
   /// The tool is committed to the registry when OnCall / OnCallResult is invoked.
   /// </summary>
   IMCPToolBuilder = interface
-    ['{D1E2F3A4-B5C6-7890-ABCD-EF0123456789}']
+    ['{47B27953-8614-46D1-BE60-2B50C44CD4BF}']
     function Description(const AText: string): IMCPToolBuilder;
     function Param(const AName, ADesc: string;
       AType: TMCPParamType = ptString;

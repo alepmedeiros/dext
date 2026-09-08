@@ -82,7 +82,7 @@ type
   /// Chain: .Arg / .OnGet to complete registration.
   /// </summary>
   IMCPPromptBuilder = interface
-    ['{B2C3D4E5-F6A7-8901-BCDE-F01234567891}']
+    ['{EAF6AD97-3600-42BB-87DE-F377BE7A3CA4}']
     function Arg(const AName, ADescription: string;
       ARequired: Boolean = True): IMCPPromptBuilder;
     function OnGet(ACallback: TMCPPromptGetCallback): IMCPPromptBuilder;

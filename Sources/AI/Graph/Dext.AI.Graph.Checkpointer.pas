@@ -36,12 +36,20 @@ uses
   Dext.Collections,
   Dext.Collections.Dict,
   System.SysUtils,
+  System.SyncObjs,
   System.Hash;
 
 type
+  /// <summary>
+  /// In-memory checkpointer. FLock serializes Save/Load/Exists/Delete
+  /// across threads of the same process - TDictionary from Dext.Collections
+  /// is not thread-safe on its own, and MCP tools/HTTP handlers routinely
+  /// call into the same TAgentGraph from multiple worker threads.
+  /// </summary>
   TMemoryCheckpointer = class(TInterfacedObject, ICheckpointer)
   private
     FStore: TDictionary<string, string>;
+    FLock: TCriticalSection;
   public
     constructor Create;
     destructor Destroy; override;
@@ -51,13 +59,22 @@ type
     procedure Delete(const AThreadId: string);
   end;
 
+  /// <summary>
+  /// File-based checkpointer. FLock serializes access within this process;
+  /// Save writes to a uniquely-named temp file and then replaces the final
+  /// file, so a crash or a concurrent Save from another thread never leaves
+  /// a truncated/interleaved checkpoint on disk. Does not coordinate across
+  /// separate OS processes sharing the same ABasePath.
+  /// </summary>
   TFileCheckpointer = class(TInterfacedObject, ICheckpointer)
   private
     FBasePath: string;
+    FLock: TCriticalSection;
     function FilePath(const AThreadId: string): string;
     function SanitizeId(const AThreadId: string): string;
   public
     constructor Create(const ABasePath: string = '');
+    destructor Destroy; override;
     procedure Save(const AThreadId: string; const AStateJson: string);
     function  Load(const AThreadId: string): string;
     function  Exists(const AThreadId: string): Boolean;
@@ -75,33 +92,55 @@ constructor TMemoryCheckpointer.Create;
 begin
   inherited Create;
   FStore := TDictionary<string, string>.Create;
+  FLock := TCriticalSection.Create;
 end;
 
 destructor TMemoryCheckpointer.Destroy;
 begin
+  FLock.Free;
   FStore.Free;
   inherited;
 end;
 
 procedure TMemoryCheckpointer.Save(const AThreadId: string; const AStateJson: string);
 begin
-  FStore.AddOrSetValue(AThreadId, AStateJson);
+  FLock.Enter;
+  try
+    FStore.AddOrSetValue(AThreadId, AStateJson);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TMemoryCheckpointer.Load(const AThreadId: string): string;
 begin
-  if not FStore.TryGetValue(AThreadId, Result) then
-    raise EGraphError.CreateFmt('Checkpoint não encontrado: %s', [AThreadId]);
+  FLock.Enter;
+  try
+    if not FStore.TryGetValue(AThreadId, Result) then
+      raise EGraphError.CreateFmt('Checkpoint não encontrado: %s', [AThreadId]);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TMemoryCheckpointer.Exists(const AThreadId: string): Boolean;
 begin
-  Result := FStore.ContainsKey(AThreadId);
+  FLock.Enter;
+  try
+    Result := FStore.ContainsKey(AThreadId);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TMemoryCheckpointer.Delete(const AThreadId: string);
 begin
-  FStore.Remove(AThreadId);
+  FLock.Enter;
+  try
+    FStore.Remove(AThreadId);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 { TFileCheckpointer }
@@ -113,6 +152,13 @@ begin
     FBasePath := TPath.Combine(TPath.GetTempPath, 'dext-ai-graph')
   else
     FBasePath := ABasePath;
+  FLock := TCriticalSection.Create;
+end;
+
+destructor TFileCheckpointer.Destroy;
+begin
+  FLock.Free;
+  inherited;
 end;
 
 function TFileCheckpointer.SanitizeId(const AThreadId: string): string;
@@ -145,33 +191,72 @@ begin
 end;
 
 procedure TFileCheckpointer.Save(const AThreadId: string; const AStateJson: string);
+var
+  FinalPath, TempPath: string;
 begin
-  TDirectory.CreateDirectory(FBasePath);
-  TFile.WriteAllText(FilePath(AThreadId), AStateJson, TEncoding.UTF8);
+  FLock.Enter;
+  try
+    TDirectory.CreateDirectory(FBasePath);
+    FinalPath := FilePath(AThreadId);
+    // Escreve num arquivo temporário com nome único e só então substitui o
+    // definitivo (delete-then-move) - evita deixar um checkpoint truncado
+    // no disco se o processo morrer no meio da escrita, e evita que duas
+    // Saves da mesma thread id (em teoria impedidas pelo FLock, mas também
+    // seguro se chamado de fora) produzam um arquivo com bytes intercalados.
+    TempPath := FinalPath + '.tmp-' +
+      TGUID.NewGuid.ToString.Replace('{', '').Replace('}', '');
+    TFile.WriteAllText(TempPath, AStateJson, TEncoding.UTF8);
+    try
+      if TFile.Exists(FinalPath) then
+        TFile.Delete(FinalPath);
+      TFile.Move(TempPath, FinalPath);
+    except
+      if TFile.Exists(TempPath) then
+        TFile.Delete(TempPath);
+      raise;
+    end;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TFileCheckpointer.Load(const AThreadId: string): string;
 var
   Path: string;
 begin
-  Path := FilePath(AThreadId);
-  if not TFile.Exists(Path) then
-    raise EGraphError.CreateFmt('Checkpoint não encontrado: %s', [AThreadId]);
-  Result := TFile.ReadAllText(Path, TEncoding.UTF8);
+  FLock.Enter;
+  try
+    Path := FilePath(AThreadId);
+    if not TFile.Exists(Path) then
+      raise EGraphError.CreateFmt('Checkpoint não encontrado: %s', [AThreadId]);
+    Result := TFile.ReadAllText(Path, TEncoding.UTF8);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 function TFileCheckpointer.Exists(const AThreadId: string): Boolean;
 begin
-  Result := TFile.Exists(FilePath(AThreadId));
+  FLock.Enter;
+  try
+    Result := TFile.Exists(FilePath(AThreadId));
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TFileCheckpointer.Delete(const AThreadId: string);
 var
   Path: string;
 begin
-  Path := FilePath(AThreadId);
-  if TFile.Exists(Path) then
-    TFile.Delete(Path);
+  FLock.Enter;
+  try
+    Path := FilePath(AThreadId);
+    if TFile.Exists(Path) then
+      TFile.Delete(Path);
+  finally
+    FLock.Leave;
+  end;
 end;
 
 end.

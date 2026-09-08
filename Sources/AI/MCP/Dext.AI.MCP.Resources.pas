@@ -69,7 +69,7 @@ type
   /// Chain: .Description / .MimeType / .OnRead to complete registration.
   /// </summary>
   IMCPResourceBuilder = interface
-    ['{A1B2C3D4-E5F6-7890-ABCD-EF0123456780}']
+    ['{F1DE3F88-E828-4793-9E4B-0F22E6C03752}']
     function Description(const AText: string): IMCPResourceBuilder;
     function MimeType(const AMimeType: string): IMCPResourceBuilder;
     function OnRead(ACallback: TMCPResourceReadCallback): IMCPResourceBuilder;
