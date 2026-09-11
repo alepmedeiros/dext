@@ -39,6 +39,25 @@ uses
   Dext.AI.Agent.Contracts;
 
 type
+  /// <summary>
+  /// Immutable state that flows through the graph. Every With* method
+  /// clones FMessages/FPendingCalls/FMetadata into a new instance rather
+  /// than mutating Self - this is what makes a checkpoint a real frozen
+  /// snapshot and what HITL Resume/Cancel and subgraph AsNode rely on.
+  ///
+  /// Known cost: a ReAct turn with N tool-call iterations allocates N
+  /// TAgentState instances plus N array/dictionary clones, and the
+  /// checkpointer serializes the full state to JSON on every transition.
+  /// This is deliberate, not an oversight - switching TAgentState to a
+  /// record would not remove the cost (the array/dictionary clones would
+  /// still be needed to preserve immutability) and would break the
+  /// already-public TNodeHandler signature. If per-turn allocation is
+  /// measured as an actual bottleneck in production (it has not been
+  /// profiled as of this writing - the LLM HTTP round-trip dominates any
+  /// realistic workload), the right fix is checkpointing only at
+  /// pause/finish instead of every transition, and/or pooling TAgentState
+  /// instances - not restructuring this type.
+  /// </summary>
   TAgentState = class
   private
     FMessages:     TArray<TLLMMessage>;

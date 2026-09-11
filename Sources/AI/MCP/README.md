@@ -17,17 +17,28 @@ Zero dependências externas - usa apenas RTL Delphi + infraestrutura Dext.
 
 ---
 
+> ⚠️ **Breaking change**: `TMCPToolCallback`, `TMCPToolResultCallback` e `TMCPPromptGetCallback`
+> passaram a usar `DextJsonDataObjects.TJsonObject` no lugar de `System.JSON.TJSONObject`.
+> Como os dois tipos têm o mesmo nome (Object Pascal é case-insensitive), código existente
+> continua compilando contra o tipo novo sem precisar trocar o `uses` - mas `TJsonObject`
+> não tem `GetValue<T>` genérico nem `.AddPair` fluente. Troque por indexadores:
+> `Args.GetValue<string>('x', '')` vira `Args.S['x']`, `Args.GetValue<Integer>('x', 0)` vira
+> `Args.I['x']` (veja a tabela em [Tipos de parâmetros](#tipos-de-parâmetros) para os demais
+> tipos e o padrão para valores default diferentes de zero/vazio).
+
+---
+
 ## Arquivos
 
 | Arquivo | Descrição |
 |---|---|
-| `Dext.MCP.Protocol.pas` | Constantes JSON-RPC 2.0, tipos base, helper `TJsonRpc` |
-| `Dext.MCP.Types.pas` | Tipos ricos: `TMCPToolResult`, `TMCPContent`, `TMCPResourceContents`, `TMCPPromptResult` |
-| `Dext.MCP.Attributes.pas` | Atributos RTTI: `[MCPTool]`, `[MCPParam]`, `[MCPResource]`, `[MCPPrompt]` |
-| `Dext.MCP.Tools.pas` | Registry de tools + builder fluente + provider RTTI |
-| `Dext.MCP.Resources.pas` | Registry de resources + builder fluente |
-| `Dext.MCP.Prompts.pas` | Registry de prompts + builder fluente |
-| `Dext.MCP.Server.pas` | `TMCPServer` - Streamable, SSE legacy, Stdio; dispatch completo |
+| `Dext.AI.MCP.Protocol.pas` | Constantes JSON-RPC 2.0, tipos base, helper `TJsonRpc` |
+| `Dext.AI.MCP.Types.pas` | Tipos ricos: `TMCPToolResult`, `TMCPContent`, `TMCPResourceContents`, `TMCPPromptResult` |
+| `Dext.AI.MCP.Attributes.pas` | Atributos RTTI: `[MCPTool]`, `[MCPParam]`, `[MCPResource]`, `[MCPPrompt]` |
+| `Dext.AI.MCP.Tools.pas` | Registry de tools + builder fluente + provider RTTI |
+| `Dext.AI.MCP.Resources.pas` | Registry de resources + builder fluente |
+| `Dext.AI.MCP.Prompts.pas` | Registry de prompts + builder fluente |
+| `Dext.AI.MCP.Server.pas` | `TMCPServer` - Streamable, SSE legacy, Stdio; dispatch completo |
 
 ---
 
@@ -37,7 +48,8 @@ Zero dependências externas - usa apenas RTL Delphi + infraestrutura Dext.
 
 ```pascal
 uses
-  Dext.MCP.Protocol, Dext.MCP.Types, Dext.MCP.Tools, Dext.MCP.Server;
+  DextJsonDataObjects,
+  Dext.AI.MCP.Protocol, Dext.AI.MCP.Types, Dext.AI.MCP.Tools, Dext.AI.MCP.Server;
 
 var
   Server: TMCPServer;
@@ -47,10 +59,10 @@ begin
   Server.Tool('buscar-cliente')
     .Description('Busca dados de um cliente pelo CPF')
     .Param('cpf', 'CPF do cliente (somente dígitos)', ptString)
-    .OnCallResult(function(Args: TJSONObject): TMCPToolResult
+    .OnCallResult(function(const Args: TJsonObject): TMCPToolResult
       var CPF: string;
       begin
-        CPF := Args.GetValue<string>('cpf', '');
+        CPF := Args.S['cpf'];
         if CPF = '' then
           Result := TMCPToolResult.Error('CPF obrigatório')
         else
@@ -100,7 +112,7 @@ claude mcp add meu-servidor http://localhost:3031/mcp
 // Resultado simples de texto
 Server.Tool('status')
   .Description('Status atual do sistema')
-  .OnCallResult(function(Args: TJSONObject): TMCPToolResult
+  .OnCallResult(function(const Args: TJsonObject): TMCPToolResult
     begin
       Result := TMCPToolResult.Text('Sistema online');
     end);
@@ -110,11 +122,11 @@ Server.Tool('dividir')
   .Description('Divide dois números')
   .Param('a', 'Dividendo', ptNumber)
   .Param('b', 'Divisor', ptNumber)
-  .OnCallResult(function(Args: TJSONObject): TMCPToolResult
+  .OnCallResult(function(const Args: TJsonObject): TMCPToolResult
     var A, B: Double;
     begin
-      A := Args.GetValue<Double>('a', 0);
-      B := Args.GetValue<Double>('b', 0);
+      A := Args.F['a'];
+      B := Args.F['b'];
       if B = 0 then
         Result := TMCPToolResult.Error('Divisão por zero')
       else
@@ -125,17 +137,19 @@ Server.Tool('dividir')
 Server.Tool('gerar-grafico')
   .Description('Gera gráfico de vendas como imagem PNG')
   .Param('mes', 'Mês (1-12)', ptInteger)
-  .OnCallResult(function(Args: TJSONObject): TMCPToolResult
+  .OnCallResult(function(const Args: TJsonObject): TMCPToolResult
+    var Mes: Integer;
     var Base64PNG: string;
     begin
-      Base64PNG := GerarGraficoPNG(Args.GetValue<Integer>('mes', 1));
+      if Args.Contains('mes') then Mes := Args.I['mes'] else Mes := 1;
+      Base64PNG := GerarGraficoPNG(Mes);
       Result := TMCPToolResult.Image(Base64PNG, 'image/png');
     end);
 
 // Múltiplos conteúdos em um resultado
 Server.Tool('relatorio-completo')
   .Description('Retorna relatório com texto e gráfico')
-  .OnCallResult(function(Args: TJSONObject): TMCPToolResult
+  .OnCallResult(function(const Args: TJsonObject): TMCPToolResult
     begin
       Result := TMCPToolResult.Text('Relatório de Vendas - Março 2026');
       Result.AddContent(TMCPContent.Image(GerarGrafico, 'image/png'));
@@ -147,24 +161,25 @@ Server.Tool('relatorio-completo')
 
 ```pascal
 uses
-  Dext.MCP.Attributes, Dext.MCP.Types, Dext.MCP.Tools;
+  DextJsonDataObjects,
+  Dext.AI.MCP.Attributes, Dext.AI.MCP.Types, Dext.AI.MCP.Tools;
 
 type
   TERPTools = class(TMCPToolProvider)
   public
     [MCPTool('buscar-cliente', 'Busca cadastro completo de um cliente')]
     [MCPParam('cpf', 'CPF do cliente (somente dígitos)', ptString)]
-    function BuscarCliente(const Args: TJSONObject): TMCPToolResult; virtual;
+    function BuscarCliente(const Args: TJsonObject): TMCPToolResult; virtual;
 
     [MCPTool('criar-pedido', 'Cria um novo pedido de venda')]
     [MCPParam('cliente_id', 'ID do cliente', ptString)]
     [MCPParam('itens', 'Array de itens do pedido', ptArray)]
-    function CriarPedido(const Args: TJSONObject): TMCPToolResult; virtual;
+    function CriarPedido(const Args: TJsonObject): TMCPToolResult; virtual;
 
     [MCPTool('listar-produtos', 'Lista produtos com filtro opcional')]
     [MCPParam('categoria', 'Categoria do produto', ptString, {required=}False)]
     [MCPParam('estoque_min', 'Estoque mínimo', ptInteger, False)]
-    function ListarProdutos(const Args: TJSONObject): TMCPToolResult; virtual;
+    function ListarProdutos(const Args: TJsonObject): TMCPToolResult; virtual;
   end;
 
 // Registrar no servidor (o servidor assume ownership do provider)
@@ -172,11 +187,11 @@ Server.RegisterProvider(TERPTools.Create);
 ```
 
 ```pascal
-function TERPTools.BuscarCliente(const Args: TJSONObject): TMCPToolResult;
+function TERPTools.BuscarCliente(const Args: TJsonObject): TMCPToolResult;
 var
   CPF: string;
 begin
-  CPF := Args.GetValue<string>('cpf', '');
+  CPF := Args.S['cpf'];
   if CPF = '' then
     Exit(TMCPToolResult.Error('CPF é obrigatório'));
 
@@ -197,7 +212,7 @@ end;
 // Código existente continua funcionando sem nenhuma mudança
 Server.Tool('ping')
   .Description('Ping')
-  .OnCall(function(Args: TJSONObject): string
+  .OnCall(function(const Args: TJsonObject): string
     begin
       Result := '{"pong": true}';
     end);
@@ -252,10 +267,10 @@ Prompts são templates de mensagens que o LLM pode invocar por nome com argument
 Server.Prompt('revisao-codigo', 'Revisão detalhada de código Delphi')
   .Arg('codigo', 'Código Delphi para revisar')
   .Arg('contexto', 'Contexto opcional', {required=}False)
-  .OnGet(function(Args: TJSONObject): TMCPPromptResult
+  .OnGet(function(const Args: TJsonObject): TMCPPromptResult
     var Code: string;
     begin
-      Code := Args.GetValue<string>('codigo', '');
+      Code := Args.S['codigo'];
       Result := TMCPPromptResult.Create('Revisão de código');
       Result.AddMessage(TMCPPromptMessage.User(
         'Revise este código Delphi:' + sLineBreak +
@@ -269,7 +284,7 @@ Server.Prompt('revisao-codigo', 'Revisão detalhada de código Delphi')
 [MCPPrompt('revisao-codigo', 'Revisão detalhada de código Delphi')]
 [MCPPromptArg('codigo', 'Código Delphi para revisar')]
 [MCPPromptArg('contexto', 'Contexto opcional', {required=}False)]
-function RevisaoCodigo(const Args: TJSONObject): TMCPPromptResult; virtual;
+function RevisaoCodigo(const Args: TJsonObject): TMCPPromptResult; virtual;
 ```
 
 ---
@@ -289,14 +304,30 @@ function RevisaoCodigo(const Args: TJSONObject): TMCPPromptResult; virtual;
 
 ## Tipos de parâmetros
 
-| Constante | JSON Schema | Leitura em Delphi |
-|---|---|---|
-| `ptString` | `"string"` | `Args.GetValue<string>('nome', '')` |
-| `ptInteger` | `"integer"` | `Args.GetValue<Integer>('qtd', 0)` |
-| `ptNumber` | `"number"` | `Args.GetValue<Double>('valor', 0.0)` |
-| `ptBoolean` | `"boolean"` | `Args.GetValue<Boolean>('ativo', True)` |
-| `ptObject` | `"object"` | `Args.GetValue('obj') as TJSONObject` |
-| `ptArray` | `"array"` | `Args.GetValue('lista') as TJSONArray` |
+`TJsonObject` (de `DextJsonDataObjects`) não tem `GetValue<T>` genérico - a leitura é por
+indexador tipado. Os indexadores `S`/`I`/`L`/`F`/`B` devolvem o valor "vazio" do tipo
+(`''`/`0`/`0`/`0.0`/`False`) quando a chave está ausente, o que já cobre a maioria dos
+defaults. Quando o default precisa ser outro valor, cheque `Args.Contains('nome')` antes.
+
+| Constante | JSON Schema | Leitura em Delphi | Default se ausente |
+|---|---|---|---|
+| `ptString` | `"string"` | `Args.S['nome']` | `''` |
+| `ptInteger` | `"integer"` | `Args.I['qtd']` | `0` |
+| `ptNumber` | `"number"` | `Args.F['valor']` | `0.0` |
+| `ptBoolean` | `"boolean"` | `Args.B['ativo']` | `False` |
+| `ptObject` | `"object"` | `Args.O['obj']` (checar `Args.Types['obj'] = jdtObject` antes se opcional) | auto-cria objeto vazio |
+| `ptArray` | `"array"` | `Args.A['lista']` (checar `Args.Types['lista'] = jdtArray` antes se opcional) | auto-cria array vazio |
+
+Default diferente de vazio/zero:
+
+```pascal
+var Categoria: string;
+begin
+  if Args.Contains('categoria') then
+    Categoria := Args.S['categoria']
+  else
+    Categoria := 'geral';
+```
 
 ---
 
