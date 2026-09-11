@@ -237,7 +237,7 @@ ERPGraph.AddNode('fiscal_agent', FiscalAgent.AsNode);
 | `get_state_history` / time travel | ❌ o checkpointer guarda só o último estado por thread |
 | `Store` (memória de longo prazo entre threads) | ❌ persistência é só por thread |
 | `stream_mode` (streaming de primeira classe) | ⚠️ parcial — `IAgentObserver` dá callbacks síncronos, não um stream/generator |
-| Fan-out / ramos paralelos (`Send`) | ⚠️ **armadilha**: adicionar mais de um `AddEdge` a partir do mesmo nó de origem não é erro — só a *primeira* é usada, o resto é ignorado silenciosamente. Não há fan-out paralelo automático. |
+| Fan-out / ramos paralelos (`Send`) | ❌ adicionar uma segunda `AddEdge`/`AddConditionalEdge` a partir do mesmo nó de origem levanta `EGraphCompileError` no momento da definição (só uma edge de saída por nó é suportada — `ResolveNextNode` sempre usa a primeira que casar, então uma segunda ficaria inalcançável em silêncio). Não há fan-out paralelo automático. |
 | Retry policy / cache de resultado por nó | ❌ não implementado |
 | `Command` (nó devolve roteamento + atualização de estado juntos) | ❌ o roteamento sempre passa pelas edges |
 

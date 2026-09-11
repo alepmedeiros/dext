@@ -77,6 +77,16 @@ type
 
   ICompiledAgent = interface
     ['{51DC1EAC-E787-40C9-A492-0A921091C6AE}']
+    /// <summary>
+    /// Starts a new turn for AThreadId (generating one if empty), or
+    /// continues an existing thread. If the thread is genuinely paused at
+    /// an approval node (waiting for Resume/Cancel), AInput is discarded
+    /// and the paused state is left untouched - Run is not a way to inject
+    /// input into a paused conversation, use Resume for that. Any other
+    /// thread state (finished, at GRAPH_END, or stuck from a prior error)
+    /// restarts the flow at the entry point with AInput as the new
+    /// message, rather than resuming silently.
+    /// </summary>
     function Run(
       const AInput:    string;
       const AThreadId: string = ''
@@ -84,6 +94,16 @@ type
 
     function Resume(const AThreadId: string): TGraphRunResult;
     procedure Cancel(const AThreadId: string);
+
+    /// <summary>
+    /// Returns the checkpointed TAgentState for AThreadId, or nil if there
+    /// is no checkpointer or no checkpoint for that thread. The returned
+    /// instance is owned by this ICompiledAgent, not by the caller - do
+    /// not free it. It stays valid only until the next call to GetState
+    /// (which frees the previous one before loading the next) or until
+    /// this ICompiledAgent itself is destroyed; hold onto the data you
+    /// need (property reads, not the reference) if it must outlive that.
+    /// </summary>
     function GetState(const AThreadId: string): TAgentState;
 
     // Adapta este grafo compilado para ser usado como um nó comum de um
