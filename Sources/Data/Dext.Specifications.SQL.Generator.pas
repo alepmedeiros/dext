@@ -828,6 +828,7 @@ function TSQLColumnMapper<T>.MapColumn(const AName: string): string;
 var
   Typ: TRttiType;
   Prop: TRttiProperty;
+  Fld: TRttiField;
   Attr: TCustomAttribute;
   PropMap: TPropertyMap;
 begin
@@ -851,6 +852,24 @@ begin
 
     if (Result = Prop.Name) and (FNamingStrategy <> nil) then
       Result := FNamingStrategy.GetColumnName(Prop);
+    Exit;
+  end;
+
+  // Entidades que declaram colunas como campo público com atributos
+  // diretos (ex.: "[Column('id')] Id: Integer;") em vez de property não
+  // eram resolvidas aqui - GetProperty só enxerga property, nunca field,
+  // então [Column]/[ForeignKey] em campo era silenciosamente ignorado e o
+  // WHERE gerado usava o nome literal do campo em vez da coluna mapeada.
+  // Aditivo: só entra aqui quando GetProperty já retornou nil, então não
+  // muda a resolução de nenhuma entidade que já funcionava.
+  Fld := Typ.GetField(AName);
+  if Fld <> nil then
+  begin
+    for Attr in Fld.GetAttributes do
+    begin
+      if Attr is ColumnAttribute then Exit(ColumnAttribute(Attr).Name);
+      if Attr is ForeignKeyAttribute then Exit(ForeignKeyAttribute(Attr).ColumnName);
+    end;
   end;
 end;
 
@@ -2087,6 +2106,7 @@ var
   WhereSQL: string;
   SB: TStringBuilder;
   Prop: TRttiProperty;
+  Fld: TRttiField;
   ColName: string;
   Attr: TCustomAttribute;
   Typ: TRttiType;
@@ -2257,11 +2277,41 @@ begin
         
         if not First then SB.Append(', ');
         First := False;
-        
+
+        SB.Append(QualifyBaseColumn(ColName, BaseTableName, HasJoins));
+      end;
+
+      // Entidades que declaram colunas como campo público com atributos
+      // diretos (ex.: "[Column('id')] Id: Integer;") em vez de property nunca
+      // eram incluídas aqui - GetProperties só enxerga property, nunca field,
+      // então o SELECT gerado para essas entidades saía sem nenhuma coluna
+      // ("SELECT  FROM ..."). Loop simplificado (sem Lazy/Navigation, que
+      // neste codebase só existem como property, nunca como campo público).
+      for Fld in Typ.GetFields do
+      begin
+        if not (Fld.Visibility in [mvPublic, mvPublished]) then Continue;
+        if Fld.FieldType = nil then Continue;
+        if Fld.FieldType.TypeKind in [tkClass, tkInterface] then Continue;
+
+        ColName := Fld.Name;
+        IsMapped := True;
+
+        for Attr in Fld.GetAttributes do
+        begin
+          if Attr is NotMappedAttribute then IsMapped := False;
+          if Attr is ColumnAttribute then ColName := ColumnAttribute(Attr).Name;
+          if Attr is ForeignKeyAttribute then ColName := ForeignKeyAttribute(Attr).ColumnName;
+        end;
+
+        if not IsMapped then Continue;
+
+        if not First then SB.Append(', ');
+        First := False;
+
         SB.Append(QualifyBaseColumn(ColName, BaseTableName, HasJoins));
       end;
     end;
-    
+
     SB.Append(' FROM ').Append(GetTableName);
     
     // Apply SQL Server Locking Hints if needed
