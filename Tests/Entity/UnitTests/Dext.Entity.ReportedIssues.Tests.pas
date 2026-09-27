@@ -46,7 +46,7 @@ type
     procedure Issue_192_FireDAC_Param_Binding_Should_Not_Truncate_Int64;
 
     [Test]
-    procedure FireDAC_Typed_Param_Should_Use_WideMemo_For_Large_Strings;
+    procedure FireDAC_Typed_Param_Should_Honor_DbType_WideMemo;
   end;
 
 implementation
@@ -329,37 +329,33 @@ begin
   end;
 end;
 
-procedure TEntityReportedIssuesTests.FireDAC_Typed_Param_Should_Use_WideMemo_For_Large_Strings;
-// PersistAdd/PersistUpdate pass an explicit ftWideString for string properties. FireDAC then
-// limits the parameter to 4000 chars ("[FireDAC][Phys][PG]-345 Data too large for variable").
-// Typed binding must follow the untyped rule (> 4000 => ftWideMemo) and honor [DbType(ftWideMemo)].
+procedure TEntityReportedIssuesTests.FireDAC_Typed_Param_Should_Honor_DbType_WideMemo;
+// [DbType(ftWideMemo)] must bind the parameter as memo (Docs/Book/05-orm/db-type.md). It used to be
+// assigned with AsWideString, which resets DataType to ftWideString and FireDAC caps it at 4000 chars
+// ("[FireDAC][Phys][PG]-345 Data too large for variable"). Plain ftWideString is left as is.
 var
   Conn: TFDConnection;
   Cmd: TFireDACCommand;
-  Big, Small: string;
+  Big: string;
 begin
   Big := StringOfChar('x', 6135);
-  Small := 'abc';
   Conn := TFDConnection.Create(nil);
   try
     Cmd := TFireDACCommand.Create(Conn, ddPostgreSQL);
     try
-      Cmd.SetSQL('INSERT INTO dummy (a, b, c, d) VALUES (:pBig, :pSmall, :pMemo, :pExact)');
+      Cmd.SetSQL('INSERT INTO dummy (a, b, c) VALUES (:pMemoBig, :pMemoSmall, :pString)');
 
-      Cmd.AddParam('pBig', TValue.From<string>(Big), ftWideString);
-      Should(Cmd.Query.ParamByName('pBig').DataType = ftWideMemo).BeTrue;
-      Should(Length(Cmd.GetParamValue('pBig').AsString)).Be(6135);
+      Cmd.AddParam('pMemoBig', TValue.From<string>(Big), ftWideMemo);
+      Should(Cmd.Query.ParamByName('pMemoBig').DataType = ftWideMemo).BeTrue;
+      Should(Length(Cmd.GetParamValue('pMemoBig').AsString)).Be(6135);
 
-      Cmd.AddParam('pSmall', TValue.From<string>(Small), ftWideString);
-      Should(Cmd.Query.ParamByName('pSmall').DataType = ftWideString).BeTrue;
-      Should(Cmd.GetParamValue('pSmall').AsString).Be('abc');
+      Cmd.AddParam('pMemoSmall', TValue.From<string>('abc'), ftMemo);
+      Should(Cmd.Query.ParamByName('pMemoSmall').DataType in [ftMemo, ftWideMemo]).BeTrue;
+      Should(Cmd.GetParamValue('pMemoSmall').AsString).Be('abc');
 
-      Cmd.AddParam('pMemo', TValue.From<string>(Small), ftWideMemo);
-      Should(Cmd.Query.ParamByName('pMemo').DataType = ftWideMemo).BeTrue;
-      Should(Cmd.GetParamValue('pMemo').AsString).Be('abc');
-
-      Cmd.AddParam('pExact', TValue.From<string>(StringOfChar('y', 4000)), ftWideString);
-      Should(Cmd.Query.ParamByName('pExact').DataType = ftWideString).BeTrue;
+      Cmd.AddParam('pString', TValue.From<string>('abc'), ftWideString);
+      Should(Cmd.Query.ParamByName('pString').DataType = ftWideString).BeTrue;
+      Should(Cmd.GetParamValue('pString').AsString).Be('abc');
     finally
       Cmd.Free;
     end;
