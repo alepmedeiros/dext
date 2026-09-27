@@ -542,7 +542,17 @@ begin
   // Set value based on the explicit type
   case ADataType of
     ftString, ftWideString, ftMemo, ftWideMemo:
-      Param.AsWideString := V.AsString;
+      // AsWideString resets DataType to ftWideString, which FireDAC caps at 4000 chars
+      // ("Data too large for variable"). Follow the untyped rule in SetParamValue: memo for
+      // explicit memo types ([DbType(ftWideMemo)]) and for strings longer than 4000 chars.
+      if (ADataType in [ftMemo, ftWideMemo]) or (Length(V.AsString) > 4000) then
+      begin
+        Param.DataType := ftWideMemo;
+        Param.Size := Length(V.AsString);
+        Param.AsWideMemo := V.AsString;
+      end
+      else
+        Param.AsWideString := V.AsString;
     ftSmallint, ftInteger, ftWord, ftShortint:
       if V.Kind = tkEnumeration then
         Param.AsInteger := V.AsOrdinal
